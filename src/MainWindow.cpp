@@ -7,6 +7,8 @@
 #include <QWindow>
 #include <QChart>
 #include <string>
+#include"robxFileIO.h"
+#include"TrajCorrectDock.h"
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 {
@@ -257,6 +259,7 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	connect(action63, SIGNAL(triggered()), this, SLOT(on_animation()));//输出视频到本地
 	connect(action64, SIGNAL(triggered()), this, SLOT(on_video()));//输出动画
 
+	connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorDock()));//弯曲变形配置窗口打开
 
 	InitPQKit();
 }
@@ -308,6 +311,11 @@ void MainWindow::OnOpenRobx()
 {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("open robx file"), "",
 		tr("Robx files(*.robx)"));
+	QString qstr = fileName;
+	qstr.replace("\\", "/");
+	std::wstring wpath = qstr.toStdWString();
+	RobxFileIO::setPath(wpath);
+	
 	if (fileName.isEmpty())
 	{
 		return;
@@ -319,6 +327,11 @@ void MainWindow::OnOpenRobx()
 	CComBSTR bsPara = "";
 	CComBSTR bsCmd = "RO_CMD_FILE_OPEN";
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsPara, varPara, &lResult);
+
+	RobxFileIO::downloadJson(RobxFileIO::GlobalPath());
+
+
+
 }
 
 void MainWindow::OnSaveRobx()
@@ -327,6 +340,8 @@ void MainWindow::OnSaveRobx()
 	CComBSTR bsParam = "";
 	CComBSTR bsCmd = "RO_CMD_FILE_SAVE";
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsParam, CComVariant(), lResult);
+	//RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
+	//std::cout << RobxFileIO::GlobalPath() << endl;
 }
 
 void MainWindow::OnSaveasRobx()
@@ -341,6 +356,7 @@ void MainWindow::on_close_robx()
 {
 	CComBSTR i_bsDocName = "";
 	m_ptrKit->pq_CloseDocument(i_bsDocName);
+
 }
 
 void MainWindow::on_kinematics()
@@ -1632,6 +1648,15 @@ void MainWindow::on_AGV_path()
 	dlg.exec();
 }
 
+void MainWindow::on_trajCorDock()
+{
+	
+	TrajCorrectDock *dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback, this);
+	addDockWidget(Qt::LeftDockWidgetArea, dock);
+
+	
+}
+
 void MainWindow::on_effectiveness_analysis()
 {
 	effectiveness_analysis dlg;
@@ -2082,12 +2107,22 @@ void MainWindow::ShowPQKitWindown()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+	CComBSTR robxName = " ";
+	m_ptrKit->Doc_get_name(&robxName);
 	if (m_ptrKit)
 	{
 		m_ptrKit->pq_CloseComponent();
 	}
-
-	event->accept();
+	
+	if (robxName == L"设计") {
+		event->accept();
+	}
+	else
+	{
+		RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
+	}
+	
+	
 }
 
 void MainWindow::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID)
@@ -2494,5 +2529,9 @@ void MainWindow::OnDraw()
 	}
 
 	
+}
+
+void MainWindow::OnMainwindowClosed()
+{
 }
 

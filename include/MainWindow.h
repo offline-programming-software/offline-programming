@@ -38,6 +38,8 @@
 #include "PQKitCallback.h"
 #include "boundBox.h"
 
+//#include "TrajCorrectDock.h"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -126,7 +128,7 @@ protected slots:
 	void OnMenuPop(unsigned long i_ulObjID, long i_lPosX, long i_lPosY, int* o_nHandled);
 	void OnInitializeKitThread();
 	void OnDraw();
-
+	void OnMainwindowClosed();
 
 	//own slot
 	void OnOpenRobx();
@@ -192,6 +194,7 @@ protected slots:
 	void on_curse_part();
 	void on_pos_cal();
 	void on_AGV_path();
-
+	
+	void on_trajCorDock();
 };
 #endif  // MAINWINDOW_H

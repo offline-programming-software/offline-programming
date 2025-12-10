@@ -3,6 +3,7 @@
 #include <QTextCodec>
 #include <QtWidgets/QApplication>
 #include <QString>
+#include"robxFileIO.h"
 
 int main(int argc, char *argv[])
 {
@@ -12,7 +13,7 @@ int main(int argc, char *argv[])
 	a.setFont(f);
 
 	MainWindow w;
-		
+
 	w.show();  // 显示主窗口
 	w.showMaximized();
 	w.setWindowTitle("自动喷涂离线编程与仿真软件");
