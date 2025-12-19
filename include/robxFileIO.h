@@ -6,8 +6,7 @@
 #include<Correction.h>
 #include<nlohmann/json.hpp>
 
-
-
+#include"spaceCalculate.h"
 /**
  * @class RobxIO
  * @brief 用于读取、写入、更新 .robx 数据的 IO 类。
@@ -82,12 +81,6 @@
  *
  */
 
-struct workSpace {
-	ULONG robotID;
-	double thickness;
-	double theta;
-	std::vector<double> points;
-};
 
 class RobxIO
 {
@@ -108,6 +101,8 @@ public:
 	 */
 	void writeData(const QVector<Correction>& list,
 		const std::string& fileName);
+	void writeData(const QVector<workSpace>& list,
+		const std::string& fileName);
 	/**
 	  * @brief 从robx文件中读取数据
 	  * 
@@ -115,6 +110,9 @@ public:
 	  * @param [in] fileName robx文件名称
 	  */
 	void updateData(QVector<Correction>& list,
+		const std::string& fileName);
+
+	void updateData(QVector<workSpace>& list,
 		const std::string& fileName);
 
 	//void writeData(const QVector<新的数据结构类型>& list,
@@ -147,16 +145,3 @@ void addDirToArchive(struct archive* a, const fs::path& dirPath, const fs::path&
 void writeRobx(const std::wstring& outname, const std::vector<std::string>& dirList);
 void readRobx(const std::wstring& robxName, const std::string targetPath);
 
-
-class workSpaceSave : public RobxIO {
-public:
-	workSpaceSave();
-	~workSpaceSave() = default;
-
-	// workSpace 类型的读写函数
-	void writeData(const QVector<workSpace>& list, const std::string& fileName);
-	void updateData(QVector<workSpace>& list, const std::string& fileName);
-
-private:
-	std::string m_tempDir = "./temp/jsons"; // 可以使用基类的或者自己定义
-};

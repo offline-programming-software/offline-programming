@@ -7,8 +7,11 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QHeaderView>
-
+#include "robxFileIO.h"
+#include "spaceCalculate.h"
+#include"robxFileIO.h"
 #include "PQKitCallback.h"
+#include<qvector.h>
 #import "RPC.tlb" no_namespace, named_guids, raw_interfaces_only, raw_native_types
 
 QT_BEGIN_NAMESPACE
@@ -52,6 +55,7 @@ private:
 	QStandardItemModel *axisModel; // 表格数据模型
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
+	QVector<workSpace> m_list;
 	
 	// 存储坐标轴数据
 	struct AxisData {
@@ -65,3 +69,5 @@ private:
 	QList<AxisData> axisList;
 
 };
+
+

@@ -234,8 +234,8 @@ public:
 		double starttheta,
 		double endtheta,
 		const std::vector<double>& direction,
-		int samplePointsPerFace,
-		double minStepSize);
+		int samplePointsPerFace = 5,
+		double minStepSize = 1.0);
 
 
 

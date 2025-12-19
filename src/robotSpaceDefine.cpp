@@ -19,6 +19,12 @@ robotSpaceDefine::robotSpaceDefine(QWidget *parent,
 	connect(ui->pushButton, &QPushButton::clicked, this, &robotSpaceDefine::onAddAxis);
 	connect(ui->pushButton_2, &QPushButton::clicked, this, &robotSpaceDefine::onDeleteAxis);
 	connect(ui->pushButton_4, &QPushButton::clicked, this, &robotSpaceDefine::onDeleteAxis);
+
+	//从json更新数据
+	RobxIO *m_io = new RobxIO();
+
+	m_io->updateData(m_list, "workspace.json");
+
 }
 
 robotSpaceDefine::~robotSpaceDefine()
@@ -124,8 +130,9 @@ void robotSpaceDefine::onAddAxis()
 		return;
 	}
 
-	addRobotSpace dlg;
+	addRobotSpace* dlg = new addRobotSpace();
 	QString robotName = getRobotName();
+	dlg->setRobotName(robotName);
 
 	// 如果机器人名称为空，提示用户
 	if (robotName.isEmpty()) {
@@ -147,9 +154,7 @@ void robotSpaceDefine::onAddAxis()
 
 	CoodernateMap = newCoodernateMap;
 	QStringList CoodernateNames = CoodernateMap.values();
-	dlg.setCoordinate(CoodernateNames); // 设置坐标系
-
-	dlg.setRobotName(robotName);
+	dlg->setCoordinate(CoodernateNames); // 设置坐标系
 
 	// 获取导轨信息
 	ULONG uExternalID = 0;
@@ -172,10 +177,32 @@ void robotSpaceDefine::onAddAxis()
 	}
 
 	// 即使没有导轨也要设置空列表
-	dlg.setRail(rail);
+	dlg->setRail(rail);
+
+
+	connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName]() {
+		
+		spacePoint center(0, 0, 0);
+		spacePoint size(0, 0, 0);
+
+		Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
+
+		ULONG robotID = 0;
+		GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
+		spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);
+		std::vector<double> direction = {0,0,1};
+
+
+		std::map<std::pair<double, double>, std::vector<spacePoint>> workSpace;
+		workSpace = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 50, 50,
+			1500,0 , 22.5, direction, 5, 1.0);
+		
+
+
+	});
 
 	// 显示对话框并处理结果
-	if (dlg.exec() == QDialog::Accepted) {
+	if (dlg->exec() == QDialog::Accepted) {
 		// 这里可以添加从对话框获取数据并更新轴列表的逻辑
 		// 例如：addAxisInfo(...);
 	}
@@ -500,3 +527,4 @@ void robotSpaceDefine::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName,
 	o_uID = bufID[nTarIndex];
 	SafeArrayUnaccessData(vIDPara.parray);
 }
+

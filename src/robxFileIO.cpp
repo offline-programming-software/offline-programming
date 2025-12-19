@@ -10,8 +10,6 @@ using json = nlohmann::json;
 
 RobxIO::RobxIO()
 {
-	
-
 
 	std::filesystem::create_directories(m_tempDir);
 }
@@ -50,6 +48,28 @@ void RobxIO::writeData(const QVector<Correction>& list,
 	ofs.close();
 }
 
+void RobxIO::writeData(const QVector<workSpace>& list, const std::string & fileName)
+{
+	json j = json::array();
+
+	for (const auto& ws : list) {
+		json jws;
+		jws = {
+			{"robotID", ws.robotID},
+			{"thickness", ws.thickness},
+			{"theta", ws.theta},
+			{"points", ws.points}
+		};
+		j.push_back(jws);
+	}
+
+	std::string fullPath = m_tempDir + "/" + fileName;
+	std::ofstream ofs(fullPath);
+	ofs << j.dump(4);
+	ofs.close();
+
+}
+
 // ========================
 // ✅ 从 temp/correctionList.json 读取
 // ========================
@@ -79,6 +99,31 @@ void RobxIO::updateData(QVector<Correction>& list,
 		c.m_isApply = item.at("isApply").get<bool>();
 		list.push_back(c);
 	}
+}
+
+void RobxIO::updateData(QVector<workSpace>& list, const std::string & fileName)
+{
+	std::string fullPath = m_tempDir + "/" + fileName;
+
+	std::ifstream ifs(fullPath);
+	if (!ifs.is_open())
+		return;
+
+	json j;
+	ifs >> j;
+	ifs.close();
+
+	list.clear();
+	for (const auto& item : j)
+	{
+		workSpace ws;
+		ws.robotID = item.at("robotID").get<ULONG>();
+		ws.thickness = item.at("thickness").get<double>();
+		ws.theta = item.at("theta").get<double>();
+		ws.points = item.at("points").get<std::vector<double>>();
+		list.push_back(ws);
+	}
+
 }
 
 
@@ -282,3 +327,4 @@ void readRobx(const std::wstring& robxName, const std::string targetPath) {
 	archive_read_close(a);
 	archive_read_free(a);
 }
+
