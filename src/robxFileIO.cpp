@@ -5,7 +5,8 @@
 #include <qmessagebox.h>
 #include <archive.h>
 #include <archive_entry.h>
-#include <iostream>
+#include<iostream>
+#include<Windows.h>
 using json = nlohmann::json;
 
 RobxIO::RobxIO()
@@ -16,7 +17,7 @@ RobxIO::RobxIO()
 
 RobxIO::~RobxIO()
 {
-	// 不自动写回，避免误覆盖
+	
 }
 
 // ========================
@@ -296,8 +297,13 @@ void addDirToArchive(struct archive* a, const fs::path& dirPath, const fs::path&
 
 std::wstring to_wide_string(const std::string& input)
 {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-	return converter.from_bytes(input);
+    if (input.empty())
+        return std::wstring();
+
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, input.data(), static_cast<int>(input.size()), nullptr, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, input.data(), static_cast<int>(input.size()), &wstrTo[0], size_needed);
+    return wstrTo;
 }
 // 主函数：写 .robx
 void writeRobx(const std::wstring& outname, const std::vector<std::string>& dirList) {

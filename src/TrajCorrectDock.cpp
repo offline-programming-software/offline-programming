@@ -60,14 +60,16 @@ TrajCorrectDock::TrajCorrectDock(
 	setWidget(contentForScroll);
 	//setWidget(contentWidget);
 	InitLists();
+	connect(ui->btnNewCorrection, SIGNAL(clicked()), this, SLOT(on_btnNewCorrection_clicked()));
+
 	setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
 	setAllowedAreas(Qt::AllDockWidgetAreas);
 	connect(pickBox, &pickWidget::blankAreaClicked, this, &TrajCorrectDock::on_pickBox_blankAreaClicked);
 	connect(pickBox, &pickWidget::deleteSignal, this, &TrajCorrectDock::testSignal);
 	connect(pickBox, &pickWidget::clearSignal, this, &TrajCorrectDock::on_pickBox_clear);
+	
 
 	connect(this, &TrajCorrectDock::blankAreaClicked, this, &TrajCorrectDock::on_this_blankAreaClicked);
-	connect(ui->btnNewCorrection, SIGNAL(clicked()), this, SLOT(on_btnNewCorrection_clicked()));
 	connect(ui->btnDeleteCorrection, SIGNAL(clicked()), this, SLOT(on_btnDeleteCorrection_clicked()));
 	connect(xMinspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
 	connect(xMaxspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
@@ -85,10 +87,7 @@ TrajCorrectDock::TrajCorrectDock(
 	
 	connect(ui->btnAttributeSetOK, &QPushButton::clicked, this,&TrajCorrectDock::on_btnAttributeSetOK_clicked);
 	connect(ui->btnFlagPointsImport, &QPushButton::clicked, this, &TrajCorrectDock::onImportFlagPointsClicked);
-	connect(ui->btnMeasurePtsInport, &QPushButton::clicked, this, &TrajCorrectDock::onImportMeasurePointsClicked);
-	connect(ui->btnFlagPointsExport, &QPushButton::clicked, this, &TrajCorrectDock::onExportFlagPointsClicked);
 	connect(ui->btnMeasurePtsExport, &QPushButton::clicked, this, &TrajCorrectDock::onExportMeasurePointsClicked);
-	connect(ui->chkAllCorrect, &QCheckBox::clicked, this, &TrajCorrectDock::onChkAllCorrectClicked);
 	pickBox->setStyleSheet("border: 1px solid black");
 	connect(ui->listCorrections, &QListWidget::itemClicked, this, &TrajCorrectDock::on_listCorrection_slectedItem);
 	connect(ui->comboCorType, SIGNAL(currentIndexChanged(int)), this, SLOT(onComboBoxIndexChanged(int)));
@@ -373,20 +372,32 @@ void TrajCorrectDock::on_this_blankAreaClicked()
 
 void TrajCorrectDock::on_btnNewCorrection_clicked()
 {
-	m_correctCounter++;
-	QString name = QString("correct%1").arg(m_correctCounter);
-	m_correction.push_back(new Correction());
-	
-	//ui->listCorrections->addItem(name);//不好，换为更新比较好
-	ui->listCorrections->clear();
-	for (size_t i = 0; i < m_correctCounter; i++)
-	{
-		QListWidgetItem* item = new QListWidgetItem(m_correction[i]->name());
-		item->setForeground(Qt::black);   // 设置字体颜色为灰色
-		item->setBackground(Qt::white);       // 设置背景为白色
-		ui->listCorrections->addItem(item);   // 添加到列表中
-		
+	QListWidgetItem* item = new QListWidgetItem(ui->listCorrections);
+	ui->btnNewCorrection->setEnabled(false);
+	QString itemName = QString::fromLocal8Bit("新建修正对象");
+	for (QListWidgetItem* it : m_correctionItems) {
+		const int suffix = 1;
+		if (itemName == it->text()) {
+			itemName = QString::fromLocal8Bit("新建修正对象%1").arg(suffix);
+		}
 	}
+	item->setText(itemName);
+	ui->groupBox_2->setEnabled(true);	
+	
+
+
+	//m_correctCounter++;
+	//QString name = QString("correct%1").arg(m_correctCounter);
+	//m_correction.push_back(new Correction());
+	//	ui->listCorrections->clear();
+	//for (size_t i = 0; i < m_correctCounter; i++)
+	//{
+	//	QListWidgetItem* item = new QListWidgetItem(m_correction[i]->name());
+	//	item->setForeground(Qt::black);   // 设置字体颜色为灰色
+	//	item->setBackground(Qt::white);       // 设置背景为白色
+	//	ui->listCorrections->addItem(item);   // 添加到列表中
+	//	
+	//}
 }
 
 void TrajCorrectDock::on_btnDeleteCorrection_clicked()
@@ -406,58 +417,45 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 {
 
 	QMessageBox::StandardButton reply;
-	reply = QMessageBox::question(this,                         // 父窗口
-		QStringLiteral("提示"),                       // 标题
-		QStringLiteral("保存当前属性至修正对象：%1 ？").arg(ui->editCorName->text()),   // 正文内容
-		QMessageBox::Yes | QMessageBox::No, // 按钮
-		QMessageBox::No);             // 默认选中 No
+	reply = QMessageBox::question(this,
+		QStringLiteral("提示"),
+		QStringLiteral("保存当前属性至修正对象：%1 ？").arg(ui->editCorName->text()),
+		QMessageBox::Yes | QMessageBox::No,
+		QMessageBox::No);
 
-	if (reply == QMessageBox::Yes) {
-		QString myName = ui->editCorName->text();
-		Correction::interpolationType myType;
-		if (ui->comboCorType->currentIndex() == 0)
-		{
-			myType = Correction::interpolationType::Liner;
-		}
-		else if (ui->comboCorType->currentIndex() == 1)
-		{
-			myType = Correction::interpolationType::Poly;
-		}
-		else
-		{
-			myType = Correction::interpolationType::Other;
-		}
-		double my_range[6];
-		bool my_isPosCor;
-		if (ui->chkIsPosCorrect->isChecked())
-			my_isPosCor = true;
-		else
-			my_isPosCor = false;
-		for (size_t i = 0; i < 6; i++)
-		{
-			my_range[i] = spinBoxes[i]->value();
-		}
-
-		GetPoints2Correct(my_range);
-
-		int myRow = ui->listCorrections->currentRow();
-		Correction *myCor = m_correction[myRow];
-		bool myIsApply = ui->chkApplyCor->isChecked();
-
-		myCor->setName(myName);
-		myCor->setType(myType);
-		myCor->setIsPosCorrect(my_isPosCor);
-		myCor->setRange(my_range);
-		myCor->setFlagPoints(m_vFlagPoints);
-		myCor->set_m_v2dTrajPointsToCorrect(m_v2dPointsToCorrect);
-		myCor->setIsApply(myIsApply);
-		qDebug() << "auto connected!";
-		QListWidgetItem *myItem = ui->listCorrections->currentItem();
-		myItem->setText(ui->editCorName->text());
-	}
-	else {
+	if (reply == QMessageBox::No)
+	{
 		return;
 	}
+
+	QString myName = ui->editCorName->text();
+	double my_range[6];
+	bool my_isPosCor;
+	if (ui->chkIsPosCorrect->isChecked())
+		my_isPosCor = true;
+	else
+		my_isPosCor = false;
+	for (size_t i = 0; i < 6; i++)
+	{
+		my_range[i] = spinBoxes[i]->value();
+	}
+
+	GetPoints2Correct(my_range);
+
+	int myRow = ui->listCorrections->currentRow();
+	Correction *myCor = m_correction[myRow];
+	bool myIsApply = ui->chkApplyCor->isChecked();
+
+	myCor->setName(myName);
+	myCor->setIsPosCorrect(my_isPosCor);
+	myCor->setRange(my_range);
+	myCor->setFlagPoints(m_vFlagPoints);
+	myCor->set_m_v2dTrajPointsToCorrect(m_v2dPointsToCorrect);
+	myCor->setIsApply(myIsApply);
+	qDebug() << "auto connected!";
+	QListWidgetItem *myItem = ui->listCorrections->currentItem();
+	myItem->setText(ui->editCorName->text());
+
 	
 }
 
@@ -524,7 +522,7 @@ void TrajCorrectDock::onImportFlagPointsClicked()
 		}
 }
 
-void TrajCorrectDock::onImportMeasurePointsClicked()
+void TrajCorrectDock::on_btnMeasurePtsInport_clicked()
 {
 	QString fileName = QFileDialog::getOpenFileName(
 		this,
@@ -546,7 +544,7 @@ void TrajCorrectDock::onImportMeasurePointsClicked()
 	}
 }
 
-void TrajCorrectDock::onExportFlagPointsClicked()
+void TrajCorrectDock::on_btnFlagPointsExport_clicked()
 {
 	QString fileName = QFileDialog::getSaveFileName(
 		this,
@@ -587,28 +585,7 @@ void TrajCorrectDock::onComboBoxIndexChanged(int index)
 	ui->stackedWidget->setCurrentIndex(index);
 }
 
-void TrajCorrectDock::onChkAllCorrectClicked()
-{
-	bool my_isChecked = ui->chkAllCorrect->isChecked();
-	if (my_isChecked)
-	{
-		for (int i = 0; i < 6; i++) {
-			spinBoxes[i]->setEnabled(false);
-			spinBoxes[i]->setStyleSheet("QSpinBox {"
-				"  background-color: lightgray;"     // 浅灰色背景
-				"}");
-		}
-	}
-	else
-	{
-		for (int i = 0; i < 6; i++) {
-			spinBoxes[i]->setEnabled(true);
-			spinBoxes[i]->setStyleSheet("QSpinBox {"
-				"  background-color: white;"     // 浅灰色背景
-				"}");
-		}
-	}
-}
+
 
 void TrajCorrectDock::text()
 {
@@ -906,7 +883,7 @@ void TrajCorrectDock::GetAllPathID()    //得到所有轨迹点ID
 	BSTR trajIDs;
 	
 	m_ptrKit->pq_GetAllDataObjectsByType(PQ_PATH, &trajNames, &trajIDs);
-	std::string sNames = (_bstr_t)trajNames;
+	std::string sNames = (const char*)trajNames;
 	std::stringstream ss(sNames);
 	std::string item;
 	unsigned long id;
@@ -916,7 +893,7 @@ void TrajCorrectDock::GetAllPathID()    //得到所有轨迹点ID
 			m_vAllPathNames.push_back(item);
 		}
 	}
-	std::string sIDs = (_bstr_t)trajIDs;
+	std::string sIDs = (const char*)trajIDs;
 	ss.clear();
 	ss.str(sIDs);
 	m_vAllPathIDs.clear();

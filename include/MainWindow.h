@@ -40,6 +40,7 @@
 #include "boundBox.h"
 #include "robxFileIO.h"
 #include "TrajCorrectDock.h"
+#include"BendingCorrectDock.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

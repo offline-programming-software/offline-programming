@@ -71,8 +71,8 @@ void effectiveness_analysis::chart_init()
 	chart->addSeries(series);
 
 	//将散点的图表放在自定义坐标中
-	chart->setAxisX(axisX, series);
-	chart->setAxisY(axisY, series);
+	//chart->setAxisX(axisX, series);
+	//chart->setAxisY(axisY, series);
 
 	//将图表加入画布中
 	ui->graphicsView->setChart(chart);

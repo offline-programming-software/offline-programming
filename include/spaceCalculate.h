@@ -162,7 +162,7 @@ private:
 	std::shared_ptr<LocalCoordinateSystem> m_localCoordSystem;
 	
 	//将方向向量转化为四元数
-	std::vector<double> Workspace::directionVectorToQuaternion(const std::vector<double>& direction);
+	std::vector<double> directionVectorToQuaternion(const std::vector<double>& direction);
 
 	// 可达性检测方法
 	bool isPointReachable(ULONG robotID, const spacePoint& point,

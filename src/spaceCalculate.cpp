@@ -2,7 +2,8 @@
 #include <random>
 #include <functional>
 #include <memory>
-
+#include <cmath>
+#include <qmath.h>
 // 随机数生成
 double getRandomDouble(double min, double max) {
 	static std::random_device rd;

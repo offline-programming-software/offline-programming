@@ -43,13 +43,16 @@ public:
 signals:
 	void blankAreaClicked();
 private:
-	Ui::DockContent *ui;
 	
+    Ui::DockContent *ui;
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback *m_ptrKitCallback2;
-	pickWidget *pickBox;
+	RobxIO* m_io;
+
+	/*-----------------------控件-----------------------------*/
+	pickWidget *pickBox;    //拾取点
 	PickSpinBox *xMinspin;
-	PickSpinBox *xMaxspin;
+	PickSpinBox* xMaxspin;
 	PickSpinBox *yMinspin;
 	PickSpinBox *yMaxspin;
 	PickSpinBox *zMinspin;
@@ -57,27 +60,29 @@ private:
 	QVector<PickSpinBox*> spinBoxes;
 	PickSource m_pickSource = PickSource::None;
 	DrawSource m_drawSource = DrawSource::None;
-	RobxIO *m_io;
 	int pointCount = 0;
 	int rangeBoxIndex;
+	int m_correctCounter = 0;
+	/*-------------------------成员变量--------------------------------*/
+	
 	std::vector<Correction*> m_correction;
 	QVector<Correction> m_correctionList;
-	int m_correctCounter = 0;
-	double rangeSamp[6] = { 1,5,1,5,1,5 };
-	
-	std::vector<unsigned long> m_vAllPathIDs;
+	QVector<QListWidgetItem*> m_correctionItems;
+	std::vector<double> m_vFlagPoints;
+	std::vector<double> m_vMeasurePoints;
+
+	std::vector<unsigned long> m_vAllPathIDs;      
 	std::vector<std::string> m_vAllPathNames;
 	std::vector<unsigned long>m_vAllPointIDs;
 	std::vector<std::vector<double>> m_v2dAllPointsPositions;
 	std::vector<std::vector<double>> m_v2dPointsToCorrect;
 	std::vector<unsigned long> m_vPointsToCorrectID;
-
 	std::map<unsigned long, std::vector<unsigned long>> m_mapAllPointIDs;
 	std::map<unsigned long, std::vector<std::vector<double>>> m_mapAllPointPositions;
 	std::map<unsigned long, std::vector<std::vector<double>>> m_mapPointsToCorrect;
-	std::vector<double> m_vFlagPoints;
-	std::vector<double> m_vMeasurePoints;
+	
 
+		/*-------------------------成员方法----------------------------*/
 
 	void importCsvPoints(const QString& filePath);
 	void importCsvPointsMeasure(const QString& filePath);
@@ -85,21 +90,21 @@ private:
 	void exportCsvMeasurePoints(const QString& filePath);
 	void getTrajPoints(double range[6], std::vector<std::vector<double>>& trajPointsToCorrect);
 
-	//----------初始化函数------------------
+	/*-------------------------初始化函数----------------------------*/
 	void initDock();
 	void InitLists();
 	void initPointLists();
 	void initGroupBox_AttributeDefine(QListWidgetItem *item);
 	void InitCustomWidget();
 	
-	//---------------pq工具函数-----------------------
+	/*-------------------------pq工具函数----------------------------*/
 	void getObjIdByName(PQDataType i_datatype, std::wstring i_wsName, ULONG & o_uID);
 	void GetAllPathID();    //读取robx中所有轨迹ID, 名称, 
 	void GetPointInfo();    //读取robx中所有轨迹点ID, 位姿
 	void GetPoints2Correct(double range[6]);    //读取robx中作用域范围内的轨迹点ID, 位姿
 	void GetParentPath();
 	void modifyPointsPoses(const std::vector<unsigned long>& CorrectPointID, const std::vector<std::vector<double>>& newPoints);
-	//---------------------------------------
+
 public slots:
 	void testSlot();
 	void testSignal(int num);
@@ -113,11 +118,10 @@ public slots:
 	void on_pickBox_delet();
 	void on_pickBox_clear();
 	void onImportFlagPointsClicked();
-	void onImportMeasurePointsClicked();
-	void onExportFlagPointsClicked();
+	void on_btnMeasurePtsInport_clicked();
+	void on_btnFlagPointsExport_clicked();
 	void onExportMeasurePointsClicked();
 	void onComboBoxIndexChanged(int index);
-	void onChkAllCorrectClicked();
 	void text();
 	void pickRange();
 	void onPickSpinBoxValueChanged(int a);
@@ -126,7 +130,8 @@ public slots:
 	void OnElementSelection(LPWSTR i_wObjNames, LPWSTR i_wFaceNames, double* i_dPointXYZ, int i_nSize);
 	void OnDraw();
 	void on_btnTest_2_clicked();
-	//------------testSlots----------------
+
+	/*-------------------------测试槽----------------------------*/
 	void on_btnTest_clicked();
 	void on_chkApplyCor_toggled(bool checked);
 protected:

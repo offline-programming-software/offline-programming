@@ -7,6 +7,8 @@
 #include <QWindow>
 #include <QChart>
 #include <string>
+#include"robxFileIO.h"
+
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 {
@@ -1128,15 +1130,15 @@ void MainWindow::on_define_space()
 		spaceDialog->setRobotOptions(name);
 	}
 
-	//根据文件名称读取配置文件
-	//待完成
+	////根据文件名称读取配置文件
+	////待完成
 
 	//实现计算θ和xyz的关系
 	spacePoint center(0, 0, 0);
 	spacePoint size(0, 0, 0);
 
-	Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
-	spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotMap.firstKey());
+	//Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
+	//spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotMap.firstKey());
 
 
 	QString name = robotNames[0];
@@ -1601,9 +1603,18 @@ void MainWindow::on_AGV_path()
 
 void MainWindow::on_trajCorrectdock_open()
 {
-	TrajCorrectDock *dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback);
+
+	//BSTR sName = nullptr;
+	//HRESULT hr = m_ptrKit->Doc_get_name(&sName);
+	//if (SUCCEEDED(hr) && sName && wcscmp(sName, L"设计") == 0) {
+	//	QMessageBox::information(this, "提示", "当前没有打开robx工程文件，无法使用该功能！");
+	//	SysFreeString(sName);  // 记得释放（一般 COM 返回的 BSTR 需要你释放）
+	//	return;
+	//}
+	//SysFreeString(sName);
+	TrajCorrectDock* dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback);
 	addDockWidget(Qt::LeftDockWidgetArea, dock);
-	dock->show();
+
 }
 
 void MainWindow::on_effectiveness_analysis()
