@@ -15,6 +15,18 @@ public:
 	addRobotSpace(QWidget *parent = nullptr);
 	~addRobotSpace();
 
+	void setRobotName(const QString &robotName);
+	void setCoordinate(const QStringList &coordList);
+	void setRail(const QStringList &railList);
+
+private slots:
+	void onLinkRail(int state);
+	void onCancelButtonClicked();
+	void onCalculateButtonClicked();  // 添加计算按钮的槽函数
+
+signals:
+	void calculateRequested();  // 添加计算信号声明
+
 private:
 	Ui::addRobotSpaceClass *ui;
 };

@@ -1,0 +1,737 @@
+#include "spaceCalculate.h"
+#include <random>
+#include <functional>
+#include <memory>
+
+// 随机数生成
+double getRandomDouble(double min, double max) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	std::uniform_real_distribution<double> dis(min, max);
+	return dis(gen);
+}
+
+// 基于局部坐标系的拓展方法
+Workspace Workspace::expand(const std::string& direction, double step) const {
+	spacePoint newCenter = m_center;
+	spacePoint newSize = m_size;
+
+	// 获取世界坐标系下的拓展方向
+	spacePoint worldDir = m_localCoordSystem->getWorldDirection(direction);
+
+	// 计算新的中心点和尺寸
+	if (direction == "x+" || direction == "x-") {
+		newCenter.x += worldDir.x * step / 2;
+		newCenter.y += worldDir.y * step / 2;
+		newCenter.z += worldDir.z * step / 2;
+		newSize.x += step;
+	}
+	else if (direction == "y+" || direction == "y-") {
+		newCenter.x += worldDir.x * step / 2;
+		newCenter.y += worldDir.y * step / 2;
+		newCenter.z += worldDir.z * step / 2;
+		newSize.y += step;
+	}
+	else if (direction == "z+" || direction == "z-") {
+		newCenter.x += worldDir.x * step / 2;
+		newCenter.y += worldDir.y * step / 2;
+		newCenter.z += worldDir.z * step / 2;
+		newSize.z += step;
+	}
+
+	return Workspace(newCenter, newSize, m_ptrKit, m_ptrKitCallback);
+}
+
+// 基于指定局部坐标系的拓展方法
+Workspace Workspace::expandInLocalCoord(const std::string& direction, double step,
+	const std::vector<double>& localDirection) const {
+	// 创建临时局部坐标系
+	LocalCoordinateSystem tempCoordSystem(m_center, localDirection);
+
+	spacePoint newCenter = m_center;
+	spacePoint newSize = m_size;
+
+	// 获取世界坐标系下的拓展方向
+	spacePoint worldDir = tempCoordSystem.getWorldDirection(direction);
+
+	// 计算新的中心点和尺寸
+	if (direction == "x+" || direction == "x-") {
+		newCenter.x += worldDir.x * step / 2;
+		newCenter.y += worldDir.y * step / 2;
+		newCenter.z += worldDir.z * step / 2;
+		newSize.x += step;
+	}
+	else if (direction == "y+" || direction == "y-") {
+		newCenter.x += worldDir.x * step / 2;
+		newCenter.y += worldDir.y * step / 2;
+		newCenter.z += worldDir.z * step / 2;
+		newSize.y += step;
+	}
+	else if (direction == "z+" || direction == "z-") {
+		newCenter.x += worldDir.x * step / 2;
+		newCenter.y += worldDir.y * step / 2;
+		newCenter.z += worldDir.z * step / 2;
+		newSize.z += step;
+	}
+
+	return Workspace(newCenter, newSize, m_ptrKit, m_ptrKitCallback);
+}
+
+// 修改获取面点的方法，基于局部坐标系
+std::vector<spacePoint> Workspace::getFacePoints(const std::string& direction, int n) const {
+	std::vector<spacePoint> points;
+	if (n < 2) n = 2;
+
+	double dx = m_size.x / 2;
+	double dy = m_size.y / 2;
+	double dz = m_size.z / 2;
+
+	// 获取世界坐标系下的方向
+	spacePoint worldDir = m_localCoordSystem->getWorldDirection(direction);
+
+	// 计算面的法向量和生成点
+	if (direction == "x+" || direction == "x-") {
+		// 使用局部坐标系的Y和Z轴来生成面
+		spacePoint yAxis = m_localCoordSystem->getWorldDirection("y+");
+		spacePoint zAxis = m_localCoordSystem->getWorldDirection("z+");
+
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j < n; ++j) {
+				double yParam = -1.0 + 2.0 * i / (n - 1);
+				double zParam = -1.0 + 2.0 * j / (n - 1);
+
+				spacePoint facePoint = m_center;
+				facePoint = facePoint + worldDir * dx; // X方向的面
+				facePoint = facePoint + yAxis * (yParam * dy);
+				facePoint = facePoint + zAxis * (zParam * dz);
+
+				points.push_back(facePoint);
+			}
+		}
+	}
+	else if (direction == "y+" || direction == "y-") {
+		// 使用局部坐标系的X和Z轴来生成面
+		spacePoint xAxis = m_localCoordSystem->getWorldDirection("x+");
+		spacePoint zAxis = m_localCoordSystem->getWorldDirection("z+");
+
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j < n; ++j) {
+				double xParam = -1.0 + 2.0 * i / (n - 1);
+				double zParam = -1.0 + 2.0 * j / (n - 1);
+
+				spacePoint facePoint = m_center;
+				facePoint = facePoint + worldDir * dy; // Y方向的面
+				facePoint = facePoint + xAxis * (xParam * dx);
+				facePoint = facePoint + zAxis * (zParam * dz);
+
+				points.push_back(facePoint);
+			}
+		}
+	}
+	else if (direction == "z+" || direction == "z-") {
+		// 使用局部坐标系的X和Y轴来生成面
+		spacePoint xAxis = m_localCoordSystem->getWorldDirection("x+");
+		spacePoint yAxis = m_localCoordSystem->getWorldDirection("y+");
+
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j < n; ++j) {
+				double xParam = -1.0 + 2.0 * i / (n - 1);
+				double yParam = -1.0 + 2.0 * j / (n - 1);
+
+				spacePoint facePoint = m_center;
+				facePoint = facePoint + worldDir * dz; // Z方向的面
+				facePoint = facePoint + xAxis * (xParam * dx);
+				facePoint = facePoint + yAxis * (yParam * dy);
+
+				points.push_back(facePoint);
+			}
+		}
+	}
+
+	return points;
+}
+
+// 其他方法保持不变（但可以基于新的坐标系进行优化）
+bool Workspace::contains(const spacePoint& point) const {
+	// 将点转换到局部坐标系
+	spacePoint localPoint = m_localCoordSystem->worldToLocal(point);
+	spacePoint localCenter = m_localCoordSystem->worldToLocal(m_center);
+
+	double dx = m_size.x / 2;
+	double dy = m_size.y / 2;
+	double dz = m_size.z / 2;
+
+	return (localPoint.x >= localCenter.x - dx) && (localPoint.x <= localCenter.x + dx) &&
+		(localPoint.y >= localCenter.y - dy) && (localPoint.y <= localCenter.y + dy) &&
+		(localPoint.z >= localCenter.z - dz) && (localPoint.z <= localCenter.z + dz);
+}
+
+std::vector<spacePoint> Workspace::calculateExpandableWorkspace(ULONG robotID, const spacePoint & center,
+	double initialStepSize, double thickness,double theta,
+	const std::vector<double>& direction, int samplePointsPerFace, double minStepSize)
+{
+	std::vector<spacePoint> cornerPoints;
+
+	// 初始化当前工作空间尺寸（小正方体）
+	spacePoint currentSize(initialStepSize, initialStepSize, thickness);
+	spacePoint currentCenter = center;
+
+	// 六个方向的扩展步长
+	std::map<std::string, double> stepSizes = {
+		{"x+", initialStepSize}, {"x-", initialStepSize},
+		{"y+", initialStepSize}, {"y-", initialStepSize},
+		{"z+", 0}, {"z-", 0}
+	};
+
+	// 六个方向的扩展距离
+	std::map<std::string, double> expandDistances = {
+		{"x+", 0}, {"x-", 0},
+		{"y+", 0}, {"y-", 0},
+		{"z+", 0}, {"z-", 0}
+	};
+
+	// 创建临时局部坐标系
+	LocalCoordinateSystem tempCoordSystem(center, direction);
+
+	bool anyDirectionExpanding = true;
+	int maxIterations = 100; // 防止无限循环
+	int iteration = 0;
+
+	while (anyDirectionExpanding && iteration < maxIterations) {
+		iteration++;
+		anyDirectionExpanding = false;
+
+		// 四个扩展方向
+		std::vector<std::string> directions = { "x+", "x-", "y+", "y-"};
+
+		for (const auto& dir : directions) {
+			double currentStep = stepSizes[dir];
+
+			// 如果步长已经小于最小值，跳过该方向
+			if (currentStep < minStepSize) {
+				continue;
+			}
+
+			// 检查当前方向的面上的所有采样点是否可达
+			bool allPointsReachable = checkFacePointsReachability(robotID, currentCenter,
+				currentSize, theta, dir,
+				samplePointsPerFace,
+				direction, tempCoordSystem);
+
+			if (allPointsReachable) {
+				// 所有点可达，进行扩展
+				expandDistances[dir] += currentStep;
+				anyDirectionExpanding = true;
+				// 下次继续使用当前步长
+				stepSizes[dir] = currentStep;
+			}
+			else {
+				// 有点不可达，步长减半
+				stepSizes[dir] = currentStep / 2.0;
+				// 如果步长仍然大于最小值，继续尝试
+				if (stepSizes[dir] >= minStepSize) {
+					anyDirectionExpanding = true;
+				}
+			}
+		}
+
+		// 更新当前工作空间尺寸和中心点
+		updateWorkspaceSizeAndCenter(currentCenter, currentSize, expandDistances, tempCoordSystem);
+	}
+
+	// 计算八个角点
+	cornerPoints = calculateCornerPoints(currentCenter, currentSize, tempCoordSystem);
+
+	return cornerPoints;
+}
+
+spacePoint Workspace::calculateRobotWorkspaceCenter(ULONG robotID) {
+	std::vector<spacePoint> reachablePoints;
+	const int NUM_SAMPLES = 10000;
+
+	// 获取关节限制
+	int jointCount = 0;
+	double* jointLimitsArray = nullptr;
+	HRESULT hr = m_ptrKit->Doc_get_obj_links(robotID, &jointCount, &jointLimitsArray);
+
+	if (FAILED(hr) || jointCount == 0 || jointLimitsArray == nullptr) {
+		return spacePoint(0, 0, 0);
+	}
+
+	int actualJointCount = jointCount / 2;
+	std::vector<std::pair<double, double>> jointLimits(actualJointCount);
+
+	for (int i = 0; i < actualJointCount; ++i) {
+		jointLimits[i] = { jointLimitsArray[2 * i], jointLimitsArray[2 * i + 1] };
+	}
+	m_ptrKit->PQAPIFreeArray((LONG_PTR*)jointLimitsArray);
+
+	// 获取基坐标系
+	ULONG baseCoordinateID = 0;
+	m_ptrKit->Robot_get_base_coordinate(robotID, &baseCoordinateID);
+
+	// 蒙特卡洛采样
+	for (int i = 0; i < NUM_SAMPLES; ++i) {
+		std::vector<double> jointAngles(actualJointCount);
+
+		// 生成随机关节角度
+		for (int j = 0; j < actualJointCount; ++j) {
+			double range = jointLimits[j].second - jointLimits[j].first;
+			jointAngles[j] = jointLimits[j].first + getRandomDouble(0, 1) * range;
+			jointAngles[j] *= M_PI / 180.0; // 度转弧度
+		}
+
+		// 正向运动学
+		int postureSize = 0;
+		double* posture = nullptr;
+
+		hr = m_ptrKit->Robot_get_forward_kinematics(robotID, jointAngles.data(), actualJointCount,
+			QUATERNION, baseCoordinateID, 1, &postureSize, &posture);
+
+		if (SUCCEEDED(hr) && posture != nullptr && postureSize >= 3) {
+			reachablePoints.push_back(spacePoint(posture[0], posture[1], posture[2]));
+		}
+
+		if (posture != nullptr) {
+			m_ptrKit->PQAPIFreeArray((LONG_PTR*)posture);
+		}
+	}
+
+	if (reachablePoints.empty()) {
+		return spacePoint(0, 0, 0);
+	}
+
+	// 计算边界框
+	spacePoint minPoint = reachablePoints[0];
+	spacePoint maxPoint = reachablePoints[0];
+
+	for (const auto& point : reachablePoints) {
+		minPoint.x = std::min(minPoint.x, point.x);
+		minPoint.y = std::min(minPoint.y, point.y);
+		minPoint.z = std::min(minPoint.z, point.z);
+		maxPoint.x = std::max(maxPoint.x, point.x);
+		maxPoint.y = std::max(maxPoint.y, point.y);
+		maxPoint.z = std::max(maxPoint.z, point.z);
+	}
+
+	// 计算中心点
+	return spacePoint((maxPoint.x) / 2.0,
+		(minPoint.y + maxPoint.y) / 2.0,
+		(minPoint.z + maxPoint.z) / 2.0);
+}
+
+bool Workspace::isPointReachable(ULONG robotID, const spacePoint& point,
+	const std::vector<double>& direction, bool enforceOrientation) {
+	try {
+		double endPosture[6] = { point.x, point.y, point.z, 0.0, 0.0, 0.0 };
+
+		if (enforceOrientation && direction.size() >= 3) {
+			double norm = sqrt(direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2]);
+			endPosture[3] = direction[0] / norm; // Roll
+			endPosture[4] = direction[1] / norm; // Pitch
+			endPosture[5] = direction[2] / norm; // Yaw
+		}
+
+		double jointValues[6] = { 0 };
+		ulong jointCount = 0;
+		m_ptrKit->Robot_get_tool(robotID, &jointCount);
+		struct_PQ6RConfig axisConfig = { PQ_INVERSE_FRONT, PQ_INVERSE_UP, PQ_INVERSE_NOFLIP,
+									   PQ_INVERSE_CONTINUATION, PQ_INVERSE_CONTINUATION, PQ_INVERSE_CONTINUATION };
+		PQPathPtState pointStatus = PQ_PPS_BE_REACH;
+		BOOL useToolPosture = FALSE;
+
+		BOOL success = m_ptrKit->PQAPIInverseKinematics(
+			robotID, endPosture, 6, EULERANGLEXYZ,
+			jointValues, jointCount, axisConfig, &pointStatus, useToolPosture);
+
+		return (success == TRUE);
+	}
+	catch (...) {
+		return false;
+	}
+}
+
+
+std::vector<double> Workspace::rodriguesRotate(
+	const std::vector<double>& v,      // 待旋转向量
+	const std::vector<double>& k,      // 旋转轴（单位向量）
+	double theta)                      // 旋转角度（弧度）
+{
+	double cosTheta = std::cos(theta);
+	double sinTheta = std::sin(theta);
+
+	// 旋转轴归一化
+	double kNorm = std::sqrt(k[0] * k[0] + k[1] * k[1] + k[2] * k[2]);
+	std::vector<double> axis = { k[0] / kNorm, k[1] / kNorm, k[2] / kNorm };
+
+	// 计算叉积和点积
+	std::vector<double> cross = {
+		axis[1] * v[2] - axis[2] * v[1],
+		axis[2] * v[0] - axis[0] * v[2],
+		axis[0] * v[1] - axis[1] * v[0]
+	};
+	double dot = axis[0] * v[0] + axis[1] * v[1] + axis[2] * v[2];
+
+	// 应用罗德里格斯公式
+	return {
+		v[0] * cosTheta + cross[0] * sinTheta + axis[0] * dot*(1 - cosTheta),
+		v[1] * cosTheta + cross[1] * sinTheta + axis[1] * dot*(1 - cosTheta),
+		v[2] * cosTheta + cross[2] * sinTheta + axis[2] * dot*(1 - cosTheta)
+	};
+}
+
+std::vector<std::vector<double>> Workspace::generateUniformGeneratrix(
+	const std::vector<double>& coneAxis,
+	double coneAngle)
+{
+	// 归一化圆锥轴
+	double axisNorm = std::sqrt(coneAxis[0] * coneAxis[0] + coneAxis[1] * coneAxis[1] + coneAxis[2] * coneAxis[2]);
+	if (axisNorm < 1e-9) return {}; // 无效轴向量
+
+	std::vector<double> axis = { coneAxis[0] / axisNorm, coneAxis[1] / axisNorm, coneAxis[2] / axisNorm };
+
+	// 生成8个均匀分布的方位角（0°, 45°, ..., 315°）
+	std::vector<double> azimuths;
+	for (int i = 0; i < 8; ++i) {
+		azimuths.push_back(2 * M_PI * i / 8);
+	}
+
+	std::vector<std::vector<double>> generatrices;
+	for (double azimuth : azimuths) {
+		// 生成局部坐标系下的母线方向（极角θ=coneAngle, φ=azimuth）
+		double theta = coneAngle;  // 圆锥半角
+		double phi = azimuth;      // 方位角
+
+		// 球坐标转局部笛卡尔坐标（默认Z轴为圆锥轴）
+		double x = std::sin(theta) * std::cos(phi);
+		double y = std::sin(theta) * std::sin(phi);
+		double z = std::cos(theta);
+		std::vector<double> localDir = { x, y, z };
+
+		// 将局部方向旋转到全局圆锥轴方向
+		std::vector<double> globalDir = rodriguesRotate(localDir, axis, M_PI / 2); // 旋转90°使局部Z轴对齐全局coneAxis
+
+		generatrices.push_back(globalDir);
+	}
+
+	return generatrices;
+}
+
+bool Workspace::isPointReachableWithConeConstraint(
+	ULONG robotID,
+	const spacePoint& point,
+	const std::vector<double>& coneAxis,
+	double coneAngle,
+	int numSamples)
+{
+	// 退化情况处理
+	if (coneAxis.size() < 3 || coneAngle <= 0) {
+		return isPointReachable(robotID, point, std::vector<double>(), false);
+	}
+
+	// 生成八条均匀母线方向
+	std::vector<std::vector<double>> generatrices = generateUniformGeneratrix(coneAxis, coneAngle);
+
+	// 验证每条母线方向
+	for (const auto& dir : generatrices) {
+		if (isPointReachable(robotID, point, dir, true)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Workspace::checkFacePointsReachability(ULONG robotID, const spacePoint & center, 
+	const spacePoint & size, double theta, const std::string & direction, int samplePoints, 
+	const std::vector<double>& coneDirection, 
+	const LocalCoordinateSystem & coordSystem)
+{
+	// 获取方向在世界坐标系中的向量
+	spacePoint worldDir = coordSystem.getWorldDirection(direction);
+
+	// 计算面的中心点
+	spacePoint faceCenter = center;
+	double offset = 0;
+
+	if (direction == "x+" || direction == "x-") {
+		offset = size.x / 2;
+		faceCenter = faceCenter + worldDir * offset;
+	}
+	else if (direction == "y+" || direction == "y-") {
+		offset = size.y / 2;
+		faceCenter = faceCenter + worldDir * offset;
+	}
+	else if (direction == "z+" || direction == "z-") {
+		offset = size.z / 2;
+		faceCenter = faceCenter + worldDir * offset;
+	}
+
+	// 在面上均匀采样
+	std::vector<spacePoint> samplePointsOnFace = generateSamplePointsOnFace(faceCenter, size,
+		direction, samplePoints, coordSystem);
+
+	// 检查每个采样点是否可达
+	for (const auto& point : samplePointsOnFace) {
+		bool reachable = false;
+
+		if (coneDirection.size() >= 4) {
+			std::vector<double> coneAxis(coneDirection.begin(), coneDirection.begin() + 3);
+			reachable = isPointReachableWithConeConstraint(robotID, point, coneAxis, theta);
+		}
+		else {
+			reachable = isPointReachable(robotID, point, coneDirection, true);
+		}
+
+		if (!reachable) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+std::vector<spacePoint> Workspace::generateSamplePointsOnFace(const spacePoint & faceCenter, const spacePoint & size,
+	const std::string & direction, int samplePoints, const LocalCoordinateSystem & coordSystem)
+{
+	std::vector<spacePoint> points;
+
+	if (samplePoints < 2) samplePoints = 2;
+
+	double dy = size.y / 2;
+	double dz = size.z / 2;
+	double dx = size.x / 2;
+
+	// 获取面的局部坐标系轴
+	spacePoint uAxis, vAxis;
+
+	if (direction == "x+" || direction == "x-") {
+		uAxis = coordSystem.getWorldDirection("y+");
+		vAxis = coordSystem.getWorldDirection("z+");
+	}
+	else if (direction == "y+" || direction == "y-") {
+		uAxis = coordSystem.getWorldDirection("x+");
+		vAxis = coordSystem.getWorldDirection("z+");
+	}
+	else if (direction == "z+" || direction == "z-") {
+		uAxis = coordSystem.getWorldDirection("x+");
+		vAxis = coordSystem.getWorldDirection("y+");
+	}
+
+	// 生成采样点网格
+	for (int i = 0; i < samplePoints; ++i) {
+		for (int j = 0; j < samplePoints; ++j) {
+			double uParam = -1.0 + 2.0 * i / (samplePoints - 1);
+			double vParam = -1.0 + 2.0 * j / (samplePoints - 1);
+
+			spacePoint samplePoint = faceCenter;
+
+			if (direction == "x+" || direction == "x-") {
+				samplePoint = samplePoint + uAxis * (uParam * dy);
+				samplePoint = samplePoint + vAxis * (vParam * dz);
+			}
+			else if (direction == "y+" || direction == "y-") {
+				samplePoint = samplePoint + uAxis * (uParam * dx);
+				samplePoint = samplePoint + vAxis * (vParam * dz);
+			}
+			else if (direction == "z+" || direction == "z-") {
+				samplePoint = samplePoint + uAxis * (uParam * dx);
+				samplePoint = samplePoint + vAxis * (vParam * dy);
+			}
+
+			points.push_back(samplePoint);
+		}
+	}
+
+	return points;
+}
+
+void Workspace::updateWorkspaceSizeAndCenter(spacePoint & center, spacePoint & size, 
+	const std::map<std::string, double>& expandDistances, const LocalCoordinateSystem & coordSystem)
+{
+
+	// 计算新的尺寸
+	double newSizeX = expandDistances.at("x+") + expandDistances.at("x-");
+	double newSizeY = expandDistances.at("y+") + expandDistances.at("y-");
+	double newSizeZ = expandDistances.at("z+") + expandDistances.at("z-");
+
+	// 计算新的中心点偏移
+	spacePoint xpDir = coordSystem.getWorldDirection("x+");
+	spacePoint ypDir = coordSystem.getWorldDirection("y+");
+	spacePoint zpDir = coordSystem.getWorldDirection("z+");
+
+	spacePoint offset;
+	offset = offset + xpDir * (expandDistances.at("x+") - expandDistances.at("x-")) / 2;
+	offset = offset + ypDir * (expandDistances.at("y+") - expandDistances.at("y-")) / 2;
+	offset = offset + zpDir * (expandDistances.at("z+") - expandDistances.at("z-")) / 2;
+
+	// 更新中心点和尺寸
+	center = center + offset;
+	size.x = newSizeX;
+	size.y = newSizeY;
+	size.z = newSizeZ;
+}
+
+std::vector<spacePoint> Workspace::calculateCornerPoints(const spacePoint & center,
+	const spacePoint & size, const LocalCoordinateSystem & coordSystem)
+{
+	std::vector<spacePoint> corners;
+
+	// 获取局部坐标系的轴方向
+	spacePoint xAxis = coordSystem.getWorldDirection("x+");
+	spacePoint yAxis = coordSystem.getWorldDirection("y+");
+	spacePoint zAxis = coordSystem.getWorldDirection("z+");
+
+	double dx = size.x / 2;
+	double dy = size.y / 2;
+	double dz = size.z / 2;
+
+	// 计算八个角点
+	std::vector<double> xSigns = { -1, 1 };
+	std::vector<double> ySigns = { -1, 1 };
+	std::vector<double> zSigns = { -1, 1 };
+
+	for (double xSign : xSigns) {
+		for (double ySign : ySigns) {
+			for (double zSign : zSigns) {
+				spacePoint corner = center;
+				corner = corner + xAxis * (xSign * dx);
+				corner = corner + yAxis * (ySign * dy);
+				corner = corner + zAxis * (zSign * dz);
+				corners.push_back(corner);
+			}
+		}
+	}
+
+	return corners;
+}
+
+std::map<std::pair<double, double>, std::vector<spacePoint>> Workspace::calculateRobotSpaceRange(
+	ULONG robotID,
+	const spacePoint& center,
+	double initialStepSize,
+	double startThick,
+	double endThick,
+	double startTheta,
+	double endTheta,
+	const std::vector<double>& baseDirection,
+	int samplePointsPerFace,
+	double minStepSize)
+{
+	// 参数校验
+	if (startThick > endThick || startTheta > endTheta || baseDirection.size() != 3) {
+		throw std::invalid_argument("Invalid input parameters");
+	}
+
+	// 归一化基础方向向量
+	Eigen::Vector3d direction = Eigen::Map<const Eigen::Vector3d>(baseDirection.data()).normalized();
+
+	std::map<std::pair<double, double>, std::vector<spacePoint>> spaceMap;
+
+	// 遍历厚度参数（步长100）
+	for (double thick = startThick; thick <= endThick; thick += 100) {
+		// 计算角度步长（保持精度）
+		double thetaStep = (endTheta - startTheta) / samplePointsPerFace;
+
+		// 遍历角度参数
+		for (int i = 0; i < samplePointsPerFace; ++i) {
+			double currentTheta = startTheta + i * thetaStep;
+
+			// 计算当前参数下的工作空间
+			std::vector<spacePoint> aabb = calculateExpandableWorkspace(
+				robotID,
+				center,
+				initialStepSize,
+				thick,
+				currentTheta,
+				baseDirection, 
+				samplePointsPerFace,
+				minStepSize
+			);
+
+			// 存储结果（使用规范化参数键）
+			spaceMap[std::make_pair(thick, currentTheta)] = aabb;
+		}
+	}
+
+	return spaceMap;
+}
+
+std::vector<spacePoint> Workspace::RobotWorkspace(const std::map<std::pair<double, double>, std::vector<spacePoint>>& aabbMap, double targetThick, double targetTheta)
+{
+	// 参数有效性检查（C++14兼容）
+	if (aabbMap.empty()) {
+		return {};
+	}
+
+	// 初始化最佳匹配变量
+	std::pair<double, double> bestMatch;
+	double minDistance = std::numeric_limits<double>::max();
+
+	// 使用传统迭代器遍历（C++11/14兼容）
+	for (auto it = aabbMap.begin(); it != aabbMap.end(); ++it) {
+		const auto& key = it->first;      
+		const auto& aabb = it->second;    
+
+		// 计算曼哈顿距离
+		double thickDiff = std::abs(key.first - targetThick);
+		double thetaDiff = std::abs(key.second - targetTheta);
+		double currentDistance = thickDiff + thetaDiff;
+
+		// 更新最佳匹配
+		if (currentDistance < minDistance) {
+			minDistance = currentDistance;
+			bestMatch = key;
+		}
+	}
+
+	// 查找最佳匹配项
+	auto foundIt = aabbMap.find(bestMatch);
+	if (foundIt == aabbMap.end()) {
+		return {};  // 未找到匹配项
+	}
+
+	// 坐标向上取整处理
+	const auto& aabb = foundIt->second;
+	std::vector<spacePoint> roundedAABB;
+	roundedAABB.reserve(aabb.size());  // 预分配内存（C++11特性）
+
+	for (const auto& pt : aabb) {
+		roundedAABB.push_back(spacePoint{
+			std::ceil(pt.x),
+			std::ceil(pt.y),
+			std::ceil(pt.z)
+			});
+	}
+
+	return roundedAABB;
+}
+
+std::vector<double> Workspace::analyzeRobotSpaceCharacteristics(const std::vector<std::array<double, 3>>& robotSpace) {
+	if (robotSpace.empty()) {
+		return std::vector<double>();
+	}
+
+	std::vector<double> characteristics;
+
+	// 计算统计特征
+	double minX = robotSpace[0][0], maxX = robotSpace[0][0];
+	double minY = robotSpace[0][1], maxY = robotSpace[0][1];
+	double minZ = robotSpace[0][2], maxZ = robotSpace[0][2];
+
+	for (const auto& point : robotSpace) {
+		minX = std::min(minX, point[0]);
+		maxX = std::max(maxX, point[0]);
+		minY = std::min(minY, point[1]);
+		maxY = std::max(maxY, point[1]);
+		minZ = std::min(minZ, point[2]);
+		maxZ = std::max(maxZ, point[2]);
+	}
+
+	characteristics.push_back(maxX - minX); // x方向范围
+	characteristics.push_back(maxY - minY); // y方向范围
+	characteristics.push_back(maxZ - minZ); // z方向范围
+	characteristics.push_back((maxX - minX) * (maxY - minY) * (maxZ - minZ)); // 体积估计
+
+	return characteristics;
+}

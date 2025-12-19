@@ -7,8 +7,6 @@
 #include <QWindow>
 #include <QChart>
 #include <string>
-#include"robxFileIO.h"
-#include"TrajCorrectDock.h"
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 {
@@ -258,8 +256,8 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	connect(action62, SIGNAL(triggered()), this, SLOT(on_linkage()));//机器人联动求解
 	connect(action63, SIGNAL(triggered()), this, SLOT(on_animation()));//输出视频到本地
 	connect(action64, SIGNAL(triggered()), this, SLOT(on_video()));//输出动画
+	connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
 
-	connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorDock()));//弯曲变形配置窗口打开
 
 	InitPQKit();
 }
@@ -311,11 +309,12 @@ void MainWindow::OnOpenRobx()
 {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("open robx file"), "",
 		tr("Robx files(*.robx)"));
+
 	QString qstr = fileName;
 	qstr.replace("\\", "/");
 	std::wstring wpath = qstr.toStdWString();
 	RobxFileIO::setPath(wpath);
-	
+
 	if (fileName.isEmpty())
 	{
 		return;
@@ -329,9 +328,6 @@ void MainWindow::OnOpenRobx()
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsPara, varPara, &lResult);
 
 	RobxFileIO::downloadJson(RobxFileIO::GlobalPath());
-
-
-
 }
 
 void MainWindow::OnSaveRobx()
@@ -340,8 +336,6 @@ void MainWindow::OnSaveRobx()
 	CComBSTR bsParam = "";
 	CComBSTR bsCmd = "RO_CMD_FILE_SAVE";
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsParam, CComVariant(), lResult);
-	//RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
-	//std::cout << RobxFileIO::GlobalPath() << endl;
 }
 
 void MainWindow::OnSaveasRobx()
@@ -356,81 +350,17 @@ void MainWindow::on_close_robx()
 {
 	CComBSTR i_bsDocName = "";
 	m_ptrKit->pq_CloseDocument(i_bsDocName);
-
 }
 
 void MainWindow::on_kinematics()
 {
-	////起点选择
-	//ULONG uID = 0;
-	//GetObjIDByName(80, L"", uID);
-	//VARIANT varIDArray;
-	//m_ptrKit->PQAPIGetPointsID(uID, &varIDArray);
-	//SAFEARRAY* psa = varIDArray.parray;
-	//if (!psa || psa->cDims != 1)
-	//	return;
-	//ULONG Size = psa->rgsabound[0].cElements;
-	//if (Size == 0)
-	//{
-	//	return;
-	//}
+	PQDataType robotType = PQ_ROBOT;
+	QMap<ULONG, QString> robotMap = getObjectsByType(robotType);
+	ULONG RobotID = robotMap.firstKey();
 
-	//ULONG ulPointID = 0;
-	//LONG lIdx = 0;
-	//SafeArrayGetElement(psa, &lIdx, &ulPointID);
-	//INT nPostureType = 0;
-	//INT nPostureCount = 0;
-	//double* dPointPosture = new double;
-	//double dVelocity = 0;
-	//double dSpeedPercent = 0;
-	//INT nInstruct = 0;
-	//INT nApproach = 0;
-	//m_ptrKit->PQAPIGetPointInfo(ulPointID, nPostureType, &nPostureCount, &dPointPosture,
-	//	&dVelocity, &dSpeedPercent, &nInstruct, &nApproach);
-	//double* PointPosture = dPointPosture;
-	//INT nposturearrsize = nPostureCount;
-	//INT nposturetype = 0;
-	//double dtranslation[16] = {};
-	//m_ptrKit->Math_trans_posture_to_rotationmatrix(dPointPosture, nposturearrsize, nposturetype,
-	//	dtranslation);
-	//m_ptrKit->PQAPIFree((LONG_PTR*)dPointPosture);
-
-	////获取导轨位置
-
-	//ULONG uExternalID = 0;
-	//GetObjIDByName(32, L"RobotExAxis_E1", uExternalID);
-	//
-
-	////设置导轨位置、获取机器人基座标系
-	////改变导轨位置有点问题，改变不了导轨位置
-	//INT nGuideCount = 1;
-	//INT nGuideDataCount = 1;
-	//DOUBLE dGuideData[1] = {70000.00};
-	//m_ptrKit->Path_modify_external_axis(ulPointID, &uExternalID, nGuideCount, dGuideData,
-	//	nGuideDataCount);
-	//VARIANT varJointsArray;
-	//m_ptrKit->PQAPIGetExternalJointsFromPoints(ulPointID, uExternalID, &varJointsArray);
-
-	//ULONG uRobotID = 0;
-	//GetObjIDByName(32, L"", uRobotID);
-	//ULONG uCoordinateID = 0;
-	//m_ptrKit->Robot_get_base_coordinate(uRobotID, &uCoordinateID);
-
-	////机器人求逆解
-	//ULONG ulRobotID = 0;
-	//GetObjIDByName(32, L"", ulRobotID);
-	//INT nEndPostureCount = 0;
-	//DOUBLE pJointValues[] = {0,0,0,0,0,0};
-	//INT nJointValuesCount = 0;
-	//INT nAxisCfg[4] = {0,0,0,0};
-	//INT nAxisCfgCount = 4;
-	//INT pPtStatus = 0;
-	//long bToolEndPosture = 1;
-	//m_ptrKit->PQAPIInverseKinematics(ulRobotID, PointPosture, nEndPostureCount,
-	//	nPostureType, pJointValues, nJointValuesCount, nAxisCfg, nAxisCfgCount,
-	//	&pPtStatus, bToolEndPosture);
-	////求解机器人关节值
-
+	int nCount = 0;
+	double* dLinks = nullptr;
+	m_ptrKit->Doc_get_obj_links(RobotID, &nCount, &dLinks);
 }
 
 void MainWindow::on_linkage() 
@@ -892,7 +822,6 @@ void MainWindow::updateRailOptions(const QString & robotName, const QMap<ULONG, 
 	curseDialog->setRailOptions(rail);
 }
 
-
 void MainWindow::on_defining_institutions()
 {
 	LONGLONG* lResult = 0;
@@ -1172,7 +1101,13 @@ void MainWindow::on_kinetic_analysis()
 
 void MainWindow::on_define_space()
 {
-	robotSpaceDefine spaceDialog;
+	if (spaceDialog) {
+		spaceDialog->close();
+		spaceDialog->deleteLater();
+		spaceDialog = nullptr;
+	}
+
+	spaceDialog = new robotSpaceDefine(this,m_ptrKit,m_ptrKitCallback);
 
 	// 使用封装好的函数获取机器人列表
 	PQDataType robotType = PQ_ROBOT;
@@ -1183,16 +1118,34 @@ void MainWindow::on_define_space()
 
 	if (robotNames.isEmpty()) {
 		QMessageBox::information(this, "提示", "当前没有可用的喷涂机器人！");
-		delete curseDialog;
-		curseDialog = nullptr;
+		delete spaceDialog;
+		spaceDialog = nullptr;
 		return;
 	}
 
 	// 将机器人名称设置到对话框中
 	for (const QString& name : robotNames) {
-		curseDialog->setRobotOptions(name);
+		spaceDialog->setRobotOptions(name);
 	}
 
+	//根据文件名称读取配置文件
+	//待完成
+
+	//实现计算θ和xyz的关系
+
+	spacePoint center(0, 0, 0);
+	spacePoint size(0, 0, 0);
+
+	Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
+	spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotMap.firstKey());
+
+	robotSpaceDefine robotSpace;
+	QString name = robotNames[0];
+	spaceDialog->addAxisInfo(1, "世界坐标系", "x轴", 1, "J1");
+
+	spaceDialog->setModal(false);
+	spaceDialog->setAttribute(Qt::WA_DeleteOnClose);
+	spaceDialog->show();
 }
 
 void MainWindow::on_curse_part()
@@ -1648,13 +1601,11 @@ void MainWindow::on_AGV_path()
 	dlg.exec();
 }
 
-void MainWindow::on_trajCorDock()
+void MainWindow::on_trajCorrectdock_open()
 {
-	
-	TrajCorrectDock *dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback, this);
+	TrajCorrectDock *dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback);
 	addDockWidget(Qt::LeftDockWidgetArea, dock);
-
-	
+	dock->show();
 }
 
 void MainWindow::on_effectiveness_analysis()
@@ -2107,13 +2058,13 @@ void MainWindow::ShowPQKitWindown()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+
 	CComBSTR robxName = " ";
-	m_ptrKit->Doc_get_name(&robxName);
 	if (m_ptrKit)
 	{
 		m_ptrKit->pq_CloseComponent();
 	}
-	
+
 	if (robxName == L"设计") {
 		event->accept();
 	}
@@ -2121,8 +2072,6 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	{
 		RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
 	}
-	
-	
 }
 
 void MainWindow::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID)
@@ -2529,9 +2478,5 @@ void MainWindow::OnDraw()
 	}
 
 	
-}
-
-void MainWindow::OnMainwindowClosed()
-{
 }
 

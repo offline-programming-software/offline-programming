@@ -104,6 +104,9 @@
         <file>resource/pickup.png</file>
         <file>resource/divide.png</file>
         <file>resource/maxTheta.png</file>
+        <file>resource/bendingFunc.png</file>
+        <file>resource/bendingmanager .png</file>
+        <file>resource/positioncorrect.png</file>
     </qresource>
     <qresource prefix="/theme">
         <file>resource/theme-win7.qss</file>

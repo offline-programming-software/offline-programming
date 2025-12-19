@@ -117,11 +117,7 @@ void RobxIO::updateData(QVector<Correction>& list,
 //	archive_write_free(a);
 //}
 
-void RobxIO::OnInitializeKitThread()
-{
-	
-	
-}
+
 namespace fs = std::filesystem;
 
 void RobxFileIO::uploadJson(std::wstring& robxPath)

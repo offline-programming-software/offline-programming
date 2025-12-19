@@ -6,135 +6,149 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>329</width>
-    <height>188</height>
+    <width>375</width>
+    <height>217</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>添加机器人工作空间配置</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>9</number>
-   </property>
    <item row="0" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="2,2,2,1">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>机器人名称：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QTextBrowser" name="textBrowser">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>30</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>机器人名称：</string>
+       </property>
+      </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,4">
-       <item>
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>坐标系选取：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="comboBox"/>
-       </item>
-      </layout>
+      <widget class="QTextBrowser" name="textBrowser">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>30</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,4">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>坐标系选取：</string>
+       </property>
+      </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,4">
-       <item>
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>主法矢选取：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="comboBox_2">
-         <item>
-          <property name="text">
-           <string>X轴正方向</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>X轴负方向</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Y轴正方向</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Y轴负方向</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Z轴正方向</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Z轴负方向</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-      </layout>
+      <widget class="QComboBox" name="comboBox"/>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,4">
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>主法矢选取：</string>
+       </property>
+      </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <widget class="QComboBox" name="comboBox_2">
        <item>
-        <spacer name="horizontalSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
+        <property name="text">
+         <string>X轴正方向</string>
+        </property>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton">
-         <property name="text">
-          <string>计算</string>
-         </property>
-        </widget>
+        <property name="text">
+         <string>X轴负方向</string>
+        </property>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_3">
-         <property name="text">
-          <string>取消</string>
-         </property>
-        </widget>
+        <property name="text">
+         <string>Y轴正方向</string>
+        </property>
        </item>
-      </layout>
+       <item>
+        <property name="text">
+         <string>Y轴负方向</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Z轴正方向</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Z轴负方向</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <widget class="QCheckBox" name="checkBox">
+       <property name="text">
+        <string>是否联动</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>联动轴选取：</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox_3"/>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton">
+       <property name="text">
+        <string>计算</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_1">
+       <property name="text">
+        <string>取消</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
