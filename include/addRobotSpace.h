@@ -15,6 +15,8 @@ public:
 	addRobotSpace(QWidget *parent = nullptr);
 	~addRobotSpace();
 
+	void setRobotName(const QString &robotName);
+
 private:
 	Ui::addRobotSpaceClass *ui;
 };

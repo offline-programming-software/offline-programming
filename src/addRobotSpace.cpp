@@ -11,3 +11,8 @@ addRobotSpace::~addRobotSpace()
 {
 	delete ui;
 }
+
+void addRobotSpace::setRobotName(const QString &robotName)
+{
+	ui->textBrowser->setPlainText(robotName);
+}

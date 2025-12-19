@@ -33,20 +33,15 @@
 #include "robotSpaceDefine.h"
 #include "posCal.h"
 #include "addRobotSpace.h"
+#include "spaceCalculate.h"
 
 #include "PQKitInitThread.h"
 #include "PQKitCallback.h"
 #include "boundBox.h"
 
-//#include "TrajCorrectDock.h"
-
-
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
-
-
-
 
 class MainWindow : public SARibbonMainWindow
 {
@@ -76,12 +71,14 @@ private:
 private:
 	void closeEvent(QCloseEvent* event);
 
+	//区域划分变量
 	cursePart* curseDialog = nullptr;  // 保存对话框指针
 	bool isPickupActive = false;       // 使用成员变量而不是局部变量
 	bool isPreview = false;
 	bool isPoint = false;
 
-
+	//机器人工作空间定义
+	robotSpaceDefine* spaceDialog = nullptr;
 	QString axisName;
 	int axisIdx;//坐标轴ID
 
@@ -89,7 +86,7 @@ private:
 
 	QStringList extractStringArrayFromVariant(const VARIANT& variant);//提取variant中数据
 	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
-
+	 
 	//实现曲面的选取
 	std::map<ULONG, std::vector<std::wstring>> pickupMap;//用于记录选取的曲面
 	void onDeleteSelectedSurfaces(const QStringList& surfaceNames);//删除选中的曲面
@@ -128,7 +125,7 @@ protected slots:
 	void OnMenuPop(unsigned long i_ulObjID, long i_lPosX, long i_lPosY, int* o_nHandled);
 	void OnInitializeKitThread();
 	void OnDraw();
-	void OnMainwindowClosed();
+
 
 	//own slot
 	void OnOpenRobx();
@@ -194,7 +191,6 @@ protected slots:
 	void on_curse_part();
 	void on_pos_cal();
 	void on_AGV_path();
-	
-	void on_trajCorDock();
+
 };
 #endif  // MAINWINDOW_H

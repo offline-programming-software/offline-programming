@@ -20,8 +20,13 @@ public:
 	robotSpaceDefine(QWidget *parent = nullptr);
 	~robotSpaceDefine();
 
-	void addAxisInfo(const QString& axisName, const QString& mainNormalVector,
-		bool hasGuideRail, double guideSpeed);
+	void addAxisInfo(int number, const QString& axisName, const QString& mainNormalVector,
+		bool hasGuideRail, const QString guideName);
+
+	void setRobotOptions(const QString& robotOption);//设置机器人名称
+
+
+	QString getRobotName();//获取机器人名称
 
 private slots:
 	void onAddAxis();  // 添加坐标轴槽函数
@@ -35,12 +40,15 @@ private:
 	Ui::robotSpaceDefineClass *ui;
 	QStandardItemModel *axisModel; // 表格数据模型
 
+	
+
 	// 存储坐标轴数据
 	struct AxisData {
+		int number;
 		QString axisName;
 		QString mainNormalVector;
 		bool hasGuideRail;
-		double guideSpeed;
+		QString guideName;
 	};
 
 	QList<AxisData> axisList;
