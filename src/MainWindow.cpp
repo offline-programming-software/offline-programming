@@ -1101,11 +1101,11 @@ void MainWindow::on_kinetic_analysis()
 
 void MainWindow::on_define_space()
 {
-	if (spaceDialog) {
-		spaceDialog->close();
-		spaceDialog->deleteLater();
-		spaceDialog = nullptr;
-	}
+	//if (spaceDialog) {
+	//	spaceDialog->close();
+	//	spaceDialog->deleteLater();
+	//	spaceDialog = nullptr;
+	//}
 
 	spaceDialog = new robotSpaceDefine(this,m_ptrKit,m_ptrKitCallback);
 
@@ -1132,14 +1132,13 @@ void MainWindow::on_define_space()
 	//待完成
 
 	//实现计算θ和xyz的关系
-
 	spacePoint center(0, 0, 0);
 	spacePoint size(0, 0, 0);
 
 	Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
 	spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotMap.firstKey());
 
-	robotSpaceDefine robotSpace;
+
 	QString name = robotNames[0];
 	spaceDialog->addAxisInfo(1, "世界坐标系", "x轴", 1, "J1");
 

@@ -19,6 +19,12 @@ public:
 	void setCoordinate(const QStringList &coordList);
 	void setRail(const QStringList &railList);
 
+	QString getCoordinate();
+	QString getMainDir();
+	QString getRail();
+
+	bool isLink();
+
 private slots:
 	void onLinkRail(int state);
 	void onCancelButtonClicked();

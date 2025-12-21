@@ -51,6 +51,26 @@ void addRobotSpace::setRail(const QStringList & railList)
 	}
 }
 
+QString addRobotSpace::getCoordinate()
+{
+	return ui->comboBox->currentText();
+}
+
+QString addRobotSpace::getMainDir()
+{
+	return ui->comboBox_2->currentText();
+}
+
+QString addRobotSpace::getRail()
+{
+	return ui->comboBox_3->currentText();
+}
+
+bool addRobotSpace::isLink()
+{
+	return ui->checkBox->isChecked();
+}
+
 
 void addRobotSpace::onLinkRail(int state)
 {

@@ -40,6 +40,8 @@ public:
 private slots:
 	void onAddAxis();  // 添加坐标轴槽函数
 	void onDeleteAxis(); // 删除坐标轴槽函数
+	void onConfirm();
+	void onClose();
 
 private:
 	void setupTableView(); // 初始化表格视图

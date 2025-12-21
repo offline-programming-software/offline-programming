@@ -323,33 +323,102 @@ spacePoint Workspace::calculateRobotWorkspaceCenter(ULONG robotID) {
 bool Workspace::isPointReachable(ULONG robotID, const spacePoint& point,
 	const std::vector<double>& direction, bool enforceOrientation) {
 	try {
-		double endPosture[6] = { point.x, point.y, point.z, 0.0, 0.0, 0.0 };
+		// 7元素数组：[x, y, z, dw, dx, dy, dz] - dw是实部，dx,dy,dz是虚部
+		double endPosture[7] = { point.x, point.y, point.z, 1.0, 0.0, 0.0, 0.0 }; // 默认单位四元数
 
 		if (enforceOrientation && direction.size() >= 3) {
-			double norm = sqrt(direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2]);
-			endPosture[3] = direction[0] / norm; // Roll
-			endPosture[4] = direction[1] / norm; // Pitch
-			endPosture[5] = direction[2] / norm; // Yaw
+			// 将方向向量转换为四元数 [dw, dx, dy, dz] 格式
+			std::vector<double> quaternion = directionVectorToQuaternion(direction);
+
+			if (quaternion.size() == 4) {
+				// 按照 [dw, dx, dy, dz] 顺序赋值
+				endPosture[3] = quaternion[0]; // dw (实部)
+				endPosture[4] = quaternion[1]; // dx (虚部x)
+				endPosture[5] = quaternion[2]; // dy (虚部y) 
+				endPosture[6] = quaternion[3]; // dz (虚部z)
+			}
+			else {
+				// 转换失败，使用默认四元数 [1, 0, 0, 0] (无旋转)
+				endPosture[3] = 1.0;
+				endPosture[4] = 0.0;
+				endPosture[5] = 0.0;
+				endPosture[6] = 0.0;
+			}
 		}
 
-		double jointValues[6] = { 0 };
-		ulong jointCount = 0;
-		m_ptrKit->Robot_get_tool(robotID, &jointCount);
-		struct_PQ6RConfig axisConfig = { PQ_INVERSE_FRONT, PQ_INVERSE_UP, PQ_INVERSE_NOFLIP,
-									   PQ_INVERSE_CONTINUATION, PQ_INVERSE_CONTINUATION, PQ_INVERSE_CONTINUATION };
-		PQPathPtState pointStatus = PQ_PPS_BE_REACH;
-		BOOL useToolPosture = FALSE;
 
-		BOOL success = m_ptrKit->PQAPIInverseKinematics(
-			robotID, endPosture, 6, EULERANGLEXYZ,
-			jointValues, jointCount, axisConfig, &pointStatus, useToolPosture);
+		//轨迹点逆解
+		//double jointValues[6] = { 0 };
+		//int jointCount = 0;
+		//m_ptrKit->Robot_get_joints_count(robotID, &jointCount);
+		//struct_PQ6RConfig axisConfig = { PQ_INVERSE_FRONT, PQ_INVERSE_UP, PQ_INVERSE_NOFLIP,
+		//							   PQ_INVERSE_CONTINUATION, PQ_INVERSE_CONTINUATION, PQ_INVERSE_CONTINUATION };
 
-		return (success == TRUE);
+		//PQPathPtState pointStatus = PQ_PPS_BE_REACH;
+		//BOOL useToolPosture = FALSE;
+
+		//// 使用四元数表示姿态
+		//BOOL success = m_ptrKit->PQAPIInverseKinematics(
+		//	robotID, endPosture, 7, QUATERNION,  
+		//	jointValues, jointCount, axisConfig, &pointStatus, useToolPosture);
+
+
+		//机器人全部逆解
+		double* i_pJointValues = NULL;
+		INT o_nJointValuesCountl = 0;
+		struct_PQ6RConfig * i_eAxisCfg = NULL;
+		INT o_nAxisCfgCount = 0;
+		HRESULT hr = m_ptrKit->Robot_Get_All_Inverse_Kinematics(robotID, endPosture, 7, QUATERNION,
+			0, &i_pJointValues, &o_nJointValuesCountl, &i_eAxisCfg, &o_nAxisCfgCount);
+
+		m_ptrKit->PQAPIFreeArray((LONG_PTR*)i_pJointValues);
+		m_ptrKit->PQAPIFreeArray((LONG_PTR*)i_eAxisCfg);
+
+		return (SUCCEEDED(hr));
 	}
 	catch (...) {
 		return false;
 	}
 }
+
+// 方向向量转四元数 [dw, dx, dy, dz] 格式
+std::vector<double> Workspace::directionVectorToQuaternion(const std::vector<double>& direction) {
+	if (direction.size() < 3) {
+		return { 1.0, 0.0, 0.0, 0.0 }; // 返回单位四元数 [1, 0, 0, 0]
+	}
+
+	// 归一化方向向量（作为Z轴）
+	Eigen::Vector3d z_axis(direction[0], direction[1], direction[2]);
+	z_axis.normalize();
+
+	// 默认上向量（世界坐标系Z轴）
+	Eigen::Vector3d up_vector(0, 0, 1);
+
+	// 如果方向向量接近上向量，选择不同的参考
+	if (z_axis.dot(up_vector) > 0.99) {
+		up_vector = Eigen::Vector3d(0, 1, 0);
+	}
+
+	// 构建坐标系
+	Eigen::Vector3d x_axis = up_vector.cross(z_axis);
+	x_axis.normalize();
+	Eigen::Vector3d y_axis = z_axis.cross(x_axis);
+	y_axis.normalize();
+
+	// 构建旋转矩阵
+	Eigen::Matrix3d rotation_matrix;
+	rotation_matrix.col(0) = x_axis;
+	rotation_matrix.col(1) = y_axis;
+	rotation_matrix.col(2) = z_axis;
+
+	// 旋转矩阵转四元数 [w, x, y, z] 格式
+	Eigen::Quaterniond quat(rotation_matrix);
+	quat.normalize();
+
+	// 返回 [dw, dx, dy, dz] 格式
+	return { quat.w(), quat.x(), quat.y(), quat.z() };
+}
+
 
 
 std::vector<double> Workspace::rodriguesRotate(

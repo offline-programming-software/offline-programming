@@ -18,7 +18,8 @@ robotSpaceDefine::robotSpaceDefine(QWidget *parent,
 	// 连接信号槽（假设UI中有添加和删除按钮）
 	connect(ui->pushButton, &QPushButton::clicked, this, &robotSpaceDefine::onAddAxis);
 	connect(ui->pushButton_2, &QPushButton::clicked, this, &robotSpaceDefine::onDeleteAxis);
-	connect(ui->pushButton_4, &QPushButton::clicked, this, &robotSpaceDefine::onDeleteAxis);
+	connect(ui->pushButton_3, &QPushButton::clicked, this, &robotSpaceDefine::onConfirm);
+	connect(ui->pushButton_4, &QPushButton::clicked, this, &robotSpaceDefine::onClose);
 
 	//从json更新数据
 	RobxIO *m_io = new RobxIO();
@@ -180,7 +181,7 @@ void robotSpaceDefine::onAddAxis()
 	dlg->setRail(rail);
 
 
-	connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName]() {
+	connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName, dlg]() {
 		
 		spacePoint center(0, 0, 0);
 		spacePoint size(0, 0, 0);
@@ -189,15 +190,33 @@ void robotSpaceDefine::onAddAxis()
 
 		ULONG robotID = 0;
 		GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
-		spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);
-		std::vector<double> direction = {0,0,1};
+		/*spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);*/
+		spacePoint centerPoint(433, 0 ,791);
+		std::vector<double> direction = {-1,0,0};
 
 
 		std::map<std::pair<double, double>, std::vector<spacePoint>> workSpace;
 		workSpace = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 50, 50,
 			1500,0 , 22.5, direction, 5, 1.0);
-		
 
+		//如何实现对于number 获取
+		int number = ui->tableView->model()->rowCount();
+		QString axisName = dlg->getCoordinate();
+		QString mainNormalVector = dlg->getMainDir();
+		bool hasGuideRail = dlg->isLink();
+		QString guideName = dlg->getRail();
+		
+		if (hasGuideRail) {
+
+			addAxisInfo(number, axisName, mainNormalVector,hasGuideRail, guideName);
+			
+		}
+		else {
+			
+			addAxisInfo(number, axisName, mainNormalVector, hasGuideRail, " ");
+		}
+
+		dlg->close();
 
 	});
 
@@ -221,6 +240,17 @@ void robotSpaceDefine::onDeleteAxis()
 		axisList.removeAt(row);
 		updateTableView();
 	}
+}
+
+void robotSpaceDefine::onConfirm()
+{
+
+	this->reject();
+}
+
+void robotSpaceDefine::onClose()
+{
+	this->reject();
 }
 
 QMap<ULONG, QString> robotSpaceDefine::getObjectsByType(PQDataType objType)
