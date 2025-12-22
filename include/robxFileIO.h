@@ -1,12 +1,12 @@
 ﻿#pragma once
-#include<string>
-#include<qvector.h>
+#include <string>
+#include <qvector.h>
 #include <archive.h>
 #include <archive_entry.h>
-#include<Correction.h>
-#include<nlohmann/json.hpp>
+#include <Correction.h>
+#include <nlohmann/json.hpp>
 
-#include"spaceCalculate.h"
+#include "spaceCalculate.h"
 /**
  * @class RobxIO
  * @brief 用于读取、写入、更新 .robx 数据的 IO 类。
@@ -101,7 +101,11 @@ public:
 	 */
 	void writeData(const QVector<Correction>& list,
 		const std::string& fileName);
+
 	void writeData(const QVector<workSpace>& list,
+		const std::string& fileName);
+
+	void writeData(const QVector<workSpaceInformation>& list,
 		const std::string& fileName);
 	/**
 	  * @brief 从robx文件中读取数据
@@ -113,6 +117,9 @@ public:
 		const std::string& fileName);
 
 	void updateData(QVector<workSpace>& list,
+		const std::string& fileName);
+
+	void updateData(QVector<workSpaceInformation>& list,
 		const std::string& fileName);
 
 	//void writeData(const QVector<新的数据结构类型>& list,

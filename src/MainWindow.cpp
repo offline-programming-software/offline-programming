@@ -1140,7 +1140,6 @@ void MainWindow::on_define_space()
 
 
 	QString name = robotNames[0];
-	spaceDialog->addAxisInfo(1, "世界坐标系", "x轴", 1, "J1");
 
 	spaceDialog->setModal(false);
 	spaceDialog->setAttribute(Qt::WA_DeleteOnClose);

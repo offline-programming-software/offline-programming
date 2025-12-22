@@ -14,16 +14,6 @@
 #include "PQKitCallback.h"
 #import "RPC.tlb" no_namespace, named_guids, raw_interfaces_only, raw_native_types
 
-
-struct workSpace {
-	
-	ULONG robotID;
-	double thickness;
-	double theta;
-	std::vector<double> points;
-};
-
-
 // 空间点结构
 struct spacePoint {
 	double x, y, z;
@@ -50,6 +40,37 @@ struct spacePoint {
 			std::abs(y - other.y) < 1e-9 &&
 			std::abs(z - other.z) < 1e-9;
 	}
+};
+
+struct workSpace {
+
+	ULONG robotID;
+	double thickness;
+	double theta;
+	std::vector<double> points;
+};
+
+struct workSpaceInformation {
+	QString robotName;
+	int number;
+	QString coodinate;
+	QString mainDir;
+	bool isLink;
+	QString railName;
+
+	workSpaceInformation(const QString& rName = "",
+		int num = 0,
+		const QString& coord = "",
+		const QString& mDir = "",
+		bool m_isLink = 0,
+		const QString& railName = "") :
+		robotName(rName),
+		number(num),
+		coodinate(coord),
+		mainDir(mDir),
+		isLink(m_isLink),
+		railName(railName)
+	{}
 };
 
 // 局部坐标系类

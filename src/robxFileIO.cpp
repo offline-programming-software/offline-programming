@@ -1,11 +1,11 @@
 ﻿#include "robxFileIO.h"
 #include <filesystem>
 #include <fstream>
-#include<qwidget.h>
-#include<qmessagebox.h>
+#include <qwidget.h>
+#include <qmessagebox.h>
 #include <archive.h>
 #include <archive_entry.h>
-#include<iostream>
+#include <iostream>
 using json = nlohmann::json;
 
 RobxIO::RobxIO()
@@ -67,7 +67,30 @@ void RobxIO::writeData(const QVector<workSpace>& list, const std::string & fileN
 	std::ofstream ofs(fullPath);
 	ofs << j.dump(4);
 	ofs.close();
+}
 
+void RobxIO::writeData(const QVector<workSpaceInformation>& list,
+	const std::string& fileName)
+{
+	json j = json::array();
+
+	for (const auto& wsInfo : list) {
+		json jws;
+		jws = {
+			{"robotName", wsInfo.robotName.toStdString()},
+			{"number", wsInfo.number},
+			{"coodinate", wsInfo.coodinate.toStdString()},
+			{"mainDir", wsInfo.mainDir.toStdString()},
+			{"isLink",wsInfo.isLink},
+			{"railName", wsInfo.railName.toStdString()}
+		};
+		j.push_back(jws);
+	}
+
+	std::string fullPath = m_tempDir + "/" + fileName;
+	std::ofstream ofs(fullPath);
+	ofs << j.dump(5);
+	ofs.close();
 }
 
 // ========================
@@ -104,6 +127,29 @@ void RobxIO::updateData(QVector<Correction>& list,
 void RobxIO::updateData(QVector<workSpace>& list, const std::string & fileName)
 {
 	std::string fullPath = m_tempDir + "/" + fileName;
+	std::ifstream ifs(fullPath); if (!ifs.is_open())
+		return;
+	json j;
+	ifs >> j;
+	ifs.close();
+
+	list.clear();
+	for (const auto& item : j) {
+		workSpace ws;
+
+		ws.robotID = item.at("robotID").get<ULONG>();
+		ws.thickness = item.at("thickness").get<double>();
+		ws.theta = item.at("theta").get<double>();
+		ws.points = item.at("points").get<std::vector<double>>();
+		list.push_back(ws);
+	}
+		
+}
+
+void RobxIO::updateData(QVector<workSpaceInformation>& list,
+	const std::string& fileName)
+{
+	std::string fullPath = m_tempDir + "/" + fileName;
 
 	std::ifstream ifs(fullPath);
 	if (!ifs.is_open())
@@ -116,14 +162,15 @@ void RobxIO::updateData(QVector<workSpace>& list, const std::string & fileName)
 	list.clear();
 	for (const auto& item : j)
 	{
-		workSpace ws;
-		ws.robotID = item.at("robotID").get<ULONG>();
-		ws.thickness = item.at("thickness").get<double>();
-		ws.theta = item.at("theta").get<double>();
-		ws.points = item.at("points").get<std::vector<double>>();
-		list.push_back(ws);
+		workSpaceInformation wsInfo;
+		wsInfo.robotName = QString::fromStdString(item.at("robotName").get<std::string>());
+		wsInfo.number = item.at("number").get<int>();
+		wsInfo.coodinate = QString::fromStdString(item.at("coodinate").get<std::string>());
+		wsInfo.mainDir = QString::fromStdString(item.at("mainDir").get<std::string>());
+		wsInfo.isLink = item.at("isLink").get<bool>();
+		wsInfo.railName = QString::fromStdString(item.at("railName").get<std::string>());
+		list.push_back(wsInfo);
 	}
-
 }
 
 

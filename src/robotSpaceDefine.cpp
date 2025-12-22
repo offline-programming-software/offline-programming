@@ -21,11 +21,13 @@ robotSpaceDefine::robotSpaceDefine(QWidget *parent,
 	connect(ui->pushButton_3, &QPushButton::clicked, this, &robotSpaceDefine::onConfirm);
 	connect(ui->pushButton_4, &QPushButton::clicked, this, &robotSpaceDefine::onClose);
 
-	//从json更新数据
-	RobxIO *m_io = new RobxIO();
-
+	m_io = new RobxIO();
 	m_io->updateData(m_list, "workspace.json");
+	m_io->updateData(m_spaceInformation, "workSpaceInformation.json");
 
+	for (workSpaceInformation data : m_spaceInformation) {
+		addAxisInfo(data.number, data.coodinate, data.mainDir, data.isLink, data.railName);;
+	}
 }
 
 robotSpaceDefine::~robotSpaceDefine()
@@ -190,14 +192,31 @@ void robotSpaceDefine::onAddAxis()
 
 		ULONG robotID = 0;
 		GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
-		/*spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);*/
-		spacePoint centerPoint(433, 0 ,791);
+		spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);
 		std::vector<double> direction = {-1,0,0};
 
-
-		std::map<std::pair<double, double>, std::vector<spacePoint>> workSpace;
-		workSpace = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 50, 50,
+		std::map<std::pair<double, double>, std::vector<spacePoint>> inputMap;
+		inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 50, 50,
 			1500,0 , 22.5, direction, 5, 1.0);
+
+		for (const auto& keyValuePair : inputMap) { // 遍历map
+			workSpace ws;
+			ws.robotID = robotID; // 设置robotID
+			ws.thickness = keyValuePair.first.first;  // 键(pair)的第一个double
+			ws.theta = keyValuePair.first.second;     // 键(pair)的第二个double
+
+			// 转换 vector<spacePoint> 到 vector<double>
+			for (const auto& sp : keyValuePair.second) { // 遍历vector<spacePoint>
+				// 假设我们取 spacePoint 的 x 成员
+				ws.points.push_back(sp.x);
+				ws.points.push_back(sp.y);
+				ws.points.push_back(sp.z);
+			}
+
+			m_list.push_back(ws);
+		}
+
+		m_io->writeData(m_list, "workspace.json");
 
 		//如何实现对于number 获取
 		int number = ui->tableView->model()->rowCount();
@@ -219,6 +238,7 @@ void robotSpaceDefine::onAddAxis()
 		dlg->close();
 
 	});
+
 
 	// 显示对话框并处理结果
 	if (dlg->exec() == QDialog::Accepted) {
@@ -244,6 +264,42 @@ void robotSpaceDefine::onDeleteAxis()
 
 void robotSpaceDefine::onConfirm()
 {
+
+	m_spaceInformation.clear();
+
+	QString robotName = ui->comboBox->currentText();
+
+	int rows = ui->tableView->model()->rowCount();
+	for (int row = 0; row < rows; ++row) {
+		QVariant data = axisModel->data(axisModel->index(row, 0));
+		int number = data.toInt(); // 如果明确是文本
+
+		QVariant data_1 = axisModel->data(axisModel->index(row, 1));
+		QString coordinate = data_1.toString(); // 如果明确是文本
+
+		QVariant data_2 = axisModel->data(axisModel->index(row, 2));
+		QString mainDir = data_2.toString(); // 如果明确是文本
+
+		QVariant data_3 = axisModel->data(axisModel->index(row, 3));
+		QString m_isLink = data_3.toString(); // 如果明确是文本
+
+		bool isLink;
+		if (m_isLink == "是") {
+			isLink = 1;
+		}
+		else {
+			isLink = 0;
+		}
+
+		QVariant data_4 = axisModel->data(axisModel->index(row, 4));
+		QString railName = data_4.toString(); // 如果明确是文本
+
+		workSpaceInformation spaceDate(robotName, number, coordinate, mainDir, isLink, railName);
+		m_spaceInformation.push_back(spaceDate);
+
+	}
+
+	m_io->writeData(m_spaceInformation, "workSpaceInformation.json");
 
 	this->reject();
 }

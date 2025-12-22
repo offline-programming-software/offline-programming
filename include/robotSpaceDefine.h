@@ -1,3 +1,5 @@
+//#ifndef ROBOTSPACEDEFINE_H
+//#define ROBOTSPACEDEFINE_H
 #pragma execution_character_set("utf-8")
 
 #include <QDialog>
@@ -7,12 +9,16 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QHeaderView>
+#include <QString.h>
 #include "robxFileIO.h"
 #include "spaceCalculate.h"
-#include"robxFileIO.h"
+#include "robxFileIO.h"
 #include "PQKitCallback.h"
-#include<qvector.h>
+#include <qvector.h>
 #import "RPC.tlb" no_namespace, named_guids, raw_interfaces_only, raw_native_types
+
+struct workSpace;
+struct workSpaceInformation;
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class robotSpaceDefineClass; };
@@ -43,6 +49,7 @@ private slots:
 	void onConfirm();
 	void onClose();
 
+
 private:
 	void setupTableView(); // 初始化表格视图
 	void updateTableView(); // 更新表格显示
@@ -51,13 +58,17 @@ private:
 	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
 	QStringList extractStringArrayFromVariant(const VARIANT& variant);
 	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);
+	
 
 private:
 	Ui::robotSpaceDefineClass *ui;
 	QStandardItemModel *axisModel; // 表格数据模型
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
+	RobxIO *m_io;
 	QVector<workSpace> m_list;
+	QVector<workSpaceInformation> m_spaceInformation;
+
 	
 	// 存储坐标轴数据
 	struct AxisData {
@@ -71,5 +82,4 @@ private:
 	QList<AxisData> axisList;
 
 };
-
-
+//#endif
