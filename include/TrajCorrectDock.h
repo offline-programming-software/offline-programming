@@ -40,6 +40,12 @@ public:
 		FromMeasurePoints,
 		FromRangePoints
 	};
+
+	enum ItemState
+	{
+		Edit,
+		View
+	};
 signals:
 	void blankAreaClicked();
 private:
@@ -65,7 +71,6 @@ private:
 	int m_correctCounter = 0;
 	/*-------------------------成员变量--------------------------------*/
 	
-	std::vector<Correction*> m_correction;
 	QVector<Correction> m_correctionList;
 	QVector<QListWidgetItem*> m_correctionItems;
 	std::vector<double> m_vFlagPoints;
@@ -89,6 +94,7 @@ private:
 	void exportCsvFlagPoints(const QString& filePath);
 	void exportCsvMeasurePoints(const QString& filePath);
 	void getTrajPoints(double range[6], std::vector<std::vector<double>>& trajPointsToCorrect);
+	void initGroupEmpty(const QString name);
 
 	/*-------------------------初始化函数----------------------------*/
 	void initDock();
@@ -96,7 +102,7 @@ private:
 	void initPointLists();
 	void initGroupBox_AttributeDefine(QListWidgetItem *item);
 	void InitCustomWidget();
-	
+	void setupConnections();
 	/*-------------------------pq工具函数----------------------------*/
 	void getObjIdByName(PQDataType i_datatype, std::wstring i_wsName, ULONG & o_uID);
 	void GetAllPathID();    //读取robx中所有轨迹ID, 名称, 
@@ -106,7 +112,6 @@ private:
 	void modifyPointsPoses(const std::vector<unsigned long>& CorrectPointID, const std::vector<std::vector<double>>& newPoints);
 
 public slots:
-	void testSlot();
 	void testSignal(int num);
 	void on_this_blankAreaClicked();
 	void on_btnNewCorrection_clicked();
@@ -121,21 +126,21 @@ public slots:
 	void on_btnMeasurePtsInport_clicked();
 	void on_btnFlagPointsExport_clicked();
 	void onExportMeasurePointsClicked();
-	void onComboBoxIndexChanged(int index);
-	void text();
 	void pickRange();
 	void onPickSpinBoxValueChanged(int a);
 	void OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
 		double i_dPointX, double i_dPointY, double i_dPointZ);
 	void OnElementSelection(LPWSTR i_wObjNames, LPWSTR i_wFaceNames, double* i_dPointXYZ, int i_nSize);
 	void OnDraw();
-	void on_btnTest_2_clicked();
-
+	void setEdit();
+	void setView();
 	/*-------------------------测试槽----------------------------*/
-	void on_btnTest_clicked();
 	void on_chkApplyCor_toggled(bool checked);
 protected:
 	void mousePressEvent(QMouseEvent *event) override;
+
+signals:
+	void groupAttributeChanged();
 };
 
 
