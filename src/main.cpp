@@ -3,6 +3,7 @@
 #include <QTextCodec>
 #include <QtWidgets/QApplication>
 #include <QString>
+#include "welcomePage.h"
 
 int main(int argc, char *argv[])
 {
@@ -11,10 +12,12 @@ int main(int argc, char *argv[])
 	f.setFamily(u8"微软雅黑");
 	a.setFont(f);
 
-	MainWindow w;
+	MainWindow* painting = new MainWindow();
+	WelcomePage welcome(painting);
 		
-	w.show();  // 显示主窗口
-	w.showMaximized();
-	w.setWindowTitle("自动喷涂离线编程与仿真软件");
+	welcome.show();
+	//w.show();  // 显示主窗口
+	//w.showMaximized();
+	//w.setWindowTitle("自动喷涂离线编程与仿真软件");
 	return a.exec();
 }

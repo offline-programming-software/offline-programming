@@ -1766,6 +1766,29 @@ QStringList MainWindow::getSprayRobotNames(PQRobotType mechanismType, const QMap
 	return robotNames;
 }
 
+void MainWindow::openRobxFile(const QString& filePath)
+{
+	QString fileName = filePath;
+	QString qstr = fileName;
+	qstr.replace("\\", "/");
+	std::wstring wpath = qstr.toStdWString();
+	RobxFileIO::setPath(wpath);
+
+	if (fileName.isEmpty())
+	{
+		return;
+	}
+	fileName = QDir::toNativeSeparators(fileName);
+	std::wstring wsFilePath = fileName.toStdWString();
+	long long lResult = 0;
+	CComVariant varPara(wsFilePath.c_str());
+	CComBSTR bsPara = "";
+	CComBSTR bsCmd = "RO_CMD_FILE_OPEN";
+	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsPara, varPara, &lResult);
+
+	RobxFileIO::downloadJson(RobxFileIO::GlobalPath());
+}
+
 // 提取long类型数组的函数
 QList<long> MainWindow::extractLongArrayFromVariant(const VARIANT& variant)
 {
@@ -2065,14 +2088,14 @@ void MainWindow::ShowPQKitWindown()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-
 	CComBSTR robxName = " ";
+	m_ptrKit->Doc_get_name(&robxName);
 	if (m_ptrKit)
 	{
 		m_ptrKit->pq_CloseComponent();
 	}
 
-	if (robxName == L"设计") {
+	if (robxName == L"设计") {   //当前没有打开任何robx文件时，不进行保存操作
 		event->accept();
 	}
 	else

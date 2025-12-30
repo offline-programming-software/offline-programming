@@ -116,4 +116,10 @@
         <file>resource/theme-office2021-blue.qss</file>
         <file>resource/theme-dark2.qss</file>
     </qresource>
+    <qresource prefix="/welcomePage">
+        <file>resource/welcomePage/emptyDir.png</file>
+        <file>resource/welcomePage/emptyProj.png</file>
+        <file>resource/welcomePage/grinding.png</file>
+        <file>resource/welcomePage/painting.png</file>
+    </qresource>
 </RCC>
