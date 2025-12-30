@@ -2065,7 +2065,7 @@ void MainWindow::ShowPQKitWindown()
 	setCentralWidget(splitter);
 }
 
-void MainWindow::closeEvent(QCloseEvent* event)
+void MainWindow::closeEvent(QCloseEvent* event)   //清除原版，副本更名
 {
 
 	CComBSTR robxName = " ";

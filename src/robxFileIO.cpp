@@ -213,7 +213,7 @@ void RobxIO::updateData(QVector<workSpaceInformation>& list,
 
 namespace fs = std::filesystem;
 
-void RobxFileIO::uploadJson(std::wstring& robxPath)
+void RobxFileIO::uploadJson(std::wstring& robxPath)   
 {
 	std::vector<std::string> list = { "temp/" };
 	std::string tempPath = "./temp";
@@ -262,10 +262,26 @@ std::wstring & RobxFileIO::GlobalPath()   //引用作为返回值
 	return path;
 }
 
+// 将 wstring 转换为 UTF-8 编码的 std::string
+std::string to_utf8_from_wide(const std::wstring& input)
+{
+	if (input.empty())
+		return "";
+
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, input.c_str(), static_cast<int>(input.size()), nullptr, 0, nullptr, nullptr);
+	std::string strTo(size_needed, 0);
+	WideCharToMultiByte(CP_UTF8, 0, input.c_str(), static_cast<int>(input.size()), &strTo[0], size_needed, nullptr, nullptr);
+	return strTo;
+}
+
 void addFileToArchive(struct archive* a, const fs::path& filePath, const fs::path& baseDir) {
 	struct archive_entry* entry = archive_entry_new();
-	fs::path relativePath = fs::relative(filePath, baseDir); // 保留文件夹结构
-	archive_entry_set_pathname(entry, relativePath.string().c_str());
+	fs::path relativePath = fs::relative(filePath, baseDir);
+	
+	// 转换为 UTF-8 编码的路径
+	std::string utf8Path = to_utf8_from_wide(relativePath.wstring());
+	archive_entry_set_pathname(entry, utf8Path.c_str());
+	
 	archive_entry_set_filetype(entry, AE_IFREG);
 	archive_entry_set_perm(entry, 0644);
 
@@ -283,14 +299,17 @@ void addFileToArchive(struct archive* a, const fs::path& filePath, const fs::pat
 	archive_entry_free(entry);
 }
 
-// 添加目录到 archive（STORE）
 void addDirToArchive(struct archive* a, const fs::path& dirPath, const fs::path& baseDir) {
 	struct archive_entry* entry = archive_entry_new();
 	fs::path relativePath = fs::relative(dirPath, baseDir);
-	archive_entry_set_pathname(entry, relativePath.string().c_str());
+	
+	// 转换为 UTF-8 编码的路径
+	std::string utf8Path = to_utf8_from_wide(relativePath.wstring());
+	archive_entry_set_pathname(entry, utf8Path.c_str());
+	
 	archive_entry_set_filetype(entry, AE_IFDIR);
 	archive_entry_set_perm(entry, 0755);
-	archive_entry_set_size(entry, 0); // 目录必须 size=0
+	archive_entry_set_size(entry, 0);
 	archive_write_header(a, entry);
 	archive_entry_free(entry);
 }
@@ -305,7 +324,15 @@ std::wstring to_wide_string(const std::string& input)
     MultiByteToWideChar(CP_UTF8, 0, input.data(), static_cast<int>(input.size()), &wstrTo[0], size_needed);
     return wstrTo;
 }
-// 主函数：写 .robx
+
+std::string to_utf8_string(const char* utf8_str)
+{
+	if (utf8_str == nullptr)
+		return "";
+	return std::string(utf8_str);
+}
+
+// 主函数：写 
 void writeRobx(const std::wstring& outname, const std::vector<std::string>& dirList) {
 	
 
@@ -343,11 +370,10 @@ void writeRobx(const std::wstring& outname, const std::vector<std::string>& dirL
 
 void readRobx(const std::wstring& robxName, const std::string targetPath) {
 	struct archive* a = archive_read_new();
-	archive_read_support_format_zip(a);   // 支持 ZIP 格式
-	archive_read_support_filter_all(a);   // 支持所有过滤器（Deflate/Store 等）
+	archive_read_support_format_zip(a);
+	archive_read_support_filter_all(a);
 
 	if (archive_read_open_filename_w(a, robxName.c_str(), 10240) != ARCHIVE_OK) {
-	
 		archive_read_free(a);
 		return;
 	}
@@ -356,20 +382,26 @@ void readRobx(const std::wstring& robxName, const std::string targetPath) {
 	while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
 		const char* pathname = archive_entry_pathname(entry);
 
-		// 添加 NULL 检查
 		if (pathname == nullptr) {
-			continue;  // 跳过此条目
+			continue;
 		}
-		std::string outPath = targetPath + "/" + archive_entry_pathname(entry);
 
-		fs::path outFsPath(outPath);
+		// 将 UTF-8 路径转换为 wstring，然后构建 fs::path
+		int size_needed = MultiByteToWideChar(CP_UTF8, 0, pathname, -1, nullptr, 0);
+		std::wstring widePath(size_needed - 1, 0);
+		MultiByteToWideChar(CP_UTF8, 0, pathname, -1, &widePath[0], size_needed);
+
+		std::wstring targetPathW = to_wide_string(targetPath);
+		std::wstring outPathW = targetPathW + L"/" + widePath;
+
+		fs::path outFsPath(outPathW);
 
 		if (archive_entry_filetype(entry) == AE_IFDIR) {
-			fs::create_directories(outFsPath); // 创建目录
+			fs::create_directories(outFsPath);
 		}
 		else {
 			if (outFsPath.has_parent_path()) {
-				fs::create_directories(outFsPath.parent_path()); // 确保父目录存在
+				fs::create_directories(outFsPath.parent_path());
 			}
 			std::ofstream ofs(outFsPath, std::ios::binary);
 			const void* buff;
