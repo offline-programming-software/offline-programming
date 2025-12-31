@@ -43,6 +43,18 @@ void pickWidget::addItemCounts()
 
 
 
+void pickWidget::setPoints(const std::vector<double>& points)
+{
+	//清空现有items
+	this->clear();
+	//循环添加item
+	int numPoints = points.size() / 3;
+	for (int i = 0; i < numPoints; ++i) {
+		this->addItem(QStringLiteral("点%1").arg(i + 1));
+	}
+
+}
+
 void pickWidget::contextMenuEvent(QContextMenuEvent * event)
 {
 	m_currentItem = itemAt(event->pos());

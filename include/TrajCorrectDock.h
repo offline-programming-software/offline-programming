@@ -56,7 +56,7 @@ private:
 	RobxIO* m_io;
 
 	/*-----------------------控件-----------------------------*/
-	pickWidget *pickBox;    //拾取点
+	pickWidget *listFlagPoints;    //拾取点
 	PickSpinBox *xMinspin;
 	PickSpinBox* xMaxspin;
 	PickSpinBox *yMinspin;
@@ -69,12 +69,13 @@ private:
 	int pointCount = 0;
 	int rangeBoxIndex;
 	int m_correctCounter = 0;
-	/*-------------------------成员变量--------------------------------*/
+	/*-------------------------**成员变量**--------------------------------*/
 	
 	QVector<Correction> m_correctionList;
 	QVector<QListWidgetItem*> m_correctionItems;
 	std::vector<double> m_vFlagPoints;
 	std::vector<double> m_vMeasurePoints;
+	
 
 	std::vector<unsigned long> m_vAllPathIDs;      
 	std::vector<std::string> m_vAllPathNames;
@@ -89,7 +90,6 @@ private:
 
 		/*-------------------------成员方法----------------------------*/
 
-	void importCsvPoints(const QString& filePath);
 	void importCsvPointsMeasure(const QString& filePath);
 	void exportCsvFlagPoints(const QString& filePath);
 	void exportCsvMeasurePoints(const QString& filePath);
@@ -118,14 +118,13 @@ public slots:
 	void on_btnDeleteCorrection_clicked();
 	void on_btnAttributeSetOK_clicked();
 	void on_btnSave_clicked();
+	void on_btnRefresh_clicked();
 	void on_listCorrection_slectedItem(QListWidgetItem *item);
 	void on_pickBox_blankAreaClicked();
 	void on_pickBox_delet();
-	void on_pickBox_clear();
-	void onImportFlagPointsClicked();
-	void on_btnMeasurePtsInport_clicked();
 	void on_btnFlagPointsExport_clicked();
 	void onExportMeasurePointsClicked();
+	void on_btnMeasurePtsInport_clicked();
 	void pickRange();
 	void onPickSpinBoxValueChanged(int a);
 	void OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
@@ -135,7 +134,28 @@ public slots:
 	void setEdit();
 	void setView();
 	/*-------------------------测试槽----------------------------*/
-	void on_chkApplyCor_toggled(bool checked);
+
+	void on_btnRefreshLog_clicked() 
+	{
+		//ui->tblLog删除所有行
+		ui->tblLog->setRowCount(0);
+		//根据m_correctionItems的数量，添加相应的行数，第一列填写item的text，第二列填写item的状态（编辑/查看）
+		for (int i = 0; i < m_correctionItems.size(); i++)
+		{
+			ui->tblLog->insertRow(i);
+			ui->tblLog->setItem(i, 0, new QTableWidgetItem(m_correctionItems[i]->text()));
+			QString state = (m_correctionItems[i]->data(Qt::UserRole).toInt() == Edit) ? "Edit" : "View";
+			ui->tblLog->setItem(i, 1, new QTableWidgetItem(state));
+		}
+		ui->tblLogCor->setRowCount(0);
+		for(int i = 0; i < m_correctionList.size(); i++)
+		{
+			ui->tblLogCor->insertRow(i);
+			ui->tblLogCor->setItem(i, 0, new QTableWidgetItem(m_correctionList[i].name()));
+			
+		}
+		
+	}
 protected:
 	void mousePressEvent(QMouseEvent *event) override;
 

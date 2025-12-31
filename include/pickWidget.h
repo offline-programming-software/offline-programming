@@ -2,6 +2,7 @@
 
 #include <QListWidget>
 #include<QMouseEvent>
+#include<vector>
 
 class pickWidget  : public QListWidget
 {
@@ -17,7 +18,7 @@ public:
 	void initItemCounts();
 	void addItemCounts();
 
-
+	void setPoints(const std::vector<double>& points);
 
 private:
 	QListWidgetItem *m_currentItem;

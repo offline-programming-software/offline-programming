@@ -1610,6 +1610,13 @@ void MainWindow::on_AGV_path()
 
 void MainWindow::on_trajCorrectdock_open()
 {
+	CComBSTR robxName = " ";
+	m_ptrKit->Doc_get_name(&robxName);
+	if (robxName == L"设计") {
+		//代表当前没有打开的robx文件，不能打开轨迹修正面板
+		QMessageBox::information(this, "提示", "请先打开robx文件！");
+		return;
+	}
 	TrajCorrectDock* dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback);
 	addDockWidget(Qt::LeftDockWidgetArea, dock);
 }
@@ -2067,6 +2074,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 {
 
 	CComBSTR robxName = " ";
+	m_ptrKit->Doc_get_name(&robxName);
 	if (m_ptrKit)
 	{
 		m_ptrKit->pq_CloseComponent();

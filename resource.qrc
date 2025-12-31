@@ -107,6 +107,7 @@
         <file>resource/bendingFunc.png</file>
         <file>resource/bendingmanager .png</file>
         <file>resource/positioncorrect.png</file>
+        <file>resource/QuestionMark.png</file>
     </qresource>
     <qresource prefix="/theme">
         <file>resource/theme-win7.qss</file>

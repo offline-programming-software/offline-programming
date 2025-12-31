@@ -30,7 +30,8 @@ TrajCorrectDock::TrajCorrectDock(
 	QWidget *contentForScroll = new QWidget(this);
 	contentForScroll->setLayout(layoutForScroll);
 	QScrollArea *scroll = new QScrollArea();
-	scroll->setFixedWidth(330);
+	//#临时修改
+	scroll->setFixedWidth(700);
 	layoutForScroll->addWidget(scroll);
 	m_io = new RobxIO();
 	m_io->updateData(m_correctionList, "correctionList.json");
@@ -38,8 +39,8 @@ TrajCorrectDock::TrajCorrectDock(
 
 	QWidget *contentWidget = new QWidget();
 	ui->setupUi(contentWidget);
-	contentWidget->setFixedWidth(300);
-	pickBox = new pickWidget(contentWidget);  //pickbox的父对象被设置为contentWidget，在QT中的父子关系负责内存管理，删除父对象时，它会自动删除所有子对象（不需要你手动 delete）
+	contentWidget->setFixedWidth(600);
+	listFlagPoints = new pickWidget(contentWidget);  //pickbox的父对象被设置为contentWidget，在QT中的父子关系负责内存管理，删除父对象时，它会自动删除所有子对象（不需要你手动 delete）
 	xMinspin = new PickSpinBox(contentWidget);
 	xMaxspin = new PickSpinBox(contentWidget);
 	yMinspin = new PickSpinBox(contentWidget);
@@ -48,7 +49,7 @@ TrajCorrectDock::TrajCorrectDock(
 	zMaxspin = new PickSpinBox(contentWidget);
 	spinBoxes = { xMinspin, xMaxspin, yMinspin, yMaxspin, zMinspin, zMaxspin };
 	InitCustomWidget();
-	ui->verticalLayout->addWidget(pickBox);
+	ui->verticalLayout->addWidget(listFlagPoints);
 	scroll->setWidget(contentWidget);
 	setWidget(contentForScroll);
 	//setWidget(contentWidget);
@@ -58,11 +59,8 @@ TrajCorrectDock::TrajCorrectDock(
 	setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
 	setAllowedAreas(Qt::AllDockWidgetAreas);
 	setupConnections();
-	connect(pickBox, &pickWidget::blankAreaClicked, this, &TrajCorrectDock::on_pickBox_blankAreaClicked);
-	connect(pickBox, &pickWidget::deleteSignal, this, &TrajCorrectDock::testSignal);
-	connect(pickBox, &pickWidget::clearSignal, this, &TrajCorrectDock::on_pickBox_clear);
-	
-
+	connect(listFlagPoints, &pickWidget::blankAreaClicked, this, &TrajCorrectDock::on_pickBox_blankAreaClicked);
+	connect(listFlagPoints, &pickWidget::deleteSignal, this, &TrajCorrectDock::testSignal);
 	connect(this, &TrajCorrectDock::blankAreaClicked, this, &TrajCorrectDock::on_this_blankAreaClicked);
 	connect(ui->btnDeleteCorrection, SIGNAL(clicked()), this, SLOT(on_btnDeleteCorrection_clicked()));
 	connect(xMinspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
@@ -78,14 +76,12 @@ TrajCorrectDock::TrajCorrectDock(
 		
 	}
 	connect(zMaxspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
-	
+	connect(ui->btnMeasurePtsInport, &QPushButton::clicked, this, &TrajCorrectDock::on_btnMeasurePtsInport_clicked);
 	connect(ui->btnAttributeSetOK, &QPushButton::clicked, this,&TrajCorrectDock::on_btnAttributeSetOK_clicked);
-	connect(ui->btnFlagPointsImport, &QPushButton::clicked, this, &TrajCorrectDock::onImportFlagPointsClicked);
-	connect(ui->btnMeasurePtsExport, &QPushButton::clicked, this, &TrajCorrectDock::onExportMeasurePointsClicked);
-	pickBox->setStyleSheet("border: 1px solid black");
+	listFlagPoints->setStyleSheet("border: 1px solid black");
+	connect(ui->btnRefresh, &QPushButton::clicked, this, &TrajCorrectDock::on_btnRefresh_clicked);
 	connect(ui->listCorrections, &QListWidget::itemClicked, this, &TrajCorrectDock::on_listCorrection_slectedItem);
 	connect(ui->comboCorType, SIGNAL(currentIndexChanged(int)), this, SLOT(onComboBoxIndexChanged(int)));
-	connect(ui->chkApplyCor, SIGNAL(toggled(bool)), this, SLOT(on_chkApplyCor_toggled(bool)));
 	initDock();
 	connect(ui->btnSave, &QPushButton::clicked, this, &TrajCorrectDock::on_btnSave_clicked);
 	//---------------pq回调信号--------------------------
@@ -102,7 +98,26 @@ TrajCorrectDock::TrajCorrectDock(
 	GetPointInfo();	  //获取所有轨迹点位姿
 	setWindowTitle(QString::fromLocal8Bit("弯曲变形配置"));
 	
-	
+	//增加一些帮助
+	QPixmap pixmap(":/image/resource/QuestionMark.png");  
+	ui->label_Question->setFixedSize(20, 20);  // 设置标签大小
+	ui->label_Question->setPixmap(pixmap);  // 设置图片
+	ui->label_Question->setAlignment(Qt::AlignCenter);  // 图片居中显示
+	ui->label_Question->setScaledContents(true);
+
+	//设置提示信息：鼠标悬停在图片上时显示提示文本
+	ui->label_Question->setToolTip(QString::fromLocal8Bit
+	(
+		"导入文件需求：\n"
+		"格式：.csv"
+		"文件内容：每行一个点，X Y, Z坐标用逗号分隔\n"
+		"例如：\n"
+		"1.000000, 2.000000, 3.000000\n"
+		"4.000000, 5.000000, 6.000000\n"
+		"7.000000, 8.000000, 9.000000\n"
+	));
+
+
 }
 
 TrajCorrectDock::~TrajCorrectDock()
@@ -110,40 +125,7 @@ TrajCorrectDock::~TrajCorrectDock()
 	delete ui;
 }
 
-void TrajCorrectDock::importCsvPoints(const QString & filePath)
-{
-	QFile file(filePath);
-	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-		qWarning() << "无法打开文件:" << filePath;
-		return;
-	}
 
-	m_vFlagPoints.clear();  // 清空旧数据
-
-	QTextStream in(&file);
-	while (!in.atEnd()) {
-		QString line = in.readLine().trimmed();
-		if (line.isEmpty()) continue;
-
-		QStringList parts = line.split(QRegExp("[,;\\s]"), QString::SkipEmptyParts);
-		if (parts.size() < 3) continue;
-
-		bool ok1, ok2, ok3;
-		double x = parts[0].toDouble(&ok1);
-		double y = parts[1].toDouble(&ok2);
-		double z = parts[2].toDouble(&ok3);
-
-		if (ok1 && ok2 && ok3) {
-			m_vFlagPoints.push_back(x);
-			m_vFlagPoints.push_back(y);
-			m_vFlagPoints.push_back(z);
-		}
-	}
-
-	file.close();
-
-	qDebug() << "成功导入点数量：" << m_vFlagPoints.size() / 3;
-}
 
 void TrajCorrectDock::importCsvPointsMeasure(const QString & filePath)
 {
@@ -152,8 +134,7 @@ void TrajCorrectDock::importCsvPointsMeasure(const QString & filePath)
 		qWarning() << "无法打开文件:" << filePath;
 		return;
 	}
-
-	m_vMeasurePoints.clear();  // 清空旧数据
+	m_vMeasurePoints.clear();
 	
 	QTextStream in(&file);
 	while (!in.atEnd()) {
@@ -261,7 +242,7 @@ void TrajCorrectDock::mousePressEvent(QMouseEvent * event)
 	QWidget *clickedChild = childAt(event->pos());
 
 	// 如果点击的控件，不是 pickBox，也不是它的子控件
-	if (!clickedChild || (clickedChild != pickBox && !pickBox->isAncestorOf(clickedChild))) {
+	if (!clickedChild || (clickedChild != listFlagPoints && !listFlagPoints->isAncestorOf(clickedChild))) {
 		emit blankAreaClicked();
 	}
 	else {
@@ -320,7 +301,7 @@ void TrajCorrectDock::initGroupEmpty(const QString name) {
 	for (PickSpinBox* p : spinBoxes) {
 		p->setValue(0);
 	}
-	pickBox->clear();
+	listFlagPoints->clear();
 	ui->listMeasurePoints->clear();
 	ui->comboCurveFittingMeasure->setCurrentIndex(0);
 
@@ -328,29 +309,27 @@ void TrajCorrectDock::initGroupEmpty(const QString name) {
 void TrajCorrectDock::initGroupBox_AttributeDefine(QListWidgetItem * item)
 {
 	int corIndex = ui->listCorrections->row(item);
-	Correction cor = m_correctionList[corIndex];
+	const Correction &cor = m_correctionList[corIndex];
+
+	// 将cor的属性值设置到界面控件上
 	ui->editCorName->setText(cor.name());
-	on_chkApplyCor_toggled(cor.isApplied());
 	ui->chkApplyCor->setChecked(cor.isApplied());
-	if (cor.type() == Correction::interpolationType::Liner)
-	{
-		ui->comboCorType->setCurrentIndex(0);
-	}
-		
-	else if (cor.type() == Correction::interpolationType::Poly)
-	{
-		ui->comboCorType->setCurrentIndex(1);
-	}
-	else
-	{
-		ui->comboCorType->setCurrentIndex(2);
-	}
+	ui->comboCorType->setCurrentIndex(static_cast<int>(cor.m_interType));
 	for (size_t i = 0; i < 6; i++)
-	{
 		spinBoxes[i]->setValue(cor.rang(i));
-	}
 	ui->chkIsPosCorrect->setChecked(cor.isPosCorrect());
+	//这里是初始化两个列表控件
+	ui->listMeasurePoints->clear();
+	size_t pointCount = cor.m_measurePoints.size() / 3;  
+	for (size_t i = 0; i < pointCount; i++)
+		ui->listMeasurePoints->addItem(QStringLiteral("点%1").arg(i + 1));
+	listFlagPoints->setPoints(cor.m_flagPoints);
+	//同步初始化列表控件背后的成员变量
+	m_vFlagPoints = cor.m_flagPoints;
+	m_vMeasurePoints = cor.m_measurePoints;
 	
+
+	//日志信息
 	ui->edtLog->appendPlainText(QString::fromLocal8Bit("切换到item,correction %1，属性同步设置到页面").arg(corIndex));
 }
 
@@ -385,7 +364,9 @@ void TrajCorrectDock::setupConnections()
 	connect(ui->chkViewPoint2Correct, &QCheckBox::stateChanged, this, &TrajCorrectDock::setEdit);
 	connect(ui->comboCurveFittingMeasure, QOverload<int>::of(&QComboBox::currentIndexChanged) , this, &TrajCorrectDock::setEdit);
 	connect(ui->listMeasurePoints, &QListWidget::itemChanged, this, &TrajCorrectDock::setEdit);
-	connect(pickBox, &QListWidget::itemChanged, this, &TrajCorrectDock::setEdit);
+	connect(listFlagPoints, &QListWidget::itemChanged, this, &TrajCorrectDock::setEdit);
+	connect(ui->btnRefreshLog, &QPushButton::clicked, this, &TrajCorrectDock::on_btnRefreshLog_clicked);
+
 
 }
 
@@ -513,47 +494,47 @@ void TrajCorrectDock::GetPointInfo()
 
 void TrajCorrectDock::GetPoints2Correct(double range[6])
 {
-	double xMin, xMax, yMin, yMax, zMin, zMax;
-	xMin = (std::min)(range[0], range[1]);
-	xMax = (std::max)(range[0], range[1]);
-	yMin = (std::min)(range[2], range[3]);
-	yMax = (std::max)(range[2], range[3]);
-	zMin = (std::min)(range[4], range[5]);
-	zMax = (std::max)(range[4], range[5]);
-	double x, y, z;
-	
-	//m_v2dPointsToCorrect.clear();
-	//for (const auto& point : m_v2dAllPointsPositions) {
-	//	x = point[0];
-	//	y = point[1];
-	//	z = point[2];
+	//double xMin, xMax, yMin, yMax, zMin, zMax;
+	//xMin = (std::min)(range[0], range[1]);
+	//xMax = (std::max)(range[0], range[1]);
+	//yMin = (std::min)(range[2], range[3]);
+	//yMax = (std::max)(range[2], range[3]);
+	//zMin = (std::min)(range[4], range[5]);
+	//zMax = (std::max)(range[4], range[5]);
+	//double x, y, z;
+	//
+	////m_v2dPointsToCorrect.clear();
+	////for (const auto& point : m_v2dAllPointsPositions) {
+	////	x = point[0];
+	////	y = point[1];
+	////	z = point[2];
 
-	//	if (x >= xMin && x <= xMax
-	//		&& y >= yMin && y <= yMax
-	//		&& z >= zMin && z <= zMax)
+	////	if (x >= xMin && x <= xMax
+	////		&& y >= yMin && y <= yMax
+	////		&& z >= zMin && z <= zMax)
+	////	{
+	////		m_v2dPointsToCorrect.push_back(point);
+	////	}
+
+	////}
+	//m_v2dPointsToCorrect.clear();
+	//m_vPointsToCorrectID.clear();
+	//for (size_t i = 0; i < m_v2dAllPointsPositions.size(); i++)
+	//{
+	//	const auto& point = m_v2dAllPointsPositions[i];
+	//	double x = point[0];
+	//	double y = point[1];
+	//	double z = point[2];
+
+	//	if (x >= xMin && x <= xMax &&
+	//		y >= yMin && y <= yMax &&
+	//		z >= zMin && z <= zMax)
 	//	{
 	//		m_v2dPointsToCorrect.push_back(point);
+	//		m_vPointsToCorrectID.push_back(m_vAllPointIDs[i]);
 	//	}
-
 	//}
-	m_v2dPointsToCorrect.clear();
-	m_vPointsToCorrectID.clear();
-	for (size_t i = 0; i < m_v2dAllPointsPositions.size(); i++)
-	{
-		const auto& point = m_v2dAllPointsPositions[i];
-		double x = point[0];
-		double y = point[1];
-		double z = point[2];
-
-		if (x >= xMin && x <= xMax &&
-			y >= yMin && y <= yMax &&
-			z >= zMin && z <= zMax)
-		{
-			m_v2dPointsToCorrect.push_back(point);
-			m_vPointsToCorrectID.push_back(m_vAllPointIDs[i]);
-		}
-	}
-	GetParentPath();
+	//GetParentPath();
 }
 
 void TrajCorrectDock::GetParentPath()
@@ -613,29 +594,12 @@ void TrajCorrectDock::modifyPointsPoses(const std::vector<unsigned long>& Correc
 
 
 #pragma region SLOTSs
-void TrajCorrectDock::on_chkApplyCor_toggled(bool checked)
-{
-	bool isChecked = ui->chkApplyCor->isChecked();
-	int row = ui->listCorrections->currentRow();
-	QListWidgetItem* item = ui->listCorrections->item(row);
-	if (!item) return;
-	if (isChecked)
-	{
-		item->setBackground(Qt::white);
-		item->setForeground(Qt::black);
-	}
-	else
-	{
-		item->setBackground(Qt::white);      // 恢复默认背景
-		item->setForeground(Qt::black);  // 显示灰色字体
-	}
-	
-}
+
 void TrajCorrectDock::on_this_blankAreaClicked()
 {
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	m_ptrKit->Doc_end_module(cmd);
-	pickBox->setStyleSheet("border: 1px solid black");
+	listFlagPoints->setStyleSheet("border: 1px solid black");
 	for (size_t i = 0; i < 6; i++)
 	{
 		spinBoxes[i]->setStyleSheet("PickSpinBox{border: 1px solid black}");
@@ -667,6 +631,30 @@ void TrajCorrectDock::onExportMeasurePointsClicked()
 
 
 
+void TrajCorrectDock::on_btnMeasurePtsInport_clicked()
+{
+	//brief: 从csv文件导入pts
+	// 0. 打开文件对话框，选择csv文件
+	//1. 初始化到列表控件
+	//2. 保存到成员变量m_vMeasurePoints中
+	QString fileName = QFileDialog::getOpenFileName(
+		this,
+		tr("导入测试点"),
+		"",
+		tr("CSV 文件 (*.csv)")
+	);
+	if (fileName.isEmpty())
+		return;
+	ui->listMeasurePoints->clear();
+	m_vMeasurePoints.clear();
+	importCsvPointsMeasure(fileName); //数据同步
+	int pointCount = m_vMeasurePoints.size() / 3;
+	for (size_t i = 0; i < pointCount; i++)
+	{
+		ui->listMeasurePoints->addItem(QStringLiteral("点%1").arg(i + 1));
+	}//界面同步
+}
+
 void TrajCorrectDock::onPickSpinBoxValueChanged(int a)
 {
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
@@ -689,10 +677,10 @@ void TrajCorrectDock::OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int 
 		m_vFlagPoints.push_back(i_dPointY);
 		m_vFlagPoints.push_back(i_dPointZ);
 		myPointCounter = m_vFlagPoints.size() / 3;
-		pickBox->clear();
+		listFlagPoints->clear();
 		for (size_t i = 0; i < myPointCounter; i++)
 		{
-			pickBox->addItem(QStringLiteral("点%1").arg(i+1));
+			listFlagPoints->addItem(QStringLiteral("点%1").arg(i+1));
 		}
 		
 		break;
@@ -921,6 +909,7 @@ void TrajCorrectDock::on_btnNewCorrection_clicked()
 	ui->groupBox_2->setEnabled(true);	
 	ui->listCorrections->setCurrentItem(item);
 	initGroupEmpty(itemName);
+	setView();
 	m_correctionList.append(newCor);
 	ui->edtLog->appendPlainText(QStringLiteral(">>新建修正对象：%1").arg(itemName));
 	ui->edtLog->appendPlainText(QStringLiteral(">>请在属性定义中设置修正对象属性"));
@@ -940,6 +929,7 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 			QMessageBox::Ok);
 		return;
 	}
+	//弹出提示框，确认是否保存属性
 	QMessageBox::StandardButton reply;
 	reply = QMessageBox::question(this,
 		QStringLiteral("提示"),
@@ -952,6 +942,7 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 		return;
 	}
 
+	//保存属性到当前选中correction对象
 	QString myName = ui->editCorName->text();
 	double my_range[6];
 	bool my_isPosCor;
@@ -984,10 +975,14 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 	myCor.setIsPosCorrect(my_isPosCor);
 	myCor.setRange(my_range);
 	myCor.setFlagPoints(m_vFlagPoints);
+	myCor.setMeasurePoints(m_vMeasurePoints);
 	myCor.set_m_v2dTrajPointsToCorrect(m_v2dPointsToCorrect);
+	myCor.setType(static_cast<Correction::interpolationType>(ui->comboCurveFittingMeasure->currentIndex()));
+	
+	myCor.setIsApply(false); //未体现在本窗口中，默认为false，这个属性在”修正函数管理“模块控制
 	QListWidgetItem *myItem = ui->listCorrections->currentItem();
 	myItem->setText(myName);
-	myCor.setIsApply(false);
+	
 
 	ui->edtLog->setPlainText(QStringLiteral(">>"));
 	ui->edtLog->setPlainText(QStringLiteral(">>属性已保存到修正对象：%1").arg(m_correctionList[myRow].m_name));
@@ -1036,9 +1031,8 @@ void TrajCorrectDock::on_listCorrection_slectedItem(QListWidgetItem *item)
 	ui->btnNewCorrection->setEnabled(false);
 	ui->groupBox_2->setEnabled(true);
 	ui->btnDeleteCorrection->setEnabled(true);
-	int row = ui->listCorrections->row(item);
 
-	item->setData(Qt::UserRole, static_cast<int>(ItemState::Edit));
+	//item->setData(Qt::UserRole, static_cast<int>(ItemState::Edit));
 	initGroupBox_AttributeDefine(item);  //触发emitedit，需保证当前处于edit状态
 	
 	
@@ -1057,67 +1051,36 @@ void TrajCorrectDock::on_btnSave_clicked()
 	this->close();
 }
 
+void TrajCorrectDock::on_btnRefresh_clicked()
+{
+	//根据CurrentRow对应的m_correctionList对象重新初始化GroupBox_2
+	int myRow = ui->listCorrections->currentRow();
+	const Correction& myCor = m_correctionList[myRow];
+
+	//刷新ui->listMeasurePoints
+	ui->listMeasurePoints->clear();
+	size_t pointCount = myCor.m_measurePoints.size() / 3;
+	for (size_t i = 0; i < pointCount; i++)
+		ui->listMeasurePoints->addItem(QStringLiteral("点%1").arg(i + 1));
+	listFlagPoints->setPoints(myCor.m_flagPoints);
+
+}
+
 void TrajCorrectDock::on_pickBox_blankAreaClicked()
 {
 	m_pickSource = PickSource::FromListFlags;
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	m_ptrKit->Doc_start_module(cmd);
-	pickBox->setStyleSheet("border: 3px solid blue");
+	listFlagPoints->setStyleSheet("border: 3px solid blue");
 	m_drawSource = DrawSource::FromFlagPoints;
 }
 
 void TrajCorrectDock::on_pickBox_delet()
 {
+//#待实现
 }
 
-void TrajCorrectDock::on_pickBox_clear()
-{
-	m_vFlagPoints.clear();
-	pickBox->clear();
-}
 
-void TrajCorrectDock::onImportFlagPointsClicked()
-{
-	QString fileName = QFileDialog::getOpenFileName(
-		this,
-		tr("导入标记点"),
-		"",
-		tr("CSV 文件 (*.csv);;Excel 文件 (*.xlsx *.xls)")
-	);
-
-	if (fileName.isEmpty())
-		return;
-
-		importCsvPoints(fileName);
-		pickBox->clear();
-		int pointNum = m_vFlagPoints.size() / 3;
-		for (size_t i = 0; i < pointNum; i++)
-		{
-			pickBox->addItem(QStringLiteral("点%1").arg(i + 1));
-		}
-}
-
-void TrajCorrectDock::on_btnMeasurePtsInport_clicked()
-{
-	QString fileName = QFileDialog::getOpenFileName(
-		this,
-		tr("导入标记点"),
-		"",
-		tr("CSV 文件 (*.csv);;Excel 文件 (*.xlsx *.xls)")
-	);
-
-	if (fileName.isEmpty())
-		return;
-
-	importCsvPoints(fileName);
-
-	ui->listMeasurePoints->clear();
-	int myPointNum = m_vMeasurePoints.size() / 3;
-	for (size_t i = 0; i < myPointNum; i++)
-	{
-		pickBox->addItem(QStringLiteral("点%1").arg(i + 1));
-	}
-}
 
 void TrajCorrectDock::on_btnFlagPointsExport_clicked()
 {
