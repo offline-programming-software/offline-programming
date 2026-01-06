@@ -7,14 +7,14 @@
 #include<QDir>
 
 class MRU;
-
+struct Details;
 QT_BEGIN_NAMESPACE
 namespace Ui { class welcomePageClass; };
 QT_END_NAMESPACE
 
 class MainWindow;
 
-class WelcomePage: public QWidget
+class WelcomePage: public QMainWindow
 {
 	Q_OBJECT
 
@@ -37,13 +37,20 @@ private:
 	MRU* mruWorkPath;
 	void connectSet();
 	void openWork(const QString& filePath);
+	void initMenu();
+	QMenuBar* menuBar;
+	QVector<Details> currentDir_detailList;
 
 private slots:
-	void on_btnGrinding_clicked();
 	void on_btnPainting_clicked();
 	void on_btnOpen_clicked();
+	void on_listRecentWrok_itemDoubleClicked(QListWidgetItem* item);
 	void on_listRecentWrok_itemClicked(QListWidgetItem* item);
-	void on_listRecentDir_itemClicked(QListWidgetItem* item);
+	void on_cmbRecentDir_currentIndexChanged(const QString& dir);
+
+	//²Ëµ¥À¸
+	void on_actionNew_triggered();
+
 };
 
 
@@ -102,4 +109,14 @@ private:
 	int m_maxItem;
 	QString m_key;
 
+};
+
+
+struct Details
+{
+	bool isPainting;
+	QString name;
+	QString filePath;
+	QString creationTime;
+	QString modificationTime;
 };

@@ -4,6 +4,8 @@
 #include <QtWidgets/QApplication>
 #include <QString>
 #include "welcomePage.h"
+#include"loginDlg.h"
+
 
 int main(int argc, char *argv[])
 {
@@ -12,12 +14,14 @@ int main(int argc, char *argv[])
 	f.setFamily(u8"微软雅黑");
 	a.setFont(f);
 
+	loginDlg login;
+	login.show();
+	if(login.exec() != QDialog::Accepted) {
+		return 0; // 如果登录未成功，退出应用程序
+	}
 	MainWindow* painting = new MainWindow();
 	WelcomePage welcome(painting);
-		
 	welcome.show();
-	//w.show();  // 显示主窗口
-	//w.showMaximized();
-	//w.setWindowTitle("自动喷涂离线编程与仿真软件");
+
 	return a.exec();
 }

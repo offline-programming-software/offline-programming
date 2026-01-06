@@ -121,5 +121,6 @@
         <file>resource/welcomePage/emptyProj.png</file>
         <file>resource/welcomePage/grinding.png</file>
         <file>resource/welcomePage/painting.png</file>
+        <file>resource/welcomePage/PaintingProj.png</file>
     </qresource>
 </RCC>
