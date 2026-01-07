@@ -92,6 +92,7 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	//添加菜单栏
 	QAction* action21 = part->addAction("定义零件", QIcon(":/image/resource/icons8-tool.png"), QToolButton::InstantPopup);
 	QAction* action22 = part->addAction("导入零件", QIcon(":/image/resource/icons-gear.png"), QToolButton::InstantPopup);
+	QAction* action47 = part->addAction("定义AGV", QIcon(":/image/resource/icons8-agv-32.png"), QToolButton::InstantPopup);
 
 	//设置菜单栏名称
 	SARibbonPannel* tool = definition->addPannel("工具");
@@ -140,7 +141,7 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	QAction* action44 = path1->addAction("路径分块", QIcon(":/image/resource/31.png"), QToolButton::InstantPopup);
 	QAction* action45 = path1->addAction("路径编辑", QIcon(":/image/resource/new_1.png"), QToolButton::InstantPopup);
 	QAction* action46 = path1->addAction("路径设置", QIcon(":/image/resource/icons8-settings-32.png"), QToolButton::InstantPopup);
-	QAction* action47 = path1->addAction("路径快排序", QIcon(":/image/resource/35.png"), QToolButton::InstantPopup);
+	
 	QAction* action48 = path1->addAction("移动路径优化", QIcon(":/image/resource/34.png"), QToolButton::InstantPopup);
 
 	//添加菜单校准
@@ -430,135 +431,86 @@ void MainWindow::on_numPost() {
 	postProcessing postDialog;
 
 	// 获取机器人列表
-	PQDataType robotType = PQ_ROBOT; // 机器人类型代码
-	VARIANT robotNamesVariant;
-	VariantInit(&robotNamesVariant);
-	robotNamesVariant.parray = NULL;
+	PQDataType robotType = PQ_ROBOT;
+	QMap<ULONG, QString> institutionMap = getObjectsByType(robotType);
 
-	VARIANT robotIDsVariant;
-	VariantInit(&robotIDsVariant);
-	robotIDsVariant.parray = NULL;
-
-	HRESULT hr = m_ptrKit->Doc_get_obj_bytype(robotType, &robotNamesVariant, &robotIDsVariant);
-	if (FAILED(hr)) {
-		QMessageBox::warning(this, QString::fromStdString("错误"), QString::fromStdString("获取机器人列表失败！"));
-		VariantClear(&robotNamesVariant);
-		VariantClear(&robotIDsVariant);
+	if (institutionMap.empty()) {
+		QMessageBox::information(this, "提示", "当前没有可用的机器人！");
 		return;
 	}
 
-	// 检查机器人数据有效性
-	SAFEARRAY* nameArray = robotNamesVariant.parray;
-	SAFEARRAY* idArray = robotIDsVariant.parray;
-
-	if (!nameArray || nameArray->cDims != 1 ||
-		!idArray || idArray->cDims != 1 ||
-		nameArray->rgsabound[0].cElements == 0) {
-		QMessageBox::information(this, QString::fromStdString("提示"), QString::fromStdString("当前没有可用的机器人！"));
-		VariantClear(&robotNamesVariant);
-		VariantClear(&robotIDsVariant);
-		return;
-	}
-
-	// 获取机器人数量
-	long lowerBound, upperBound;
-	SafeArrayGetLBound(nameArray, 1, &lowerBound);
-	SafeArrayGetUBound(nameArray, 1, &upperBound);
-	long robotCount = upperBound - lowerBound + 1;
-
-	// 提取机器人数据
-	BSTR* nameData = NULL;
-	LONG* idData = NULL;
-
-	HRESULT hrName = SafeArrayAccessData(nameArray, (void**)&nameData);
-	HRESULT hrId = SafeArrayAccessData(idArray, (void**)&idData);
-
-	if (SUCCEEDED(hrName) && SUCCEEDED(hrId)) {
-		// 遍历所有机器人，添加为父节点
-		for (long i = 0; i < robotCount; i++) {
-			QString robotName;
-			if (nameData[i] != NULL) {
-				robotName = QString::fromWCharArray(nameData[i]);
-			}
-			else {
-				robotName = QString::fromStdString("机器人_%1").arg(i + 1);
-			}
-
-			long robotId = idData[i];
-
-			// 设置机器人名称
-			postDialog.setRobotName(robotName);
-
-			// 添加机器人作为父节点
-			int parentNodeId = postDialog.addParentNode(robotName, robotId);
-
-			// 获取当前机器人的路径组
-			VARIANT pathGroupVariant;
-			VariantInit(&pathGroupVariant);
-			pathGroupVariant.parray = NULL;
-
-			hr = m_ptrKit->Doc_get_pathgroup_name(robotId, &pathGroupVariant);
-			if (SUCCEEDED(hr)) {
-				SAFEARRAY* pathGroupArray = pathGroupVariant.parray;
-				if (pathGroupArray && pathGroupArray->cDims == 1) {
-					ULONG pathGroupCount = pathGroupArray->rgsabound[0].cElements;
-
-					// 遍历路径组，添加为子节点
-					for (ULONG pgIndex = 0; pgIndex < pathGroupCount; pgIndex++) {
-
-						BSTR pathGroupId = 0;
-						SafeArrayGetElement(pathGroupArray, (LONG*)&pgIndex, &pathGroupId);
-
-						// 获取路径组名称
-						QString pathGroupName = QString::fromWCharArray(pathGroupId);
-
-						// 设置路径组名称
-						postDialog.setPathGroupName(pathGroupName);
-
-						// 生成唯一的子节点ID（使用机器人ID和路径组索引组合）
-						int childNodeId = robotId * 1000 + pgIndex;
-
-						// 生成该路径组的后置文件内容
-						QString postContent = generatePathGroupPostContent(robotId, pathGroupId, robotName, pathGroupName);
-
-						// 添加路径组作为子节点
-						postDialog.addChildNode(parentNodeId, pathGroupName, childNodeId, postContent);
-
-						// 设置group站位信息
-						QString positionName = "POS" + pathGroupName;
-						int positionId = robotId * 10000 + pgIndex * 100 + 1;
-
-						// 生成站位信息的内容
-						//String positionContent = generatePositionContent(robotId, pathGroupId, positionName);
-
-						// 添加子子节点（站位信息）
-						postDialog.addSubChildNode(childNodeId, positionName, positionId,"");
-					}
-				}
-				VariantClear(&pathGroupVariant);
+	// 过滤机械臂机器人
+	QMap<ULONG, QString> robotMap;
+	for (auto it = institutionMap.begin(); it != institutionMap.end(); ++it) {
+		ULONG robotID = it.key();
+		PQRobotType eRobotType = PQ_MECHANISM_ROBOT;
+		if (SUCCEEDED(m_ptrKit->Robot_get_type(robotID, &eRobotType))){
+			if (eRobotType == PQ_MECHANISM_ROBOT) {
+				robotMap.insert(robotID, it.value());
 			}
 		}
-
-		// 释放数组访问
-		SafeArrayUnaccessData(nameArray);
-		SafeArrayUnaccessData(idArray);
 	}
-	else {
-		// 清理资源
-		if (SUCCEEDED(hrName)) SafeArrayUnaccessData(nameArray);
-		if (SUCCEEDED(hrId)) SafeArrayUnaccessData(idArray);
 
-		QMessageBox::warning(this, QString::fromStdString("错误"), QString::fromStdString("无法读取机器人数据！"));
-		VariantClear(&robotNamesVariant);
-		VariantClear(&robotIDsVariant);
+	if (robotMap.empty()) {
+		QMessageBox::information(this, "提示", "当前没有可用的机械臂机器人！");
+			return;
+	}
+
+	// 添加所有机器人和路径组
+	bool hasValidData = false;
+	for (auto it = robotMap.begin(); it != robotMap.end(); ++it) {
+		ULONG robotId = it.key();
+		QString robotName = it.value();
+
+		// 添加机器人父节点
+		int parentNodeId = postDialog.addParentNode(robotName, robotId);
+		if (parentNodeId == -1) continue;
+
+		// 获取路径组
+		VARIANT pathGroupVariant;
+		VariantInit(&pathGroupVariant);
+
+		if (SUCCEEDED(m_ptrKit->Doc_get_pathgroup_name(robotId, &pathGroupVariant))) {
+			SAFEARRAY* pathGroupArray = pathGroupVariant.parray;
+			if (pathGroupArray && pathGroupArray->cDims == 1) {
+				ULONG pathGroupCount = pathGroupArray->rgsabound[0].cElements;
+
+				for (ULONG pgIndex = 0; pgIndex < pathGroupCount; pgIndex++) {
+					BSTR pathGroupId = 0;
+					if (SUCCEEDED(SafeArrayGetElement(pathGroupArray, (LONG*)&pgIndex, &pathGroupId))) {
+						QString pathGroupName = QString::fromWCharArray(pathGroupId);
+
+						int groupNodeId = robotId * 1000 + pgIndex;
+						postDialog.addChildNode(parentNodeId, pathGroupName, groupNodeId, "");
+
+						// 生成轨迹内容
+						QString postContent = generatePathGroupPostContent(robotId, pathGroupId, robotName, pathGroupName);
+
+						// 添加轨迹节点
+						int trajectoryNodeId = robotId * 10000 + pgIndex * 100 + 1;
+						QString trajectoryNodeName = QString("轨迹_%1").arg(pathGroupName);
+						postDialog.addSubChildNode(groupNodeId, trajectoryNodeName, trajectoryNodeId, postContent);
+
+						// 添加位置节点
+						int positionNodeId = robotId * 10000 + pgIndex * 100 + 2;
+						QString positionNodeName = QString("位置_%1").arg(pathGroupName);
+						postDialog.addSubChildNode(groupNodeId, positionNodeName, positionNodeId, "");
+
+						SysFreeString(pathGroupId);
+						hasValidData = true;
+					}
+				}
+			}
+			VariantClear(&pathGroupVariant);
+		}
+	}
+
+	if (!hasValidData) {
+		QMessageBox::information(this, "提示", "没有找到有效的路径组数据！");
 		return;
 	}
 
-	// 清理VARIANT资源
-	VariantClear(&robotNamesVariant);
-	VariantClear(&robotIDsVariant);
-
-	// 显示后处理对话框
+	// 显示对话框
 	postDialog.exec();
 }
 
@@ -1073,31 +1025,11 @@ void MainWindow::on_insert_path()
 
 void MainWindow::on_kinetic_analysis()
 {
-	//kinetic_analysis dlg;
-	//kinetic_analysis dlg;
-	//dlg.setModal(true);
-	//dlg.exec();
+	kinetic_analysis *dlg = new kinetic_analysis(this, m_ptrKit, m_ptrKitCallback);
 
-	long lCount = 0;
-	ulong key = 0;
-	GetObjIDByName(PQ_WORKINGPART, L"零件2", key);
-	m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);//获取顶点个数
-	//std::vector<double> dSrc(3 * lCount, 0);
-	//double* dSrcPosition = dSrc.data();//顶点位置（通过一维数组表示）
-	double dSrcPosition[69] = {};
-	BSTR sName;
-	m_ptrKit->Doc_get_obj_name(key, &sName);
-
-	
-
-	m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);//获取顶点位置
-
-	for (int i = 0; i < 69; i++) {
-		m_vPosition.push_back(dSrcPosition[i]);
-	}
-
-	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+	dlg->setModal(false);
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->show();
 
 }
 
@@ -1589,16 +1521,21 @@ std::vector<double> MainWindow::calculateAABBCornersFromPickupMap(const std::map
 
 void MainWindow::on_pos_cal()
 {
-	posCal dlg;
-	dlg.setModal(true);
-	dlg.exec();
+	posCal *dlg = new posCal(this,m_ptrKit,m_ptrKitCallback);
+
+
+	dlg->setModal(false);
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->show();
 }
 
 void MainWindow::on_AGV_path()
 {
-	AGVpath dlg;
-	dlg.setModal(true);
-	dlg.exec();
+	AGVpath *dlg = new AGVpath(this, m_ptrKit, m_ptrKitCallback);
+
+	dlg->setModal(false);
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->show();
 }
 
 void MainWindow::on_trajCorrectdock_open()
@@ -1619,9 +1556,10 @@ void MainWindow::on_trajCorrectdock_open()
 
 void MainWindow::on_effectiveness_analysis()
 {
-	effectiveness_analysis dlg;
-	dlg.setModal(true);
-	dlg.exec();
+	effectiveness_analysis *dlg = new effectiveness_analysis(this, m_ptrKit, m_ptrKitCallback);
+	dlg->setModal(false);
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->show();
 }
 
 void MainWindow::on_AlignPart3Point()
@@ -1666,9 +1604,11 @@ void MainWindow::on_path_set_up()
 
 void MainWindow::on_path_sort()
 {
-	path_sort path_sort;
-	path_sort.setModal(true);
-	path_sort.exec();
+	path_sort  *dlg = new path_sort(this, m_ptrKit, m_ptrKitCallback);
+
+	dlg->setModal(false);
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->show();
 }
 
 void MainWindow::on_addlinearspraypath()
@@ -2018,8 +1958,8 @@ void MainWindow::InitPQKit()
 void MainWindow::OnInitializeKitThread()
 {
 	//initialize pqkit
-	CComBSTR bsName = L"ra_tsinghua_whk03";
-	CComBSTR bsPWD = L"tsinghua_whk03";
+	CComBSTR bsName = L"ra_tsinghua_whk04";
+	CComBSTR bsPWD = L"tsinghua_whk04";
 	HRESULT hr = m_ptrKit->pq_InitPlatformComponent(m_ptrKitCallback, (int)(this->winId()), bsName, bsPWD);
 	if (S_OK != hr)
 	{

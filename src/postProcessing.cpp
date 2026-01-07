@@ -115,39 +115,51 @@ void postProcessing::onSelectSavePathClicked()
 
 void postProcessing::onGenerateRobotFilesClicked()
 {
-	// 获取当前选中的项
-	QTreeWidgetItem *currentItem = treeWidget->currentItem();
-	if (!currentItem) {
+	// 检查是否有机器人节点
+	if (parentIdToItemMap.isEmpty()) {
 		QMessageBox::warning(this, QString::fromLocal8Bit("警告"),
-			QString::fromLocal8Bit("请选择一个机器人节点"));
+			QString::fromLocal8Bit("没有可用的机器人节点"));
 		return;
 	}
 
-	// 检查是否为机器人节点（父节点）
-	if (currentItem->parent() != nullptr) {
+	// 检查保存路径
+	if (savePath.isEmpty()) {
 		QMessageBox::warning(this, QString::fromLocal8Bit("警告"),
-			QString::fromLocal8Bit("请选择机器人节点（父节点），而不是组节点"));
+			QString::fromLocal8Bit("请选择保存路径"));
 		return;
 	}
 
-	int robotNodeId = currentItem->data(0, Qt::UserRole).toInt();
+	bool allSuccess = true;
+	int successCount = 0;
+	int totalCount = parentIdToItemMap.size();
 
-	// 获取机器人名称
-	QString robotName = getNodeName(robotNodeId);
+	// 遍历所有机器人节点并生成文件
+	QMapIterator<int, QTreeWidgetItem*> it(parentIdToItemMap);
+	while (it.hasNext()) {
+		it.next();
+		int robotNodeId = it.key();
 
-	// 根据机器人名称判断是否为AGV小车
-	bool isAGV = robotName.contains("AGV", Qt::CaseInsensitive);
-	QString positionFileSuffix = isAGV ? ".agv" : ".txt";
+		if (generateRobotPostFiles(robotNodeId)) {
+			successCount++;
+		}
+		else {
+			allSuccess = false;
+		}
+	}
 
-	// 生成整个机器人的后置文件
-	if (generateRobotPostFiles(robotNodeId)) {
-		QString message = QString::fromLocal8Bit("机器人 %1 的所有后置文件已成功生成\n轨迹文件: .txt\n位置文件: %2")
-			.arg(currentItem->text(0))
-			.arg(positionFileSuffix);
-
-		QMessageBox::information(this, QString::fromLocal8Bit("成功"), message);
+	// 显示生成结果
+	if (allSuccess) {
+		QMessageBox::information(this, QString::fromLocal8Bit("成功"),
+			QString::fromLocal8Bit("成功生成所有机器人的后置文件\n共生成 %1 个机器人的文件").arg(successCount));
+	}
+	else {
+		QMessageBox::information(this, QString::fromLocal8Bit("完成"),
+			QString::fromLocal8Bit("文件生成完成\n成功: %1 个, 失败: %2 个")
+			.arg(successCount).arg(totalCount - successCount));
 	}
 }
+
+
 bool postProcessing::generateRobotPostFiles(int robotNodeId)
 {
 	// 获取机器人名称
@@ -158,17 +170,12 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 		return false;
 	}
 
-	// 根据机器人名称判断是否为AGV小车
+	// 判断是否为AGV小车
 	bool isAGV = robotName.contains("AGV", Qt::CaseInsensitive);
 	QString positionFileSuffix = isAGV ? ".agv" : ".txt";
 
-	// 获取该机器人的所有组
+	// 获取用户设置的组 - 移除了空组检查
 	QMap<int, QString> groups = getRobotGroups(robotNodeId);
-	if (groups.isEmpty()) {
-		QMessageBox::warning(this, QString::fromLocal8Bit("警告"),
-			QString::fromLocal8Bit("该机器人下没有组节点"));
-		return false;
-	}
 
 	// 检查保存路径
 	if (savePath.isEmpty()) {
@@ -181,9 +188,9 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 	QString robotFolderPath = savePath + "/" + robotName;
 	QDir robotDir(robotFolderPath);
 
-	// 删除已存在的机器人文件夹（清理旧文件）
+	// 删除已存在的机器人文件夹内容
 	if (robotDir.exists()) {
-		// 先删除所有子文件夹和文件
+		// 删除文件夹内的所有内容
 		QDirIterator it(robotFolderPath, QDir::AllEntries | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 		while (it.hasNext()) {
 			it.next();
@@ -198,11 +205,17 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 		}
 	}
 
-	// 重新创建机器人文件夹
+	// 创建文件夹
 	if (!robotDir.mkpath(".")) {
 		QMessageBox::critical(this, QString::fromLocal8Bit("错误"),
-			QString::fromLocal8Bit("无法创建机器人文件夹: %1").arg(robotFolderPath));
+			QString::fromLocal8Bit("无法创建文件夹: %1").arg(robotFolderPath));
 		return false;
+	}
+
+	// 如果没有组，创建一个默认组
+	if (groups.isEmpty()) {
+		// 创建默认组
+		groups[0] = "DefaultGroup";
 	}
 
 	// 为每个组生成文件
@@ -217,12 +230,7 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 
 		// 生成轨迹内容
 		QString trajectoryContent = generateTrajectoryContentForGroup(groupId);
-		if (trajectoryContent.isEmpty()) {
-			QMessageBox::warning(this, QString::fromLocal8Bit("警告"),
-				QString::fromLocal8Bit("组 %1 的轨迹内容为空").arg(groupName));
-			allSuccess = false;
-			continue;
-		}
+		// 即使轨迹内容为空也继续生成文件
 
 		// 生成位置内容
 		QString positionContent = generatePositionContentForGroup(groupId);
@@ -238,7 +246,7 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 			continue;
 		}
 
-		// 保存轨迹文件（保持.txt后缀）
+		// 写入轨迹文件
 		QString trajectoryFilePath = groupFolderPath + "/" + groupFolderName + "_trajectory.txt";
 		QFile trajectoryFile(trajectoryFilePath);
 		if (!trajectoryFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -253,8 +261,8 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 		trajectoryStream << trajectoryContent;
 		trajectoryFile.close();
 
-		// 保存位置文件（根据是否为AGV决定后缀）
-		QString positionFilePath = groupFolderPath + "/" + groupFolderName + "_position" + positionFileSuffix;
+		// 写入位置文件
+		QString positionFilePath = groupFolderPath + "/" + groupFolderName + "_position.agv";
 		QFile positionFile(positionFilePath);
 		if (!positionFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
 			QMessageBox::critical(this, QString::fromLocal8Bit("错误"),
@@ -278,14 +286,14 @@ QMap<int, QString> postProcessing::getRobotGroups(int robotNodeId) const
 {
 	QMap<int, QString> groups;
 
-	// 查找对应的父节点项
+	// 查找对应的父节点
 	if (!parentIdToItemMap.contains(robotNodeId)) {
-		return groups;
+		return groups; // 返回空组
 	}
 
 	QTreeWidgetItem *robotItem = parentIdToItemMap[robotNodeId];
 
-	// 遍历所有子节点（组节点）
+	// 遍历子节点（组节点）
 	for (int i = 0; i < robotItem->childCount(); i++) {
 		QTreeWidgetItem *groupItem = robotItem->child(i);
 		int groupId = groupItem->data(0, Qt::UserRole).toInt();
@@ -298,26 +306,33 @@ QMap<int, QString> postProcessing::getRobotGroups(int robotNodeId) const
 
 QString postProcessing::generateTrajectoryContentForGroup(int groupNodeId)
 {
-	// 直接从映射中获取组节点的内容
+	// 直接获取节点内容，如果没有内容返回默认轨迹
 	if (nodeIdToContentMap.contains(groupNodeId)) {
-		return nodeIdToContentMap[groupNodeId];
+		QString content = nodeIdToContentMap[groupNodeId];
+		if (!content.isEmpty()) {
+			return content;
+		}
 	}
-	return QString();
+
+	// 返回默认的轨迹文件内容
+	return QString::fromLocal8Bit("; 轨迹信息文件\n; 该组没有配置具体的轨迹信息\n");
 }
+
 
 QString postProcessing::generatePositionContentForGroup(int groupNodeId)
 {
 	QString positionContent;
 	int positionCount = 0;
 
-	// 查找组节点项
+	// 检查是否有子节点（位置信息节点）
 	if (!childIdToItemMap.contains(groupNodeId)) {
-		return QString::fromLocal8Bit("; 位置信息\n");
+		// 如果没有子节点，返回默认的位置文件内容
+		return QString::fromLocal8Bit("; 位置信息文件\n; 该组没有配置具体的位置点\n");
 	}
 
 	QTreeWidgetItem *groupItem = childIdToItemMap[groupNodeId];
 
-	// 遍历所有子子节点（位置节点）
+	// 遍历子节点（位置信息节点）
 	for (int i = 0; i < groupItem->childCount(); i++) {
 		QTreeWidgetItem *positionItem = groupItem->child(i);
 		int positionId = positionItem->data(0, Qt::UserRole).toInt();
@@ -329,8 +344,9 @@ QString postProcessing::generatePositionContentForGroup(int groupNodeId)
 		}
 	}
 
+	// 如果没有位置信息，返回默认内容
 	if (positionContent.isEmpty()) {
-		positionContent = QString::fromLocal8Bit("; 位置信息\n");
+		positionContent = QString::fromLocal8Bit("; 位置信息文件\n; 该组没有配置具体的位置点\n");
 	}
 
 	return positionContent;

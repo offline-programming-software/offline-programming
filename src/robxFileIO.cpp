@@ -5,8 +5,9 @@
 #include <qmessagebox.h>
 #include <archive.h>
 #include <archive_entry.h>
-#include<iostream>
-#include<Windows.h>
+#include <iostream>
+#include <tuple>
+#include <Windows.h>
 using json = nlohmann::json;
 
 RobxIO::RobxIO()
@@ -94,6 +95,33 @@ void RobxIO::writeData(const QVector<workSpaceInformation>& list,
 	ofs.close();
 }
 
+void RobxIO::writeData(QVector<std::tuple<QString, QString, QString>>& list,
+	const std::string& fileName)
+{
+	nlohmann::json j = nlohmann::json::array();
+
+	for (const auto& tuple : list) {
+		// 将QString转换为std::string后创建JSON数组
+		nlohmann::json tupleJson = {
+			std::get<0>(tuple).toStdString(),  // 第一个QString转换为std::string
+			std::get<1>(tuple).toStdString(),  // 第二个QString转换为std::string
+			std::get<2>(tuple).toStdString()   // 第三个QString转换为std::string
+		};
+		j.push_back(tupleJson);
+	}
+
+	std::string fullPath = m_tempDir + "/" + fileName;
+
+	std::ofstream ofs(fullPath);
+	if (ofs.is_open()) {
+		ofs << j.dump(4);
+		ofs.close();
+	}
+	else {
+		std::cerr << "无法打开文件进行写入: " << fullPath << std::endl;
+	}
+}
+
 // ========================
 // ? 从 temp/correctionList.json 读取
 // ========================
@@ -174,6 +202,33 @@ void RobxIO::updateData(QVector<workSpaceInformation>& list,
 	}
 }
 
+void RobxIO::updateData(QVector<std::tuple<QString, QString, QString>>& list,
+	const std::string& fileName)
+{
+	std::string fullPath = m_tempDir + "/" + fileName;
+
+	std::ifstream ifs(fullPath);
+	if (!ifs.is_open()) {
+		std::cerr << "无法打开文件: " << fullPath << std::endl;
+		return;
+	}
+
+	nlohmann::json j;
+	ifs >> j;
+	ifs.close();
+
+	list.clear();
+	for (const auto& item : j) {
+		if (item.is_array() && item.size() == 3) {
+			std::tuple<QString, QString, QString> tuple = {
+				QString::fromStdString(item[0].get<std::string>()),  // 第一个转换为QString
+				QString::fromStdString(item[1].get<std::string>()),  // 第二个转换为QString
+				QString::fromStdString(item[2].get<std::string>())   // 第三个转换为QString
+			};
+			list.push_back(tuple);
+		}
+	}
+}
 
 //void RobxIO::flushTempToRobx()
 //{

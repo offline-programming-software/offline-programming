@@ -107,6 +107,9 @@ public:
 
 	void writeData(const QVector<workSpaceInformation>& list,
 		const std::string& fileName);
+	
+	void writeData(QVector<std::tuple<QString, QString, QString>>& list,
+		const std::string& fileName);
 	/**
 	  * @brief 从robx文件中读取数据
 	  * 
@@ -120,6 +123,9 @@ public:
 		const std::string& fileName);
 
 	void updateData(QVector<workSpaceInformation>& list,
+		const std::string& fileName);
+
+	void updateData(QVector<std::tuple<QString, QString, QString>>& list,
 		const std::string& fileName);
 
 	//void writeData(const QVector<新的数据结构类型>& list,

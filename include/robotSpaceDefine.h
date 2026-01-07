@@ -1,5 +1,5 @@
-//#ifndef ROBOTSPACEDEFINE_H
-//#define ROBOTSPACEDEFINE_H
+#ifndef ROBOTSPACEDEFINE_H
+#define ROBOTSPACEDEFINE_H
 #pragma execution_character_set("utf-8")
 
 #include <QDialog>
@@ -54,6 +54,8 @@ private:
 	void setupTableView(); // 初始化表格视图
 	void updateTableView(); // 更新表格显示
 
+	//获取主法矢量
+	std::vector<double>getDir(ULONG coordinateID, QString mainDir);
 	QMap<ULONG, QString> getObjectsByType(PQDataType objType);
 	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
 	QStringList extractStringArrayFromVariant(const VARIANT& variant);
@@ -82,4 +84,4 @@ private:
 	QList<AxisData> axisList;
 
 };
-//#endif
+#endif

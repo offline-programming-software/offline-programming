@@ -152,7 +152,7 @@ void robotSpaceDefine::onAddAxis()
 
 	// 将原有数据添加到新map中（从1开始）
 	for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
-		newCoodernateMap.insert(it.key() + 1, it.value());
+		newCoodernateMap.insert(it.key(), it.value());
 	}
 
 	CoodernateMap = newCoodernateMap;
@@ -183,7 +183,7 @@ void robotSpaceDefine::onAddAxis()
 	dlg->setRail(rail);
 
 
-	connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName, dlg]() {
+	connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName, dlg, CoodernateMap]() {
 		
 		spacePoint center(0, 0, 0);
 		spacePoint size(0, 0, 0);
@@ -193,7 +193,18 @@ void robotSpaceDefine::onAddAxis()
 		ULONG robotID = 0;
 		GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
 		spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);
-		std::vector<double> direction = {-1,0,0};
+		int number = ui->tableView->model()->rowCount();
+
+		//获取主法矢量
+		QString axisName = dlg->getCoordinate();
+		QString mainNormalVector = dlg->getMainDir();
+		ULONG zuobiaoximingcheng;
+		GetObjIDByName(PQ_COORD, axisName.toStdWString(), zuobiaoximingcheng);
+
+		std::vector<double> direction = getDir(CoodernateMap.key(axisName), mainNormalVector);
+
+		bool hasGuideRail = dlg->isLink();
+		QString guideName = dlg->getRail();
 
 		std::map<std::pair<double, double>, std::vector<spacePoint>> inputMap;
 		inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 50, 50,
@@ -217,13 +228,6 @@ void robotSpaceDefine::onAddAxis()
 		}
 
 		m_io->writeData(m_list, "workspace.json");
-
-		//如何实现对于number 获取
-		int number = ui->tableView->model()->rowCount();
-		QString axisName = dlg->getCoordinate();
-		QString mainNormalVector = dlg->getMainDir();
-		bool hasGuideRail = dlg->isLink();
-		QString guideName = dlg->getRail();
 		
 		if (hasGuideRail) {
 
@@ -307,6 +311,105 @@ void robotSpaceDefine::onConfirm()
 void robotSpaceDefine::onClose()
 {
 	this->reject();
+}
+
+std::vector<double> robotSpaceDefine::getDir(ULONG coordinateID, QString mainDir)
+{
+	std::vector<double> dir;
+
+	// 如果 coordinateID 为 0，直接返回世界坐标系的基础方向
+	if (coordinateID == 0) {
+		if (mainDir == "X轴正方向") {
+			dir = { 1.0, 0.0, 0.0 };
+		}
+		else if (mainDir == "X轴负方向") {
+			dir = { -1.0, 0.0, 0.0 };
+		}
+		else if (mainDir == "Y轴正方向") {
+			dir = { 0.0, 1.0, 0.0 };
+		}
+		else if (mainDir == "Y轴负方向") {
+			dir = { 0.0, -1.0, 0.0 };
+		}
+		else if (mainDir == "Z轴正方向") {
+			dir = { 0.0, 0.0, 1.0 };
+		}
+		else if (mainDir == "Z轴负方向") {
+			dir = { 0.0, 0.0, -1.0 };
+		}
+		return dir;
+	}
+
+	int nCount = 0;
+	double* dPosture = nullptr;
+	m_ptrKit->Doc_get_coordinate_posture(coordinateID, QUATERNION, &nCount, &dPosture, 0);
+
+	std::vector<double> coordinatePos;
+
+	for (int i = 0; i < nCount; i++) {
+		coordinatePos.push_back(dPosture[i]);
+	}
+
+	// 四元数顺序为 [w, x, y, z]
+	if (coordinatePos.size() >= 4) {
+		double w = coordinatePos[0]; // w
+		double x = coordinatePos[1]; // x
+		double y = coordinatePos[2]; // y
+		double z = coordinatePos[3]; // z
+
+		if ( mainDir == "X轴正方向" ) {
+			// 计算旋转后的X轴正方向向量
+			double xx = 1 - 2 * y*y - 2 * z*z;     // 旋转后的X分量
+			double xy = 2 * x*y + 2 * w*z;         // 旋转后的Y分量
+			double xz = 2 * x*z - 2 * w*y;         // 旋转后的Z分量
+
+			dir = { xx, xy, xz };
+		}
+		else if (mainDir == "X轴负方向") {
+			// 计算旋转后的X轴负方向向量
+			double xx = 1 - 2 * y*y - 2 * z*z;     // 旋转后的X分量
+			double xy = 2 * x*y + 2 * w*z;         // 旋转后的Y分量
+			double xz = 2 * x*z - 2 * w*y;         // 旋转后的Z分量
+
+			dir = { -xx, -xy, -xz }; // 取负值
+		}
+		else if ( mainDir == "Y轴正方向" ) {
+			// 计算旋转后的Y轴正方向向量
+			double yx = 2 * x*y - 2 * w*z;         // 旋转后的X分量
+			double yy = 1 - 2 * x*x - 2 * z*z;     // 旋转后的Y分量
+			double yz = 2 * y*z + 2 * w*x;         // 旋转后的Z分量
+
+			dir = { yx, yy, yz };
+		}
+		else if (mainDir == "Y轴负方向") {
+			// 计算旋转后的Y轴负方向向量
+			double yx = 2 * x*y - 2 * w*z;         // 旋转后的X分量
+			double yy = 1 - 2 * x*x - 2 * z*z;     // 旋转后的Y分量
+			double yz = 2 * y*z + 2 * w*x;         // 旋转后的Z分量
+
+			dir = { -yx, -yy, -yz }; // 取负值
+		}
+		else if (mainDir == "Z轴正方向" ) {
+			// 计算旋转后的Z轴正方向向量
+			double zx = 2 * x*z + 2 * w*y;         // 旋转后的X分量
+			double zy = 2 * y*z - 2 * w*x;         // 旋转后的Y分量
+			double zz = 1 - 2 * x*x - 2 * y*y;     // 旋转后的Z分量
+
+			dir = { zx, zy, zz };
+		}
+		else if (mainDir == "Z轴负方向") {
+			// 计算旋转后的Z轴负方向向量
+			double zx = 2 * x*z + 2 * w*y;         // 旋转后的X分量
+			double zy = 2 * y*z - 2 * w*x;         // 旋转后的Y分量
+			double zz = 1 - 2 * x*x - 2 * y*y;     // 旋转后的Z分量
+
+			dir = { -zx, -zy, -zz }; // 取负值
+		}
+	}
+
+	m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
+
+	return dir;
 }
 
 QMap<ULONG, QString> robotSpaceDefine::getObjectsByType(PQDataType objType)
