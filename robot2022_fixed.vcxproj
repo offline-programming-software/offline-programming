@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="include\addRobotSpace.ui" />
+    <QtUic Include="include\AGVpath.ui" />
+    <QtUic Include="include\BendingCorrectDock.ui" />
+    <QtUic Include="include\cursePart.ui" />
+    <QtUic Include="include\deformation_correction.ui" />
+    <QtUic Include="include\effectiveness_analysis.ui" />
+    <QtUic Include="include\InsertPathDlg.ui" />
+    <QtUic Include="include\kinetic_analysis.ui" />
+    <QtUic Include="include\loginwindow.ui" />
+    <QtUic Include="include\MainWindow.ui" />
+    <QtUic Include="include\mydialog.ui" />
+    <QtUic Include="include\path_edit.ui" />
+    <QtUic Include="include\path_optimize.ui" />
+    <QtUic Include="include\path_partion.ui" />
+    <QtUic Include="include\path_set_up.ui" />
+    <QtUic Include="include\path_sort.ui" />
+    <QtUic Include="include\posCal.ui" />
+    <QtUic Include="include\postProcessing.ui" />
+    <QtUic Include="include\robotSpaceDefine.ui" />
+    <QtUic Include="include\TrajCorrectDock.ui" />
+    <QtUic Include="currentActive\loginDlg.ui" />
+    <QtUic Include="currentActive\welcomePage.ui" />
+    <QtUic Include="currentActive\welcomePage\deviceDlg.ui" />
+    <QtUic Include="currentActive\welcomePage\newFileDlg.ui" />
+    <QtUic Include="currentActive\welcomePage\UserManageDlg.ui" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="include\addRobotSpace.h" />
+    <QtMoc Include="include\AGVpath.h" />
+    <QtMoc Include="include\BendingCorrectDock.h" />
+    <QtMoc Include="include\TrajCorrectDock.h" />
+    <QtMoc Include="include\SARibbon.h" />
+    <QtMoc Include="include\robotSpaceDefine.h" />
+    <QtMoc Include="include\PQKitInitThread.h" />
+    <QtMoc Include="include\PQKitCallback.h" />
+    <QtMoc Include="include\postProcessing.h" />
+    <QtMoc Include="include\posCal.h" />
+    <QtMoc Include="include\pickWidget.h" />
+    <QtMoc Include="include\PickSpinBox.h" />
+    <QtMoc Include="include\path_sort.h" />
+    <QtMoc Include="include\path_set_up.h" />
+    <QtMoc Include="include\path_partion.h" />
+    <QtMoc Include="include\path_optimize.h" />
+    <QtMoc Include="include\path_edit.h" />
+    <QtMoc Include="include\mydialog.h" />
+    <QtMoc Include="include\MainWindow.h" />
+    <QtMoc Include="include\loginwindow.h" />
+    <QtMoc Include="include\kinetic_analysis.h" />
+    <QtMoc Include="include\InsertPathDlg.h" />
+    <QtMoc Include="include\effectiveness_analysis.h" />
+    <QtMoc Include="include\deformation_correction.h" />
+    <QtMoc Include="include\cursePart.h" />
+    <QtMoc Include="currentActive\loginDlg.h" />
+    <QtMoc Include="currentActive\welcomePage.h" />
+    <QtMoc Include="currentActive\welcomePage\UserManageDlg.h" />
+    <QtMoc Include="currentActive\welcomePage\deviceDlg.h" />
+    <QtMoc Include="currentActive\welcomePage\newFileDlg.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\boundBox.h" />
+    <ClInclude Include="include\Correction.h" />
+    <ClInclude Include="include\PQKitCallBackBase.h" />
+    <ClInclude Include="include\PQKitError.h" />
+    <ClInclude Include="include\resource.h" />
+    <ClInclude Include="include\robxFileIO.h" />
+    <ClInclude Include="include\spaceCalculate.h" />
+    <ClInclude Include="include\TrajectoryFileGenerator.h" />
+    <ClInclude Include="currentActive\welcomePage\deviceDlg.h" />
+    <ClInclude Include="currentActive\welcomePage\newFileDlg.h" />
+    <ClInclude Include="currentActive\welcomePage\UserManageDlg.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="resource.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\addRobotSpace.cpp" />
+    <ClCompile Include="src\AGVpath.cpp" />
+    <ClCompile Include="src\BendingCorrectDock.cpp" />
+    <ClCompile Include="src\boundBox.cpp" />
+    <ClCompile Include="src\Correction.cpp" />
+    <ClCompile Include="src\cursePart.cpp" />
+    <ClCompile Include="src\deformation_correction.cpp" />
+    <ClCompile Include="src\effectiveness_analysis.cpp" />
+    <ClCompile Include="src\InsertPathDlg.cpp" />
+    <ClCompile Include="src\kinetic_analysis.cpp" />
+    <ClCompile Include="src\loginwindow.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\MainWindow.cpp" />
+    <ClCompile Include="src\mydialog.cpp" />
+    <ClCompile Include="src\path_edit.cpp" />
+    <ClCompile Include="src\path_optimize.cpp" />
+    <ClCompile Include="src\path_partion.cpp" />
+    <ClCompile Include="src\path_set_up.cpp" />
+    <ClCompile Include="src\path_sort.cpp" />
+    <ClCompile Include="src\PickSpinBox.cpp" />
+    <ClCompile Include="src\pickWidget.cpp" />
+    <ClCompile Include="src\posCal.cpp" />
+    <ClCompile Include="src\postProcessing.cpp" />
+    <ClCompile Include="src\PQKitCallback.cpp" />
+    <ClCompile Include="src\PQKitInitThread.cpp" />
+    <ClCompile Include="src\robotSpaceDefine.cpp" />
+    <ClCompile Include="src\robxFileIO.cpp" />
+    <ClCompile Include="src\SARibbon.cpp" />
+    <ClCompile Include="src\spaceCalculate.cpp" />
+    <ClCompile Include="src\TrajCorrectDock.cpp" />
+    <ClCompile Include="src\TrajectoryFileGenerator.cpp" />
+    <ClCompile Include="currentActive\loginDlg.cpp" />
+    <ClCompile Include="currentActive\welcomePage.cpp" />
+    <ClCompile Include="currentActive\welcomePage\deviceDlg.cpp" />
+    <ClCompile Include="currentActive\welcomePage\UserManageDlg.cpp" />
+    <ClCompile Include="currentActive\welcomePage\newFileDlg.cpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{14319277-CF68-4337-84E3-C6ECDE1F94D6}</ProjectGuid>
+    <Keyword>QtVS_v304</Keyword>
+    <WindowsTargetPlatformVersion Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">10.0.26100.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">10.0</WindowsTargetPlatformVersion>
+    <QtMsBuild Condition="'$(QtMsBuild)'=='' OR !Exists('$(QtMsBuild)\qt.targets')">$(MSBuildProjectDirectory)\QtMsBuild</QtMsBuild>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Condition="Exists('$(QtMsBuild)\qt_defaults.props')">
+    <Import Project="$(QtMsBuild)\qt_defaults.props" />
+  </ImportGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
+    <QtInstall>5.12.8_msvc2017_64</QtInstall>
+    <QtModules>core;gui;widgets;charts</QtModules>
+    <QtBuildConfig>debug</QtBuildConfig>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
+    <QtInstall>5.12.8_msvc2017_64</QtInstall>
+    <QtModules>core;gui;widgets</QtModules>
+    <QtBuildConfig>release</QtBuildConfig>
+  </PropertyGroup>
+  <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
+    <Message Importance="High" Text="QtMsBuild: could not locate qt.targets, qt.props; project may not build correctly." />
+  </Target>
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)x64\Debug\qt\uic;$(ProjectDir)x64\Debug;$(ProjectDir)src;$(ProjectDir)currentActive\welcomePage;$(ProjectDir)currentActive;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>GLOG_NO_ABBREVIATED_SEVERITIES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Manifest>
+      <AdditionalManifestFiles>PQKit.manifest</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
+    <ClCompile>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
+    <ClCompile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>GLOG_NO_ABBREVIATED_SEVERITIES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
+    <Import Project="$(QtMsBuild)\qt.targets" />
+  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

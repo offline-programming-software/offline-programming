@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>914</width>
-    <height>1127</height>
+    <width>1020</width>
+    <height>1176</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -78,11 +78,11 @@
      <x>0</x>
      <y>300</y>
      <width>302</width>
-     <height>611</height>
+     <height>761</height>
     </rect>
    </property>
    <property name="title">
-    <string>弯曲变形配置</string>
+    <string>弯曲变形函数配置</string>
    </property>
    <widget class="QLabel" name="label_2">
     <property name="geometry">
@@ -107,14 +107,14 @@
      </rect>
     </property>
     <property name="text">
-     <string>修正范围：</string>
+     <string>修正范围*：</string>
     </property>
    </widget>
    <widget class="QPushButton" name="btnAttributeSetOK">
     <property name="geometry">
      <rect>
       <x>200</x>
-      <y>570</y>
+      <y>720</y>
       <width>93</width>
       <height>28</height>
      </rect>
@@ -162,32 +162,6 @@
       <widget class="QLabel" name="label_10">
        <property name="text">
         <string>z</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="layoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>50</y>
-      <width>160</width>
-      <height>18</height>
-     </rect>
-    </property>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>是否修正轨迹点姿态</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="chkIsPosCorrect">
-       <property name="text">
-        <string/>
        </property>
       </widget>
      </item>
@@ -247,7 +221,7 @@
      </font>
     </property>
     <property name="text">
-     <string>弯曲变形误差</string>
+     <string>弯曲变形误差*</string>
     </property>
    </widget>
    <widget class="QWidget" name="verticalLayoutWidget">
@@ -317,7 +291,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>540</y>
+      <y>640</y>
       <width>204</width>
       <height>23</height>
      </rect>
@@ -346,7 +320,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="comboCurveFittingMeasure">
+      <widget class="QComboBox" name="cmbFittingType">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -388,7 +362,7 @@
    <widget class="QLabel" name="label_Question_2">
     <property name="geometry">
      <rect>
-      <x>220</x>
+      <x>260</x>
       <y>530</y>
       <width>21</width>
       <height>21</height>
@@ -398,25 +372,145 @@
      <string>?</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnRefresh">
+   <widget class="QWidget" name="layoutWidget_2">
     <property name="geometry">
      <rect>
-      <x>220</x>
-      <y>270</y>
-      <width>21</width>
-      <height>28</height>
+      <x>10</x>
+      <y>530</y>
+      <width>204</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout_6">
+     <item>
+      <widget class="QLabel" name="label_15">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>60</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>自由端方向*：</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="cmbBeamDir">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <item>
+        <property name="text">
+         <string>沿x轴正方向</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>沿x轴负方向</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>沿y轴正方向</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>沿y轴负方向</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QCheckBox" name="chkIsTwisted">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>680</y>
+      <width>131</width>
+      <height>19</height>
      </rect>
     </property>
     <property name="text">
-     <string>R</string>
+     <string>启用扭转变形拟合</string>
     </property>
+   </widget>
+   <widget class="QCheckBox" name="chkIsPosCorrect">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>710</y>
+      <width>131</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>启用姿态变形修正</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_16">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>560</y>
+      <width>82</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>60</width>
+      <height>0</height>
+     </size>
+    </property>
+    <property name="text">
+     <string>原点坐标*：</string>
+    </property>
+   </widget>
+   <widget class="QWidget" name="layoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>590</y>
+      <width>226</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="loutOriginPt">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+    </layout>
    </widget>
   </widget>
   <widget class="QPushButton" name="btnSave">
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>920</y>
+     <x>210</x>
+     <y>1070</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -428,8 +522,8 @@
   <widget class="QStackedWidget" name="stackedWidget">
    <property name="geometry">
     <rect>
-     <x>410</x>
-     <y>870</y>
+     <x>1080</x>
+     <y>480</y>
      <width>271</width>
      <height>211</height>
     </rect>
@@ -488,19 +582,6 @@
      </property>
      <property name="text">
       <string>预览</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="btnFlagPointsImport">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>80</y>
-       <width>61</width>
-       <height>28</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>导入</string>
      </property>
     </widget>
     <widget class="QPushButton" name="btnMeasurePtsExport">
@@ -606,8 +687,8 @@
   <widget class="QLabel" name="label_4">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>960</y>
+     <x>340</x>
+     <y>570</y>
      <width>72</width>
      <height>15</height>
     </rect>
@@ -619,10 +700,10 @@
   <widget class="QPlainTextEdit" name="edtLog">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>980</y>
-     <width>301</width>
-     <height>141</height>
+     <x>340</x>
+     <y>590</y>
+     <width>671</width>
+     <height>381</height>
     </rect>
    </property>
   </widget>
@@ -678,6 +759,71 @@
      <string>模式</string>
     </property>
    </column>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_3">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>990</y>
+     <width>341</width>
+     <height>171</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>testBtns</string>
+   </property>
+   <widget class="QPushButton" name="btnCal">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>80</y>
+      <width>93</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>calculate</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnImportFlag">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>120</y>
+      <width>61</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>导入</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnRefresh">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>120</y>
+      <width>101</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Refresh</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QPushButton" name="btnDevPage">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>1080</y>
+     <width>93</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>log</string>
+   </property>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>

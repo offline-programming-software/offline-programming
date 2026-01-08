@@ -7,6 +7,7 @@
 #include <archive_entry.h>
 #include<iostream>
 #include<Windows.h>
+#include"correction.h"
 using json = nlohmann::json;
 
 RobxIO::RobxIO()
@@ -20,6 +21,7 @@ RobxIO::~RobxIO()
 	
 }
 
+
 // ========================
 // ? 写入 temp/correctionList.json
 // ========================
@@ -31,13 +33,19 @@ void RobxIO::writeData(const QVector<Correction>& list,
 	for (const auto& c : list) {
 		json jc;
 		jc = {
+			//	beamModel m_beamModelType = beamModel::Euler; /**默认梁模型类型*/
+
 		{"name", c.m_name.toStdString()},
 		{"interType", static_cast<int>(c.m_interType)},
+		{"beamModelType",static_cast<int>(c.m_beamModelType)},
 		{"isPosCorrect", c.m_isPosCorrect},
 		{"range", c.m_range},
 		{"flagPoints", c.m_flagPoints},
 		{"measurePoints", c.m_measurePoints},
-		{"isApply", c.m_isApply}
+		{"isApply", c.m_isApply},
+		{"origin", c.vBeamOrigin },
+		{ "direction", c.vBeamDirection },
+		{"coeff",c.m_coeffs }
 		};
 		j.push_back(jc);
 	}
@@ -114,13 +122,55 @@ void RobxIO::updateData(QVector<Correction>& list,
 	for (const auto& item : j)
 	{
 		Correction c;
-		c.m_name = QString::fromStdString(item.at("name").get<std::string>());
+	/*	c.m_name = QString::fromStdString(item.at("name").get<std::string>());
 		c.m_interType = static_cast<Correction::interpolationType>(item.at("interType").get<int>());
 		c.m_isPosCorrect = item.at("isPosCorrect").get<bool>();
 		c.m_range = item.at("range").get<std::array<double, 6>>();
 		c.m_flagPoints = item.at("flagPoints").get<std::vector<double>>();
 		c.m_measurePoints = item.at("measurePoints").get<std::vector<double>>();
 		c.m_isApply = item.at("isApply").get<bool>();
+		c.vBeamDirection = item.at("direction").get<std::vector<double>>();
+		c.vBeamOrigin = item.at("origin").get<std::vector<double>>();
+		item.at("coeff").get_to(c.m_coeffs);
+		item.at("origin").get_to(c.vBeamOrigin);
+		item.at("direction").get_to(c.vBeamDirection);*/
+		if (item.contains("name"))
+			c.m_name = QString::fromStdString(
+				item.at("name").get<std::string>());
+
+		if (item.contains("interType"))
+			c.m_interType =
+			static_cast<Correction::interpolationType>(
+				item.at("interType").get<int>());
+
+		if (item.contains("beamModelType"))
+			c.m_beamModelType =
+			static_cast<Correction::beamModel>(
+				item.at("beamModelType").get<int>());
+
+		if (item.contains("isPosCorrect"))
+			c.m_isPosCorrect = item.at("isPosCorrect").get<bool>();
+
+		if (item.contains("isApply"))
+			c.m_isApply = item.at("isApply").get<bool>();
+
+		// 结构体 / 容器（? 用 get_to）
+		if (item.contains("range"))
+			item.at("range").get_to(c.m_range);
+
+		if (item.contains("flagPoints"))
+			item.at("flagPoints").get_to(c.m_flagPoints);
+
+		if (item.contains("measurePoints"))
+			item.at("measurePoints").get_to(c.m_measurePoints);
+
+		if (item.contains("origin"))
+			item.at("origin").get_to(c.vBeamOrigin);
+
+		if (item.contains("direction"))
+			item.at("direction").get_to(c.vBeamDirection);
+		if (item.contains("coeff"))
+			item.at("coeff").get_to(c.m_coeffs);
 		list.push_back(c);
 	}
 }

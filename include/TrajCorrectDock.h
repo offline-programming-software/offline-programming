@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 #include <QWidget>
 #include "ui_TrajCorrectDock.h"
@@ -18,6 +17,7 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class DockContent; };
 QT_END_NAMESPACE
 
+class QScrollArea;
 class TrajCorrectDock : public QDockWidget
 {
 	Q_OBJECT
@@ -29,7 +29,8 @@ public:
 	enum class PickSource {
 		None,
 		FromListFlags,
-		FromSpinRanges
+		FromSpinRanges,
+		FromOriginPoint
 
 	};
 
@@ -38,7 +39,8 @@ public:
 		None,
 		FromFlagPoints,
 		FromMeasurePoints,
-		FromRangePoints
+		FromRangePoints,
+		FromOriginPoint
 	};
 
 	enum ItemState
@@ -46,8 +48,8 @@ public:
 		Edit,
 		View
 	};
-signals:
-	void blankAreaClicked();
+
+
 private:
 	
     Ui::DockContent *ui;
@@ -55,7 +57,7 @@ private:
 	CPQKitCallback *m_ptrKitCallback2;
 	RobxIO* m_io;
 
-	/*-----------------------控件-----------------------------*/
+	/*-----------------------自定义控件-----------------------------*/
 	pickWidget *listFlagPoints;    //拾取点
 	PickSpinBox *xMinspin;
 	PickSpinBox* xMaxspin;
@@ -63,9 +65,13 @@ private:
 	PickSpinBox *yMaxspin;
 	PickSpinBox *zMinspin;
 	PickSpinBox *zMaxspin;
+	PickSpinBox* spnOriginx;
+	PickSpinBox* spnOriginy;
+	PickSpinBox* spnOriginz;
 	QVector<PickSpinBox*> spinBoxes;
 	PickSource m_pickSource = PickSource::None;
 	DrawSource m_drawSource = DrawSource::None;
+	QScrollArea* scroll ;
 	int pointCount = 0;
 	int rangeBoxIndex;
 	int m_correctCounter = 0;
@@ -111,6 +117,8 @@ private:
 	void GetParentPath();
 	void modifyPointsPoses(const std::vector<unsigned long>& CorrectPointID, const std::vector<std::vector<double>>& newPoints);
 
+	/*-------------------------辅助函数----------------------------*/
+	
 public slots:
 	void testSignal(int num);
 	void on_this_blankAreaClicked();
@@ -121,11 +129,12 @@ public slots:
 	void on_btnRefresh_clicked();
 	void on_listCorrection_slectedItem(QListWidgetItem *item);
 	void on_pickBox_blankAreaClicked();
-	void on_pickBox_delet();
-	void on_btnFlagPointsExport_clicked();
-	void onExportMeasurePointsClicked();
-	void on_btnMeasurePtsInport_clicked();
+	void on_btnExportFlagPoints_clicked();
+	void on_btnImportMeasurePoints_clicked();
+	void on_btnImportFlag_clicked();
+	void on_spnOrigin_valueChanged(int a);
 	void pickRange();
+	void pickOriginPoint();
 	void onPickSpinBoxValueChanged(int a);
 	void OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
 		double i_dPointX, double i_dPointY, double i_dPointZ);
@@ -134,12 +143,15 @@ public slots:
 	void setEdit();
 	void setView();
 	/*-------------------------测试槽----------------------------*/
-
+	void on_btnDevPage_clicked();
+	void on_btnCal_clicked();
 	void on_btnRefreshLog_clicked() 
 	{
 		//ui->tblLog删除所有行
 		ui->tblLog->setRowCount(0);
+		//刷新correctItem信息：
 		//根据m_correctionItems的数量，添加相应的行数，第一列填写item的text，第二列填写item的状态（编辑/查看）
+		//获取currentitem，然后高亮显示
 		for (int i = 0; i < m_correctionItems.size(); i++)
 		{
 			ui->tblLog->insertRow(i);
@@ -147,6 +159,19 @@ public slots:
 			QString state = (m_correctionItems[i]->data(Qt::UserRole).toInt() == Edit) ? "Edit" : "View";
 			ui->tblLog->setItem(i, 1, new QTableWidgetItem(state));
 		}
+		QListWidgetItem* currentItem = ui->listCorrections->currentItem();
+		if (currentItem)
+		{
+			for (int i = 0; i < ui->tblLog->rowCount(); i++)
+			{
+				if (ui->tblLog->item(i, 0)->text() == currentItem->text())
+				{
+					ui->tblLog->selectRow(i);
+					break;
+				}
+			}
+		}
+		//刷新correctionList信息
 		ui->tblLogCor->setRowCount(0);
 		for(int i = 0; i < m_correctionList.size(); i++)
 		{
@@ -161,6 +186,7 @@ protected:
 
 signals:
 	void groupAttributeChanged();
+	void blankAreaClicked();
 };
 
 
@@ -174,38 +200,4 @@ signals:
   *          %beamFrame 类可以通过输入一组数据计算坐标系的原点坐标以及X轴方向向量，最终确定坐标系。
   */
 
-class beamFrame
-{
-
-public:
-	/**
-	  * \fun beamFrame
-	  * \brief %beamFrame 类的构造函数，用于计算坐标系位置，参考了robotstudio中的三点建立坐标系
-	  *
-	  * \param[in] flagPoints 在直升机尾梁上分布的一些标志点
-	  * \param[in] measuredPoints
-	  * \param[in] point1 尾梁根部一点xyz坐标
-	  * \param[in] point2 用户选取，尾梁尾部一点xyz坐标，尽量和 %point1 在同一 y 平面（全局坐标系）上，假设整机沿着x轴停靠
-	  */
-	beamFrame(Eigen::MatrixXd flagPoints, Eigen::MatrixXd measuredPoints, Eigen::Vector3d point1, Eigen::Vector3d point2);
-	~beamFrame();
-	Eigen::MatrixXd flagPoints() { return m_flagPoints; }
-	Eigen::MatrixXd measuredPoints() { return m_measuredPoints; }
-	Eigen::Vector3d origin() { return m_originPoint; }
-
-
-private:
-
-	Eigen::MatrixXd m_flagPoints,
-		m_measuredPoints;
-	Eigen::Matrix4d m_beamPose;/**坐标系位姿*/
-	Eigen::Vector3d m_originPoint;/**坐标系原点*/
-	Eigen::Vector3d m_xDir, m_point1, m_point2;//(x0,y0,0)
-
-	void getXDir();
-	void getOrigin();
-	void getBeamPose();
-	void getPoints();
-	void transFormMatrix(const Eigen::Matrix4d T, Eigen::MatrixXd& P);
-};
 
