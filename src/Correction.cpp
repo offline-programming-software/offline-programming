@@ -98,7 +98,7 @@ private:
 };
 
 
-coeffs Correction::calculate()
+coeffs Correction::calCoeffs()
 {
 	//构造齐次变换矩阵，将坐标点变换到尾梁坐标系：
 	//R = [beamDirection, [0,0,1]^T, zDirection]
@@ -106,7 +106,8 @@ coeffs Correction::calculate()
 	// 从向量中读取数据，转换为 Vector3d
 	Eigen::Vector3d beamDir(vBeamDirection[0], vBeamDirection[1], vBeamDirection[2]);
 	Eigen::Vector3d T(vBeamOrigin[0], vBeamOrigin[1], vBeamOrigin[2]);
-	Eigen::Vector3d zDir = beamDir.cross(Eigen::Vector3d(0, 0, 1)); //计算z方向
+	Eigen::Vector3d yDir = Eigen::Vector3d(0, 0, 1);
+	Eigen::Vector3d zDir = beamDir.cross(yDir); //计算z方向
 	
 	// 构造旋转矩阵 R (3x3)
 	Eigen::Matrix3d R;
@@ -160,26 +161,28 @@ coeffs Correction::calculate()
 	 */
 
 	
-	
 
-
-	if(m_interType == interpolationType::Poly)
-	{
-		if(m_beamModelType == beamModel::Euler)
-		{
-			////ui界面选择多项式拟合、忽略扭转变形
-			//多项式拟合求解系数，欧拉梁模型
-		}
-		else if (m_beamModelType == beamModel::Timoshenko)
-		{
-			//ui界面选择多项式拟合、考虑扭转变形
-			//多项式拟合求解系数，Timoshenko梁模型
-		}
-	}
-	else if (m_interType == interpolationType::Liner)
+	if (m_interType == interpolationType::Liner)
 	{
 		//线性拟合求解系数
-
+		double beamLength;
+		Eigen::MatrixX3d a = flagPointsMat - measurePointsMat;
+		beamLength = flagPointsMat.col(0).maxCoeff() - flagPointsMat.col(0).minCoeff();
+		auto V = a.col(1);
+		std::cout << "V = " << V.transpose() << std::endl;
+		double deltaZ = V.maxCoeff();
+		double k =- (deltaZ / beamLength);
+		m_coeffs.a0 = 0.0;
+		m_coeffs.a1 = k;
+		std::cout << "log,线性拟合计算完成，计算斜率k = " << k << std::endl;
+	}
+	else if (m_interType == interpolationType::Euler)
+	{
+		//euler拟合方法
+	}
+	if (m_interType == interpolationType::Timoshenko)
+	{
+		//timoshenko拟合方法
 	}
 	return m_coeffs;
 }

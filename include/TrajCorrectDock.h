@@ -18,6 +18,20 @@ namespace Ui { class DockContent; };
 QT_END_NAMESPACE
 
 class QScrollArea;
+
+namespace 
+{
+	struct CorrectionDataModel
+			{
+		QString name;
+		QString fittingType;
+		QString beamDir;
+		bool isPosCorrect;
+		bool isTwisted;
+		std::vector<double> flagPoints;
+		std::vector<double> measurePoints;
+	};
+}
 class TrajCorrectDock : public QDockWidget
 {
 	Q_OBJECT
@@ -83,7 +97,7 @@ private:
 	std::vector<double> m_vMeasurePoints;
 	
 
-	std::vector<unsigned long> m_vAllPathIDs;      
+	std::vector<unsigned long> m_vAllPathIDs;
 	std::vector<std::string> m_vAllPathNames;
 	std::vector<unsigned long>m_vAllPointIDs;
 	std::vector<std::vector<double>> m_v2dAllPointsPositions;
@@ -143,8 +157,16 @@ public slots:
 	void setEdit();
 	void setView();
 	/*-------------------------²âÊÔ²Û----------------------------*/
+	void testConnection()
+	{
+		connect(ui->btnDelAll, &QPushButton::clicked, this, &TrajCorrectDock::on_btnDelAll_clicked);
+	}
 	void on_btnDevPage_clicked();
 	void on_btnCal_clicked();
+	void on_btnDelAll_clicked() {
+		m_correctionList.clear();
+		m_correctionItems.clear();
+	}
 	void on_btnRefreshLog_clicked() 
 	{
 		//ui->tblLogÉ¾³ýËùÓÐÐÐ

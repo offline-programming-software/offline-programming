@@ -37,7 +37,6 @@ void RobxIO::writeData(const QVector<Correction>& list,
 
 		{"name", c.m_name.toStdString()},
 		{"interType", static_cast<int>(c.m_interType)},
-		{"beamModelType",static_cast<int>(c.m_beamModelType)},
 		{"isPosCorrect", c.m_isPosCorrect},
 		{"range", c.m_range},
 		{"flagPoints", c.m_flagPoints},
@@ -143,10 +142,6 @@ void RobxIO::updateData(QVector<Correction>& list,
 			static_cast<Correction::interpolationType>(
 				item.at("interType").get<int>());
 
-		if (item.contains("beamModelType"))
-			c.m_beamModelType =
-			static_cast<Correction::beamModel>(
-				item.at("beamModelType").get<int>());
 
 		if (item.contains("isPosCorrect"))
 			c.m_isPosCorrect = item.at("isPosCorrect").get<bool>();

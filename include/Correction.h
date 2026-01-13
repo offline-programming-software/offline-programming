@@ -42,24 +42,60 @@ inline void from_json(const nlohmann::json& j, coeffs& c)
 	c.c0 = cArr[0]; c.c1 = cArr[1]; c.c2 = cArr[2];
 	c.c3 = cArr[3]; c.c4 = cArr[4]; c.c5 = cArr[5];
 }
+
+
+/**
+ * @brief 将整机各个部分的弯曲变形看作不同函数
+ * 
+ * @details 
+ * 
+ * 创建一个Correction对象，需要用户输入如下属性
+ *	- 1. 修正名称					m_name
+ * - 2. 插值类型
+ * - 3. 梁模型	
+ * - 4. 作用域
+ * - 5. 梁的顶点位置
+ * - 6. 梁的方向
+ * - 7. 是否修正姿态
+ * - 8. 标志点 & 测量点  
+ * - 9. 弯曲角度
+ * 用户可能一次无法定义全部属性，因此有一个手动方法 
+ * correction.solve()来计算结果，此方法返回参数矩阵m_coeffs
+ * 
+ * correction对象有一个开关：isApply控制是否修正
+ * 通过方法计算出的值
+ * - 1. coeffs:		vector<vector<double>>
+ * - 2. offset:		vector<array<double,7>>
+ * @code
+ * ```
+ * Correction mycor;
+ * //为变形修正赋予属性
+ * mycor.name = ...;
+ * mycor.range = ...;
+ * ...
+ * //计算参数
+ * mycor.m_coeffs = mycor.solve();  
+ * //应用变形
+ * 
+ * //应用&撤销变形
+ * mycor.apply();
+ * mycor.withdraw();
+ * ```.
+ */
 class Correction
 {
 public:
 
 	enum class interpolationType {
 		Liner,   ///线性分段
-		Poly,    ///多项式
-		Other
-	};
-	enum class beamModel
-	{
 		Euler,
 		Timoshenko
 	};
 
+
 	
 	
-	Eigen::MatrixX3d u(const Eigen::Vector3d& p, const coeffs& k);
+	
 
 
 	Correction() ;
@@ -94,12 +130,11 @@ public:
 	void setIsApply(bool isChecked) { m_isApply = isChecked; }
 	void setBeamDir(const std::vector<double> &dir) { vBeamDirection = dir; }
 	void setBeamOrigin(const std::vector<double>& orig) { vBeamOrigin = orig; }
-	void setBeamModelType(beamModel model) { m_beamModelType = model; }
 	//------setter-----------
 public:	
 	QString m_name = "null";/**修正名称*/
 	interpolationType m_interType = interpolationType::Liner;/**默认插值类型*/
-	beamModel m_beamModelType = beamModel::Euler; /**默认梁模型类型*/
+	double m_bendingDeg = 0.0;
 	bool m_isPosCorrect = false; /**是否修正姿态*/
 	std::array<double, 6> m_range = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; /**作用域*/
 	std::vector<std::vector<double>> m_v2dTrajPointsToCorrect; /**待修正轨迹点*/
@@ -111,14 +146,57 @@ public:
 	Eigen::Vector3d beamDirection; /**梁的方向*/
 	std::vector<double> vBeamOrigin = {0.0,0.0,0.0}; /**用于json存储的梁原点位置*/
 	std::vector<double> vBeamDirection = { 1.0,0.0,0.0 };
+	Eigen::MatrixX3d TBO; /**梁坐标系到机器人基坐标系的变换矩阵*/
+	Eigen::MatrixX3d DeltaXYZ;
 	
 
 	
-	coeffs calculate();
+	
 	
 
 
-	private:
+private:
 		Eigen::MatrixX3d HT(Eigen::MatrixX3d pointSet, Eigen::Matrix4d TransformMatrix);
 		coeffs timoShenkoBeamSolve(const MatrixX3d& flagPointsMat, const MatrixX3d& measurePointsMat);
+		/**
+		 * @brief LinearSolve 线性方程组求解
+		 * 
+		 * @param flagPointsMat
+		 * @param measurePointsMat
+		 * \return 
+		 */
+		coeffs LinearSolve(const MatrixX3d& flagPointsMat, const MatrixX3d& measurePointsMat);
+		
+
+public:
+	//属性编辑界面
+	/**
+	 * @brief 计算参数，程序总入口
+	 */
+	coeffs calCoeffs();
+
+	//在管理界面
+	/**
+	 * 计算待修正轨迹点.
+	 */
+	std::vector<std::array<double, 7>> getTrajPoints2Correct(const std::array<double, 6>& range);
+	/**
+	 * @brief 计算修正量，程序总入口
+	 */
+	std::vector<std::array<double, 7>> calOffset(const std::vector<std::array<double,7>> &trajPoint, const coeffs &c);
+	/**
+	 * 应用修正
+	 * 1. 计算当前range待修正轨迹点ID列表
+	 * 2. 计算修正量offset
+	 * 3. 修正量应用到待修正轨迹点
+	 */
+	void applyCorrection(const std::vector<std::array<double, 7>> &offsets);
+	/**
+	 * 撤销修正.
+	 * 1. 
+	 */
+	void withDrawCorrection();
+
+	//功能函数: 
+	
 };

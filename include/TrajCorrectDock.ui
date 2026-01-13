@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1020</width>
+    <width>782</width>
     <height>1176</height>
    </rect>
   </property>
@@ -38,18 +38,28 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>60</x>
       <y>210</y>
-      <width>279</width>
+      <width>221</width>
       <height>49</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout_3"/>
-     </item>
-     <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>100</width>
+           <height>22</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
        <item>
         <widget class="QPushButton" name="btnNewCorrection">
          <property name="text">
@@ -58,7 +68,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnDeleteCorrection">
+        <widget class="QPushButton" name="btnDelCor">
          <property name="text">
           <string>删除</string>
          </property>
@@ -77,7 +87,7 @@
     <rect>
      <x>0</x>
      <y>300</y>
-     <width>302</width>
+     <width>311</width>
      <height>761</height>
     </rect>
    </property>
@@ -166,19 +176,6 @@
       </widget>
      </item>
     </layout>
-   </widget>
-   <widget class="QCheckBox" name="chkViewPoint2Correct">
-    <property name="geometry">
-     <rect>
-      <x>150</x>
-      <y>230</y>
-      <width>123</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>显示待修正轨迹点</string>
-    </property>
    </widget>
    <widget class="QListWidget" name="listMeasurePoints">
     <property name="geometry">
@@ -292,7 +289,7 @@
      <rect>
       <x>10</x>
       <y>640</y>
-      <width>204</width>
+      <width>291</width>
       <height>23</height>
      </rect>
     </property>
@@ -334,12 +331,12 @@
        </item>
        <item>
         <property name="text">
-         <string>分段线性拟合</string>
+         <string>多项式拟合</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>多项式拟合</string>
+         <string>多项式拟合：考虑扭转变形</string>
         </property>
        </item>
       </widget>
@@ -436,19 +433,6 @@
      </item>
     </layout>
    </widget>
-   <widget class="QCheckBox" name="chkIsTwisted">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>680</y>
-      <width>131</width>
-      <height>19</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>启用扭转变形拟合</string>
-    </property>
-   </widget>
    <widget class="QCheckBox" name="chkIsPosCorrect">
     <property name="geometry">
      <rect>
@@ -510,7 +494,7 @@
    <property name="geometry">
     <rect>
      <x>210</x>
-     <y>1070</y>
+     <y>1100</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -702,7 +686,7 @@
     <rect>
      <x>340</x>
      <y>590</y>
-     <width>671</width>
+     <width>261</width>
      <height>381</height>
     </rect>
    </property>
@@ -811,18 +795,57 @@
      <string>Refresh</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="btnDelAll">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>80</y>
+      <width>93</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>delete all</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QPushButton" name="btnDevPage">
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>1080</y>
+     <y>1110</y>
      <width>93</width>
      <height>28</height>
     </rect>
    </property>
    <property name="text">
     <string>log</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="chkIsTwisted">
+   <property name="geometry">
+    <rect>
+     <x>1010</x>
+     <y>730</y>
+     <width>131</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>启用扭转变形拟合</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="chkViewPoint2Correct">
+   <property name="geometry">
+    <rect>
+     <x>1010</x>
+     <y>760</y>
+     <width>123</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>显示待修正轨迹点</string>
    </property>
   </widget>
  </widget>
