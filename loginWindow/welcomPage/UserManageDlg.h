@@ -10,6 +10,13 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class UserManageDlgClass; };
 QT_END_NAMESPACE
 
+enum class level
+{
+	Admin,
+	User,
+	Visitor
+};
+
 struct UserInfo {
 	QString id;
 	QString pwd;
@@ -17,6 +24,8 @@ struct UserInfo {
 	QString apart;
 	QString contact;
 	QString workID;
+	level userLevel;
+	
 };
 
 /**

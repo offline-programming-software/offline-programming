@@ -19,7 +19,7 @@ class WelcomePage: public QMainWindow
 	Q_OBJECT
 
 public:
-	WelcomePage(MainWindow *w, QWidget *parent = nullptr);
+	WelcomePage(QString ID, MainWindow* w, QWidget* parent = nullptr);
 	~WelcomePage();
 	
 private:
@@ -38,8 +38,11 @@ private:
 	void connectSet();
 	void openWork(const QString& filePath);
 	void initMenu();
+	void setThumbNails();
 	QMenuBar* menuBar;
+	QToolBar* toolBar;
 	QVector<Details> currentDir_detailList;
+	QString m_UserID;
 
 private slots:
 	void on_btnPainting_clicked();
@@ -120,3 +123,5 @@ struct Details
 	QString creationTime;
 	QString modificationTime;
 };
+
+

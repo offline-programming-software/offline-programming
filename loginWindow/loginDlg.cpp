@@ -47,6 +47,7 @@ void loginDlg::on_btnLogin_clicked() {
 		if (m_userCredentials[username] == password)
 		{
 			this->accept();
+			m_userID = username;
 		}
 		else
 		{

@@ -20,7 +20,8 @@ int main(int argc, char *argv[])
 		return 0; // 如果登录未成功，退出应用程序
 	}
 	MainWindow* painting = new MainWindow();
-	WelcomePage welcome(painting);
+	WelcomePage welcome(login.getID(), painting);
+
 	welcome.show();
 
 	return a.exec();

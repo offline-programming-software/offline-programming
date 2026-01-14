@@ -17,11 +17,14 @@ public:
 	loginDlg(QWidget *parent = nullptr);
 	~loginDlg();
 
+	QString getID() { return m_userID; }
+
 private slots:
 	void on_btnLogin_clicked();
 
 private:
 	void loadUsersFromSettings();
+	QString m_userID;
 
 	Ui::loginDlgClass *ui;
 	QMap<QString, QString> m_userCredentials;

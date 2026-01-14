@@ -70,6 +70,7 @@ void UserManageDlg::onBtnEditOKClicked()
 	info.apart = ui->edtApart->text();
 	info.contact = ui->edtContact->text();
 	info.workID = ui->edtWorkID->text();
+	info.userLevel = static_cast<level>(ui->cmbLevel->currentIndex());
 	
 	m_users[userID] = info;
 	m_isEditingNew = false;
@@ -108,6 +109,7 @@ void UserManageDlg::onListUsersSelectionChanged()
 		ui->edtApart->setText(info.apart);
 		ui->edtContact->setText(info.contact);
 		ui->edtWorkID->setText(info.workID);
+		ui->cmbLevel->setCurrentIndex(static_cast<int>(info.userLevel));
 	}
 }
 
@@ -137,6 +139,7 @@ void UserManageDlg::loadUsersFromSettings()
 		info.apart = settings.value("apart", "").toString();
 		info.contact = settings.value("contact", "").toString();
 		info.workID = settings.value("workID", "").toString();
+		info.userLevel = static_cast<level>(settings.value("userLevel", "").toInt());
 		
 		if (!info.id.isEmpty()) {
 			m_users[info.id] = info;
@@ -161,6 +164,7 @@ void UserManageDlg::saveUsersToSettings()
 		settings.setValue("apart", info.apart);
 		settings.setValue("contact", info.contact);
 		settings.setValue("workID", info.workID);
+		settings.setValue("userLevel", static_cast<int>(info.userLevel));
 	}
 	settings.endArray();
 }
@@ -173,6 +177,7 @@ void UserManageDlg::clearEditFields()
 	ui->edtApart->clear();
 	ui->edtContact->clear();
 	ui->edtWorkID->clear();
+	ui->cmbLevel->setCurrentIndex(0);
 }
 
 void UserManageDlg::updateUserListDisplay()

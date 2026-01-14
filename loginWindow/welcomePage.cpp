@@ -4,9 +4,12 @@
 #include<QListView>
 #include "newFileDlg.h"
 #include "UserManageDlg.h"
+#include "About.h"
+#include "myProfile.h"
 
-WelcomePage::WelcomePage(MainWindow* w, QWidget *parent)
+WelcomePage::WelcomePage(QString ID, MainWindow* w, QWidget *parent)
 	: QMainWindow(parent),
+	m_UserID(ID),
 	paint(w),
 	ui(new Ui::welcomePageClass())
 {
@@ -68,25 +71,7 @@ WelcomePage::WelcomePage(MainWindow* w, QWidget *parent)
 	}
 
 
-	//初始化菜单栏
-	menuBar = QMainWindow::menuBar();
-	this->setMenuBar(menuBar);
-	QMenu* menuFile = menuBar->addMenu("文件(&F)");
-	QMenu* menuDevice = menuBar->addMenu("设备(&D)");
-	QMenu* menuUser = menuBar->addMenu("用户(&U)");
-	QMenu* menuHelp = menuBar->addMenu("帮助(&H)");
-	QAction* actionOpen = menuFile->addAction("打开工程(&O)");
-	QAction* actionNew = menuFile->addAction("新建工程(&N)");
-	QAction* actionUserManage = menuUser->addAction("用户管理(&M)");
-	connect(actionOpen, &QAction::triggered, this, &WelcomePage::on_btnOpen_clicked);
-	connect(actionNew, &QAction::triggered, this, &WelcomePage::on_btnPainting_clicked);
-	connect(actionUserManage, &QAction::triggered, []() {
-		UserManageDlg dlg;
-		dlg.setWindowTitle("用户管理");
-		dlg.exec();  //在dlg里面处理保存读取
-		});
-	menuFile->addAction(actionNew);
-	menuFile->addAction(actionOpen);
+	initMenu();
 	
 	
 }
@@ -132,11 +117,131 @@ void WelcomePage::openWork(const QString& filePath)
 
 void WelcomePage::initMenu()
 {
+	menuBar = QMainWindow::menuBar();
+	toolBar = QMainWindow::addToolBar("Main Toolbar");
+	this->setMenuBar(menuBar);
+
 	//初始化菜单栏，目前有：文件、设备、用户、帮助
+	QMenu* menuFile = menuBar->addMenu("文件(&F)");
+	QMenu* menuDevice = menuBar->addMenu("设备(&D)");
+	QMenu* menuUser = menuBar->addMenu("用户(&U)");
+	QMenu* menuHelp = menuBar->addMenu("帮助(&H)");
+
+	//文件菜单
+	QAction* actionOpen = menuFile->addAction(QIcon(":/welcomePage/resource/welcomePage/open.png"),"打开工程(&O)");
+	
+	QAction* actionNew = menuFile->addAction(QIcon(":/welcomePage/resource/welcomePage/new.png"), "新建工程(&N)");
+	menuFile->addSeparator();
+	QAction* actionExit = menuFile->addAction(QIcon(":/welcomePage/resource/welcomePage/exit.png"), "退出(&X)");
+
+	//设备菜单
+	QAction* actionDevice = menuDevice->addAction("设备信息");
+
+
+	//用户菜单
+	QAction* actionChangeUser = menuUser->addAction("切换账号");
+	menuUser->addSeparator();
+	QAction* actionMyProfile = menuUser->addAction("我的资料");
+	QAction* actionChangePWD = menuUser->addAction(QIcon(":/welcomePage/resource/welcomePage/changePWD.png"), "修改密码");
+	menuUser->addSeparator();
+	QAction* actionUserManage = menuUser->addAction(QIcon(":/welcomePage/resource/welcomePage/myProfile.png"), "用户管理(&M)");
+	menuUser->addSeparator();
+	QAction* actionLog = menuUser->addAction(QIcon(":/welcomePage/resource/welcomePage/log.png"), "操作日志");
+
+
+	//帮助菜单
+	QAction* actionAbout = menuHelp->addAction(QIcon(":/welcomePage/resource/welcomePage/about.png"), "关于");
+	menuHelp->addSeparator();
+	QAction* actionHelpDoc = menuHelp->addAction( "操作说明文档(&f1)");
+	QAction* actionDevDoc = menuHelp->addAction("开发者文档");
+
+
+	
+
+	toolBar->addAction(actionOpen);
+	toolBar->addAction(actionNew);
+	toolBar->addAction(actionExit);
+
+	toolBar->addSeparator();
+
+	toolBar->addAction(actionUserManage);
+
+	toolBar->addSeparator();
+
+	toolBar->addAction(actionAbout);
+
+
+	connect(actionOpen, &QAction::triggered, this, &WelcomePage::on_btnOpen_clicked);
+	connect(actionNew, &QAction::triggered, this, &WelcomePage::on_btnPainting_clicked);
+	connect(actionExit, &QAction::triggered, this, &QWidget::close);
+	connect(actionMyProfile, &QAction::triggered, this, [this]() 
+		{
+			myProfile pfl(m_UserID);
+			pfl.setWindowTitle(u8"当前用户信息");
+			pfl.exec();
+		}
+	);
+	connect(actionUserManage, &QAction::triggered, this, []() {
+		UserManageDlg dlg;
+		dlg.setWindowTitle("用户管理");
+		dlg.exec();  //在dlg里面处理保存读取
+		});
+	menuFile->addAction(actionNew);
+	connect(actionAbout, &QAction::triggered, this, []() {
+		About dlg;
+		dlg.setWindowTitle("关于");
+		dlg.exec();
+		});
+	menuFile->addAction(actionOpen);
 	
 }
 
 
+
+void WelcomePage::setThumbNails()
+{
+	// root/thumbNail文件夹有若干projName.png文件，检查listRecentWrok上的item文件
+	// 同名的（忽略后缀）则把图片文件附给item
+
+	QString thumbNailDir = QDir::currentPath() + "/thumbNail";
+	QDir directory(thumbNailDir);
+
+	// 检查thumbNail文件夹是否存在
+	if (!directory.exists()) {
+		return;
+	}
+
+	// 获取thumbNail文件夹中的所有.png文件
+	QStringList filters;
+	filters << "*.png";
+	QFileInfoList thumbNailFiles = directory.entryInfoList(filters, QDir::Files);
+
+	// 为每个item查找对应的缩略图
+	for (int i = 0; i < ui->listRecentWrok->count(); ++i) {
+		QListWidgetItem* item = ui->listRecentWrok->item(i);
+		QString itemName = item->text(); // 获取item的文本（不带后缀的文件名）
+
+		// 在thumbNail文件夹中查找同名的png文件
+		for (const QFileInfo& fileInfo : thumbNailFiles) {
+			QString thumbNailName = fileInfo.completeBaseName(); // 获取不带后缀的文件名
+
+			if (thumbNailName == itemName) {
+				// 找到匹配的缩略图，设置给item
+				QPixmap pixmap(fileInfo.absoluteFilePath());
+				if (!pixmap.isNull()) {
+					// 按照listRecentWrok的iconSize缩放图片
+					QPixmap scaledPixmap = pixmap.scaledToWidth(
+						ui->listRecentWrok->iconSize().width(),
+						Qt::SmoothTransformation
+					);
+					QIcon icon(scaledPixmap);
+					item->setIcon(icon);
+				}
+				break;
+			}
+		}
+	}
+}
 
 void WelcomePage::on_btnPainting_clicked()
 {
@@ -291,6 +396,8 @@ void WelcomePage::on_cmbRecentDir_currentIndexChanged(const QString& dir)
 		//detail.description = ... //需要从文件中读取描述信息
 		currentDir_detailList.append(detail);
 	}
+
+	setThumbNails();
 }
 
 void WelcomePage::on_actionNew_triggered()

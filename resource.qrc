@@ -122,5 +122,14 @@
         <file>resource/welcomePage/grinding.png</file>
         <file>resource/welcomePage/painting.png</file>
         <file>resource/welcomePage/PaintingProj.png</file>
+        <file>resource/welcomePage/about.png</file>
+        <file>resource/welcomePage/changePWD.png</file>
+        <file>resource/welcomePage/exit.png</file>
+        <file>resource/welcomePage/log.png</file>
+        <file>resource/welcomePage/myProfile.png</file>
+        <file>resource/welcomePage/new.png</file>
+        <file>resource/welcomePage/open.png</file>
+        <file>resource/welcomePage/userDoc.png</file>
+        <file>resource/welcomePage/devDoc.png</file>
     </qresource>
 </RCC>
