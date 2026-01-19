@@ -553,6 +553,8 @@ QList<long> AGVpath::extractLongArrayFromVariant(const VARIANT& variant)
 	SafeArrayUnlock(array);
 	return result;
 }
+
+
 QStringList AGVpath::getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap)
 {
 	QStringList robotNames;

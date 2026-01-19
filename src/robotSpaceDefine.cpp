@@ -11,7 +11,25 @@ robotSpaceDefine::robotSpaceDefine(QWidget *parent,
 {
 	ui->setupUi(this);
 
+	// 使用封装好的函数获取机器人列表
+	PQDataType robotType = PQ_ROBOT;
+	QMap<ULONG, QString> robotMap = getObjectsByType(robotType);
 
+	// 使用封装函数获取喷涂机器人名称列表
+	QStringList robotNames = getSpraydRobotNames(PQ_MECHANISM_ROBOT, robotMap);
+
+	if (robotNames.isEmpty()) {
+		QMessageBox::information(this, "提示", "当前没有可用的喷涂机器人！");
+		delete ui;
+		return; // 早期返回
+	}
+
+	// 将机器人名称设置到对话框中
+	for (const QString& name : robotNames) {
+		ui->comboBox->addItem(name);
+	}
+
+	ui->comboBox->setCurrentIndex(0);
 	// 初始化表格视图
 	setupTableView();
 
@@ -21,17 +39,29 @@ robotSpaceDefine::robotSpaceDefine(QWidget *parent,
 	connect(ui->pushButton_3, &QPushButton::clicked, this, &robotSpaceDefine::onConfirm);
 	connect(ui->pushButton_4, &QPushButton::clicked, this, &robotSpaceDefine::onClose);
 
+	// 新增：连接机器人切换信号
+	connect(ui->comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+		this, &robotSpaceDefine::onRobotChanged);
+
 	m_io = new RobxIO();
 	m_io->updateData(m_list, "workspace.json");
-	m_io->updateData(m_spaceInformation, "workSpaceInformation.json");
 
-	for (workSpaceInformation data : m_spaceInformation) {
-		addAxisInfo(data.number, data.coodinate, data.mainDir, data.isLink, data.railName);;
+	// 加载所有机器人的数据
+	for (const QString& robotName : robotNames) {
+		QString filename = QString("workSpaceInformation_%1.json").arg(robotName);
+		QVector<workSpaceInformation> robotData;
+		m_io->updateData(robotData, filename.toStdString().c_str());
+		m_spaceInformation[robotName] = robotData;
 	}
+
+	// 加载当前选中机器人的数据到表格
+	QString currentRobot = ui->comboBox->currentText();
+	loadRobotData(currentRobot);
 }
 
 robotSpaceDefine::~robotSpaceDefine()
 {
+	delete m_io; // 修复内存泄漏
 	delete ui;
 }
 
@@ -52,15 +82,15 @@ void robotSpaceDefine::setupTableView()
 
 	// 设置列宽
 	ui->tableView->horizontalHeader()->setStretchLastSection(true);
-	ui->tableView->setColumnWidth(0, 60);  
+	ui->tableView->setColumnWidth(0, 60);
 	ui->tableView->setColumnWidth(1, 100);
 	ui->tableView->setColumnWidth(2, 100);
-	ui->tableView->setColumnWidth(3, 80);  
+	ui->tableView->setColumnWidth(3, 80);
 	ui->tableView->setColumnWidth(4, 120);
 }
 
-void robotSpaceDefine::addAxisInfo(int number,const QString& axisName, 
-	const QString& mainNormalVector,bool hasGuideRail, const QString guideName)
+void robotSpaceDefine::addAxisInfo(int number, const QString& axisName,
+	const QString& mainNormalVector, bool hasGuideRail, const QString guideName)
 {
 	AxisData data;
 	data.number = number;
@@ -71,14 +101,6 @@ void robotSpaceDefine::addAxisInfo(int number,const QString& axisName,
 
 	axisList.append(data);
 	updateTableView();
-}
-
-void robotSpaceDefine::setRobotOptions(const QString & robotOption)
-{
-	if (!robotOption.isEmpty()) {
-		ui->comboBox->addItem(robotOption);
-		ui->comboBox->setCurrentIndex(0);
-	}
 }
 
 QString robotSpaceDefine::getRobotName()
@@ -184,7 +206,7 @@ void robotSpaceDefine::onAddAxis()
 
 
 	connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName, dlg, CoodernateMap]() {
-		
+
 		spacePoint center(0, 0, 0);
 		spacePoint size(0, 0, 0);
 
@@ -193,7 +215,7 @@ void robotSpaceDefine::onAddAxis()
 		ULONG robotID = 0;
 		GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
 		spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);
-		int number = ui->tableView->model()->rowCount();
+		int number = ui->tableView->model()->rowCount() + 1; // 序号从1开始
 
 		//获取主法矢量
 		QString axisName = dlg->getCoordinate();
@@ -207,8 +229,8 @@ void robotSpaceDefine::onAddAxis()
 		QString guideName = dlg->getRail();
 
 		std::map<std::pair<double, double>, std::vector<spacePoint>> inputMap;
-		inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 50, 50,
-			1500,0 , 22.5, direction, 5, 1.0);
+		inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 5, 50,
+			1500, 0, 22.5, direction, 5, 10.0);
 
 		for (const auto& keyValuePair : inputMap) { // 遍历map
 			workSpace ws;
@@ -228,19 +250,15 @@ void robotSpaceDefine::onAddAxis()
 		}
 
 		m_io->writeData(m_list, "workspace.json");
-		
-		if (hasGuideRail) {
 
-			addAxisInfo(number, axisName, mainNormalVector,hasGuideRail, guideName);
-			
+		if (hasGuideRail) {
+			addAxisInfo(number, axisName, mainNormalVector, hasGuideRail, guideName);
 		}
 		else {
-			
 			addAxisInfo(number, axisName, mainNormalVector, hasGuideRail, " ");
 		}
 
 		dlg->close();
-
 	});
 
 
@@ -268,10 +286,10 @@ void robotSpaceDefine::onDeleteAxis()
 
 void robotSpaceDefine::onConfirm()
 {
-
-	m_spaceInformation.clear();
-
 	QString robotName = ui->comboBox->currentText();
+
+	// 清空当前机器人的数据
+	m_spaceInformation[robotName].clear();
 
 	int rows = ui->tableView->model()->rowCount();
 	for (int row = 0; row < rows; ++row) {
@@ -299,11 +317,12 @@ void robotSpaceDefine::onConfirm()
 		QString railName = data_4.toString(); // 如果明确是文本
 
 		workSpaceInformation spaceDate(robotName, number, coordinate, mainDir, isLink, railName);
-		m_spaceInformation.push_back(spaceDate);
-
+		m_spaceInformation[robotName].push_back(spaceDate);
 	}
 
-	m_io->writeData(m_spaceInformation, "workSpaceInformation.json");
+	// 保存当前机器人的数据到对应文件
+	QString filename = QString("workSpaceInformation_%1.json").arg(robotName);
+	m_io->writeData(m_spaceInformation[robotName], filename.toStdString().c_str());
 
 	this->reject();
 }
@@ -311,6 +330,34 @@ void robotSpaceDefine::onConfirm()
 void robotSpaceDefine::onClose()
 {
 	this->reject();
+}
+
+void robotSpaceDefine::onRobotChanged(int index)
+{
+	QString currentRobot = ui->comboBox->itemText(index);
+
+	// 保存当前机器人的数据（如果需要的话）
+	// 可以选择在切换时自动保存，或者只在确认时保存
+
+	// 加载新选择机器人的数据
+	loadRobotData(currentRobot);
+}
+
+void robotSpaceDefine::loadRobotData(const QString& robotName)
+{
+	// 清空当前表格数据
+	axisList.clear();
+
+	// 从m_spaceInformation中获取对应机器人的数据
+	if (m_spaceInformation.contains(robotName)) {
+		QVector<workSpaceInformation> robotData = m_spaceInformation[robotName];
+		for (const workSpaceInformation& data : robotData) {
+			addAxisInfo(data.number, data.coodinate, data.mainDir, data.isLink, data.railName);
+		}
+	}
+
+	// 更新表格显示
+	updateTableView();
 }
 
 std::vector<double> robotSpaceDefine::getDir(ULONG coordinateID, QString mainDir)
@@ -357,7 +404,7 @@ std::vector<double> robotSpaceDefine::getDir(ULONG coordinateID, QString mainDir
 		double y = coordinatePos[2]; // y
 		double z = coordinatePos[3]; // z
 
-		if ( mainDir == "X轴正方向" ) {
+		if (mainDir == "X轴正方向") {
 			// 计算旋转后的X轴正方向向量
 			double xx = 1 - 2 * y*y - 2 * z*z;     // 旋转后的X分量
 			double xy = 2 * x*y + 2 * w*z;         // 旋转后的Y分量
@@ -373,7 +420,7 @@ std::vector<double> robotSpaceDefine::getDir(ULONG coordinateID, QString mainDir
 
 			dir = { -xx, -xy, -xz }; // 取负值
 		}
-		else if ( mainDir == "Y轴正方向" ) {
+		else if (mainDir == "Y轴正方向") {
 			// 计算旋转后的Y轴正方向向量
 			double yx = 2 * x*y - 2 * w*z;         // 旋转后的X分量
 			double yy = 1 - 2 * x*x - 2 * z*z;     // 旋转后的Y分量
@@ -389,7 +436,7 @@ std::vector<double> robotSpaceDefine::getDir(ULONG coordinateID, QString mainDir
 
 			dir = { -yx, -yy, -yz }; // 取负值
 		}
-		else if (mainDir == "Z轴正方向" ) {
+		else if (mainDir == "Z轴正方向") {
 			// 计算旋转后的Z轴正方向向量
 			double zx = 2 * x*z + 2 * w*y;         // 旋转后的X分量
 			double zy = 2 * y*z - 2 * w*x;         // 旋转后的Y分量
@@ -717,3 +764,87 @@ void robotSpaceDefine::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName,
 	SafeArrayUnaccessData(vIDPara.parray);
 }
 
+QStringList robotSpaceDefine::getSpraydRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap)
+{
+	QStringList robotNames;
+
+	if (robotMap.isEmpty()) {
+		return robotNames; // 返回空列表
+	}
+
+	// 遍历机器人映射表，筛选指定类型的机器人
+	for (auto it = robotMap.constBegin(); it != robotMap.constEnd(); ++it) {
+		long id = it.key();    // 获取机器人ID
+		QString name = it.value(); // 获取机器人名称
+
+		PQRobotType robotType = PQ_MECHANISM_ROBOT;
+		HRESULT hr = m_ptrKit->Robot_get_type(id, &robotType);
+
+		if (SUCCEEDED(hr) && robotType == mechanismType) {
+			robotNames.append(name);
+		}
+	}
+
+	return robotNames;
+}
+
+QStringList robotSpaceDefine::getPathGroupNames(ULONG robotID)
+{
+	QStringList groupNames;
+
+	VARIANT varGroupName;
+	VariantInit(&varGroupName);
+	varGroupName.parray = NULL;
+
+	// 调用接口获取轨迹组名称
+	HRESULT hr = m_ptrKit->Doc_get_pathgroup_name(robotID, &varGroupName);
+	if (SUCCEEDED(hr)) {
+		groupNames = extractStringArrayFromVariant(varGroupName);
+		qDebug() << "成功获取轨迹组名称，数量:" << groupNames.size() << "机器人ID:" << robotID;
+	}
+	else {
+		qDebug() << "获取轨迹组名称失败，机器人ID:" << robotID << "错误码:" << hr;
+		QMessageBox::warning(this, "警告", "获取轨迹组名称失败！");
+	}
+
+	VariantClear(&varGroupName);
+	return groupNames;
+}
+
+QStringList robotSpaceDefine::getPathNames(ULONG robotID, const QString & groupName)
+{
+	QStringList pathNames;
+
+	VARIANT sNames;
+	VARIANT sIDs;
+	VariantInit(&sNames);
+	VariantInit(&sIDs);
+	sNames.parray = NULL;
+	sIDs.parray = NULL;
+
+	// 将QString转换为std::wstring，再获取C风格宽字符串指针
+	std::wstring wstrGroupName = groupName.toStdWString();
+	BSTR bstrGroupName = SysAllocString(wstrGroupName.c_str());
+
+	// 或者更简洁的一行写法：
+	// BSTR bstrGroupName = SysAllocString(groupName.toStdWString().c_str());
+
+	HRESULT hr = m_ptrKit->Path_get_group_path(robotID, bstrGroupName, &sNames, &sIDs);
+
+	SysFreeString(bstrGroupName);
+
+	if (SUCCEEDED(hr)) {
+		pathNames = extractStringArrayFromVariant(sNames);
+		qDebug() << "成功获取轨迹名称，数量:" << pathNames.size()
+			<< "机器人ID:" << robotID << "组名:" << groupName;
+	}
+	else {
+		qDebug() << "获取轨迹名称失败，机器人ID:" << robotID
+			<< "组名:" << groupName << "错误码:" << hr;
+	}
+
+	VariantClear(&sNames);
+	VariantClear(&sIDs);
+
+	return pathNames;
+}

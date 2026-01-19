@@ -160,7 +160,7 @@ private:
 
 	// 局部坐标系（基于方向矢量）
 	std::shared_ptr<LocalCoordinateSystem> m_localCoordSystem;
-	
+
 	//将方向向量转化为四元数
 	std::vector<double> directionVectorToQuaternion(const std::vector<double>& direction);
 
@@ -174,7 +174,7 @@ private:
 
 	//创建八条母线方向向量
 	std::vector<std::vector<double>> generateUniformGeneratrix(
-		const std::vector<double>& coneAxis,double coneAngle);
+		const std::vector<double>& coneAxis, double coneAngle);
 
 	bool isPointReachableWithConeConstraint(ULONG robotID, const spacePoint& point,
 		const std::vector<double>& coneAxis, double coneAngle,
@@ -210,7 +210,6 @@ private:
 
 	// 分析功能
 	static std::vector<double> analyzeRobotSpaceCharacteristics(const std::vector<std::array<double, 3>>& robotSpace);
-
 
 public:
 	Workspace(const spacePoint& center, const spacePoint& size,
@@ -261,13 +260,18 @@ public:
 		int samplePointsPerFace = 5,
 		double minStepSize = 1.0);
 
-
-
 	//4、输入机器人id、主法矢量、厚度，输出八个角点
 	std::vector<spacePoint> RobotWorkspace(
 		const std::map<std::pair<double, double>, std::vector<spacePoint>>& aabbMap,
 		double targetThick, double targetTheta);
 
+	//5、中心点优化方法
+	spacePoint optimizeCenterPoint(ULONG robotID,
+		const spacePoint& initialCenter,
+		const std::vector<double>& direction,
+		double searchRadius = 100.0,
+		int searchSteps = 10,
+		int samplePoints = 10);
 };
 
 #endif // SPACE_CALCULATE_H

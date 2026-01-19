@@ -1035,45 +1035,8 @@ void MainWindow::on_kinetic_analysis()
 
 void MainWindow::on_define_space()
 {
-	//if (spaceDialog) {
-	//	spaceDialog->close();
-	//	spaceDialog->deleteLater();
-	//	spaceDialog = nullptr;
-	//}
-
 	spaceDialog = new robotSpaceDefine(this,m_ptrKit,m_ptrKitCallback);
 
-	// 使用封装好的函数获取机器人列表
-	PQDataType robotType = PQ_ROBOT;
-	QMap<ULONG, QString> robotMap = getObjectsByType(robotType);
-
-	// 使用封装函数获取喷涂机器人名称列表
-	QStringList robotNames = getSprayRobotNames(PQ_MECHANISM_ROBOT, robotMap);
-
-	if (robotNames.isEmpty()) {
-		QMessageBox::information(this, "提示", "当前没有可用的喷涂机器人！");
-		delete spaceDialog;
-		spaceDialog = nullptr;
-		return;
-	}
-
-	// 将机器人名称设置到对话框中
-	for (const QString& name : robotNames) {
-		spaceDialog->setRobotOptions(name);
-	}
-
-	////根据文件名称读取配置文件
-	////待完成
-
-	//实现计算θ和xyz的关系
-	spacePoint center(0, 0, 0);
-	spacePoint size(0, 0, 0);
-
-	//Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
-	//spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotMap.firstKey());
-
-
-	QString name = robotNames[0];
 
 	spaceDialog->setModal(false);
 	spaceDialog->setAttribute(Qt::WA_DeleteOnClose);

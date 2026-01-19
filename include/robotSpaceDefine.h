@@ -10,6 +10,7 @@
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QString.h>
+#include <QComboBox>
 #include "robxFileIO.h"
 #include "spaceCalculate.h"
 #include "robxFileIO.h"
@@ -38,9 +39,6 @@ public:
 	void addAxisInfo(int number, const QString& axisName, const QString& mainNormalVector,
 		bool hasGuideRail, const QString guideName);
 
-	void setRobotOptions(const QString& robotOption);//设置机器人名称
-
-
 	QString getRobotName();//获取机器人名称
 
 private slots:
@@ -48,11 +46,12 @@ private slots:
 	void onDeleteAxis(); // 删除坐标轴槽函数
 	void onConfirm();
 	void onClose();
-
+	void onRobotChanged(int index); // 新增：机器人切换槽函数
 
 private:
 	void setupTableView(); // 初始化表格视图
 	void updateTableView(); // 更新表格显示
+	void loadRobotData(const QString& robotName); // 新增：加载特定机器人的数据
 
 	//获取主法矢量
 	std::vector<double>getDir(ULONG coordinateID, QString mainDir);
@@ -60,7 +59,17 @@ private:
 	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
 	QStringList extractStringArrayFromVariant(const VARIANT& variant);
 	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);
-	
+
+
+	//获取机器人列表
+	QStringList getSpraydRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);
+
+	// 获取轨迹组名称
+	QStringList getPathGroupNames(ULONG robotID);
+
+	// 获取轨迹名称
+	QStringList getPathNames(ULONG robotID, const QString& groupName);
+
 
 private:
 	Ui::robotSpaceDefineClass *ui;
@@ -69,9 +78,10 @@ private:
 	CPQKitCallback* m_ptrKitCallback;
 	RobxIO *m_io;
 	QVector<workSpace> m_list;
-	QVector<workSpaceInformation> m_spaceInformation;
+	// 修改：使用 QMap 按机器人名称存储工作空间信息
+	QMap<QString, QVector<workSpaceInformation>> m_spaceInformation;
 
-	
+
 	// 存储坐标轴数据
 	struct AxisData {
 		int number;
