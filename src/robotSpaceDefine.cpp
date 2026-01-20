@@ -229,7 +229,7 @@ void robotSpaceDefine::onAddAxis()
 		QString guideName = dlg->getRail();
 
 		std::map<std::pair<double, double>, std::vector<spacePoint>> inputMap;
-		inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 5, 50,
+		inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 10, 50,
 			1500, 0, 22.5, direction, 5, 10.0);
 
 		for (const auto& keyValuePair : inputMap) { // ±éÀúmap
