@@ -1,4 +1,3 @@
-
 #include<iostream>
 #include<qstringliteral.h>
 #include"TrajCorrectDock.h"
@@ -35,76 +34,27 @@ TrajCorrectDock::TrajCorrectDock(
 	QWidget *contentWidget = new QWidget();
 	ui->setupUi(contentWidget);
 	contentWidget->setFixedWidth(800);
-
-	//初始化一些自定义控件
-	listFlagPoints = new pickWidget(contentWidget);  //pickbox的父对象被设置为contentWidget，在QT中的父子关系负责内存管理，删除父对象时，它会自动删除所有子对象（不需要你手动 delete）
-	xMinspin = new PickSpinBox(contentWidget);
-	xMaxspin = new PickSpinBox(contentWidget);
-	yMinspin = new PickSpinBox(contentWidget);
-	yMaxspin = new PickSpinBox(contentWidget);
-	zMinspin = new PickSpinBox(contentWidget);
-	zMaxspin = new PickSpinBox(contentWidget);
-	spinBoxes = { xMinspin, xMaxspin, yMinspin, yMaxspin, zMinspin, zMaxspin };
-	 spnOriginx = new PickSpinBox(contentWidget);
-	 spnOriginy = new PickSpinBox(contentWidget);
-	 spnOriginz = new PickSpinBox(contentWidget);
-	ui->loutOriginPt->addWidget(spnOriginx);
-	ui->loutOriginPt->addWidget(spnOriginy);
-	ui->loutOriginPt->addWidget(spnOriginz);
-	InitCustomWidget();
-	ui->verticalLayout->addWidget(listFlagPoints);
 	scroll->setWidget(contentWidget);
 	setWidget(contentForScroll);
-	//setWidget(contentWidget);
-	connect(ui->btnNewCorrection, SIGNAL(clicked()), this, SLOT(on_btnNewCorrection_clicked()));
-
 	setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
 	setAllowedAreas(Qt::AllDockWidgetAreas);
+
+	//初始化dock
+	initDock(contentWidget);
+	//初始化一些自定义控件
+	InitCustomWidget();
+	//信号槽链接
 	setupConnections();
-	connect(listFlagPoints, &pickWidget::blankAreaClicked, this, &TrajCorrectDock::on_pickBox_blankAreaClicked);
-	connect(listFlagPoints, &pickWidget::deleteSignal, this, &TrajCorrectDock::testSignal);
-	connect(this, &TrajCorrectDock::blankAreaClicked, this, &TrajCorrectDock::on_this_blankAreaClicked);
-	connect(ui->btnDelCor, SIGNAL(clicked()), this, SLOT(on_btnDeleteCorrection_clicked()));
-	connect(xMinspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
-	connect(xMaxspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
-	connect(yMinspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
-	connect(yMaxspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
-	connect(zMinspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
-	connect(spnOriginx, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickOriginPoint);
-	connect(spnOriginy, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickOriginPoint);
-	connect(spnOriginz, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickOriginPoint);
-	for (size_t i = 0; i < 6; i++)
-	{
-		connect(spinBoxes[i], &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
-		connect(spinBoxes[i], QOverload<int>::of(&PickSpinBox::valueChanged),
-			this, &TrajCorrectDock::onPickSpinBoxValueChanged);
-		
-	}
-	connect(spnOriginx, QOverload<int>::of(&PickSpinBox::valueChanged), this, &TrajCorrectDock::on_spnOrigin_valueChanged);
-	connect(spnOriginy, QOverload<int>::of(&PickSpinBox::valueChanged), this, &TrajCorrectDock::on_spnOrigin_valueChanged);
-	connect(spnOriginz, QOverload<int>::of(&PickSpinBox::valueChanged), this, &TrajCorrectDock::on_spnOrigin_valueChanged);
-	connect(zMaxspin, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
-	connect(ui->btnMeasurePtsInport, &QPushButton::clicked, this, &TrajCorrectDock::on_btnImportMeasurePoints_clicked);
-	connect(ui->btnImportFlag, &QPushButton::clicked, this, &TrajCorrectDock::on_btnImportFlag_clicked);
-	connect(ui->btnFlagPointsExport, &QPushButton::clicked, this, &TrajCorrectDock::on_btnExportFlagPoints_clicked);
-	connect(ui->btnAttributeSetOK, &QPushButton::clicked, this,&TrajCorrectDock::on_btnAttributeSetOK_clicked);
-	listFlagPoints->setStyleSheet("border: 1px solid black");
-	connect(ui->btnRefresh, &QPushButton::clicked, this, &TrajCorrectDock::on_btnRefresh_clicked);
-	connect(ui->listCorrections, &QListWidget::itemClicked, this, &TrajCorrectDock::on_listCorrection_slectedItem);
-	connect(ui->comboCorType, SIGNAL(currentIndexChanged(int)), this, SLOT(onComboBoxIndexChanged(int)));
-	initDock();
-	connect(ui->btnSave, &QPushButton::clicked, this, &TrajCorrectDock::on_btnSave_clicked);
-	//---------------pq回调信号--------------------------
-	connect(m_ptrKitCallback2, &CPQKitCallback::signalElementPickup, this, &TrajCorrectDock::OnPickup);
-	//connect(m_ptrKitCallback2, &CPQKitCallback::signalElementSelection, this, &TrajCorrectDock::OnElementSelection);
-	connect(m_ptrKitCallback2, &CPQKitCallback::signalDraw, this, &TrajCorrectDock::OnDraw);
 	
-
-
-	//-------------test-----------------
-
-	//---------init------------
-		//从json读入数据，初始化数据列表, 初始化变形列表控件
+	//设置样式表格式
+	listFlagPoints->setStyleSheet("border: 1px solid black");
+	QFont font("SimSun", 10);
+	ui->groupBox->setFont(font);  // 设置
+	ui->groupBox_2->setFont(font);
+	ui->spnDeg->setSingleStep(0.05);
+	ui->spnMaxDeflection->setDisabled(true);
+	
+	//从json读入数据，初始化数据列表, 初始化变形列表控件
 	m_io = new RobxIO();
 	m_io->updateData(m_correctionList, "correctionList.json");
 	for (const Correction& corr : m_correctionList)
@@ -113,8 +63,7 @@ TrajCorrectDock::TrajCorrectDock(
 		m_correctionItems.push_back(item);
 	}
 	InitLists();
-	GetAllPathID();   //获取所有轨迹ID,名称,轨迹点ID
-	GetPointInfo();	  //获取所有轨迹点位姿
+
 	setWindowTitle(QString::fromLocal8Bit("弯曲变形配置"));
 	
 	//增加一些帮助
@@ -192,7 +141,7 @@ void TrajCorrectDock::exportCsvFlagPoints(const QString & filePath)
 	out.setRealNumberNotation(QTextStream::FixedNotation);
 	out.setRealNumberPrecision(6);
 
-	for (size_t i = 0; i + 2 < m_vFlagPoints.size(); i += 3) {
+	for (int i = 0; i + 2 < m_vFlagPoints.size(); i += 3) {
 		out << m_vFlagPoints[i] << ", "
 			<< m_vFlagPoints[i + 1] << ", "
 			<< m_vFlagPoints[i + 2] << "\n";
@@ -214,7 +163,7 @@ void TrajCorrectDock::exportCsvMeasurePoints(const QString & filePath)
 	out.setRealNumberNotation(QTextStream::FixedNotation);
 	out.setRealNumberPrecision(6);
 
-	for (size_t i = 0; i + 2 < m_vMeasurePoints.size(); i += 3) {
+	for (int i = 0; i + 2 < m_vMeasurePoints.size(); i += 3) {
 		out << m_vMeasurePoints[i] << ", "
 			<< m_vMeasurePoints[i + 1] << ", "
 			<< m_vMeasurePoints[i + 2] << "\n";
@@ -253,12 +202,33 @@ void TrajCorrectDock::mousePressEvent(QMouseEvent * event)
 
 
 #pragma region InitializationFunctions
-void TrajCorrectDock::initDock()
+void TrajCorrectDock::initDock(QWidget* contentWidget)
 {
-	
+	listFlagPoints = new pickWidget(contentWidget);  //pickbox的父对象被设置为contentWidget，在QT中的父子关系负责内存管理，删除父对象时，它会自动删除所有子对象（不需要你手动 delete）
+	xMinspin = new PickSpinBox(contentWidget);
+	xMaxspin = new PickSpinBox(contentWidget);
+	yMinspin = new PickSpinBox(contentWidget);
+	yMaxspin = new PickSpinBox(contentWidget);
+	zMinspin = new PickSpinBox(contentWidget);
+	zMaxspin = new PickSpinBox(contentWidget);
+	spinBoxes = { xMinspin, xMaxspin, yMinspin, yMaxspin, zMinspin, zMaxspin };
+	spnOriginx = new PickSpinBox(contentWidget);
+	spnOriginy = new PickSpinBox(contentWidget);
+	spnOriginz = new PickSpinBox(contentWidget);
+	spnOriginx->setSingleStep(10.0);
+	spnOriginy->setSingleStep(10.0);
+	spnOriginz->setSingleStep(10.0);
+	for(PickSpinBox* box : spinBoxes)
+	{
+		box->setSingleStep(10.0);
+	}
+	ui->loutOriginPt->addWidget(spnOriginx);
+	ui->loutOriginPt->addWidget(spnOriginy);
+	ui->loutOriginPt->addWidget(spnOriginz);
 	ui->btnDelCor->setEnabled(false);
 	ui->groupBox_2->setEnabled(false);
-	for (size_t i = 0; i < 6; i++)
+	ui->verticalLayout->addWidget(listFlagPoints);
+	for (int i = 0; i < 6; i++)
 	{
 		spinBoxes[i]->setStyleSheet("PickSpinBox{border: 1px solid black}");
 	}
@@ -322,6 +292,28 @@ void TrajCorrectDock::InitCustomWidget()
 
 void TrajCorrectDock::setupConnections()
 {
+	//点击事件
+	connect(ui->btnNewCorrection, SIGNAL(clicked()), this, SLOT(on_btnNewCorrection_clicked()));
+	connect(ui->btnMeasurePtsInport, &QPushButton::clicked, this, &TrajCorrectDock::on_btnImportMeasurePoints_clicked);
+	connect(ui->btnImportFlag, &QPushButton::clicked, this, &TrajCorrectDock::on_btnImportFlag_clicked);
+	connect(ui->btnFlagPointsExport, &QPushButton::clicked, this, &TrajCorrectDock::on_btnExportFlagPoints_clicked);
+	connect(ui->btnAttributeSetOK, &QPushButton::clicked, this, &TrajCorrectDock::on_btnAttributeSetOK_clicked);
+	connect(ui->btnRefresh, &QPushButton::clicked, this, &TrajCorrectDock::on_btnRefresh_clicked);
+	connect(ui->listCorrections, &QListWidget::itemClicked, this, &TrajCorrectDock::on_listCorrection_slectedItem);
+	connect(ui->btnSave, &QPushButton::clicked, this, &TrajCorrectDock::on_btnSave_clicked);
+	connect(listFlagPoints, &pickWidget::blankAreaClicked, this, &TrajCorrectDock::on_pickBox_blankAreaClicked);
+	connect(listFlagPoints, &pickWidget::deleteSignal, this, &TrajCorrectDock::testSignal);
+	connect(this, &TrajCorrectDock::blankAreaClicked, this, &TrajCorrectDock::on_this_blankAreaClicked);
+	connect(ui->btnDelCor, SIGNAL(clicked()), this, SLOT(on_btnDeleteCorrection_clicked()));
+	
+	connect(ui->cmbBeamDir, QOverload<int>::of(&QComboBox::currentIndexChanged),
+		this, &TrajCorrectDock::on_cmbBeamDir_currentIndexChanged);
+	connect(spnOriginx, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickOriginPoint);
+	connect(spnOriginy, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickOriginPoint);
+	connect(spnOriginz, &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickOriginPoint);
+	//tap页切换事件
+	connect(ui->tabInput, &QTabWidget::currentChanged, this, &TrajCorrectDock::on_tabInput_currentChanged);
+
 	//触发setEdit槽函数，当编辑名称时
 	connect(ui->editCorName, &QLineEdit::textEdited, this, &TrajCorrectDock::setEdit);
 	for (PickSpinBox* box : spinBoxes)
@@ -333,13 +325,29 @@ void TrajCorrectDock::setupConnections()
 	connect(listFlagPoints, &QListWidget::itemChanged, this, &TrajCorrectDock::setEdit);
 	connect(ui->btnRefreshLog, &QPushButton::clicked, this, &TrajCorrectDock::on_btnRefreshLog_clicked);
 
-	
+	for (int i = 0; i < 6; i++)
+	{
+		connect(spinBoxes[i], &PickSpinBox::lineEditClicked, this, &TrajCorrectDock::pickRange);
+		connect(spinBoxes[i], QOverload<int>::of(&PickSpinBox::valueChanged),
+			this, &TrajCorrectDock::onPickSpinBoxValueChanged);
+	}
+	connect(spnOriginx, QOverload<int>::of(&PickSpinBox::valueChanged), this, &TrajCorrectDock::on_spnOrigin_valueChanged);
+	connect(spnOriginy, QOverload<int>::of(&PickSpinBox::valueChanged), this, &TrajCorrectDock::on_spnOrigin_valueChanged);
+	connect(spnOriginz, QOverload<int>::of(&PickSpinBox::valueChanged), this, &TrajCorrectDock::on_spnOrigin_valueChanged);
+	connect(ui->spnDeg, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &TrajCorrectDock::on_spnBeamDeg_valueChanged);
+	//绘图
+	connect(ui->listMeasurePoints, &QListWidget::itemClicked, this, &TrajCorrectDock::on_listMeasurePoints_itemClicked);
+	connect(listFlagPoints, &QListWidget::itemClicked, this, &TrajCorrectDock::on_listFlagPoints_itemClicked);
+
 	//devPage
 	testConnection();
 	connect(ui->btnDevPage, &QPushButton::clicked, this, &TrajCorrectDock::on_btnDevPage_clicked);
 	connect(ui->btnCal, &QPushButton::clicked, this, &TrajCorrectDock::on_btnCal_clicked);
 	
-
+	//---------------pq回调信号--------------------------
+	connect(m_ptrKitCallback2, &CPQKitCallback::signalElementPickup, this, &TrajCorrectDock::OnPickup);
+	//connect(m_ptrKitCallback2, &CPQKitCallback::signalElementSelection, this, &TrajCorrectDock::OnElementSelection);
+	connect(m_ptrKitCallback2, &CPQKitCallback::signalDraw, this, &TrajCorrectDock::OnDraw);
 }
 
 #pragma endregion regionName
@@ -363,41 +371,228 @@ void TrajCorrectDock::OnDraw()
 	double lengh, width, height;
 	switch (m_drawSource)
 	{
+
 	case TrajCorrectDock::DrawSource::None:
 		break;
-	case TrajCorrectDock::DrawSource::FromFlagPoints:
 
-		
-		for (size_t i = 0; i < m_vFlagPoints.size(); i++)
+	case TrajCorrectDock::DrawSource::FromFlagPoints:
+	{
+		int CurrentPointIndex = listFlagPoints->currentRow();
+		for (int i = 0; i < m_vFlagPoints.size(); i += 3)
 		{
-			dPos[counter++] = m_vFlagPoints[i];
-			if ((counter % 3) == 0)
+			// 确保有完整的三个坐标
+			if (i + 2 >= m_vFlagPoints.size()) break;
+
+			double currentPoint[3] = {
+				m_vFlagPoints[i],
+				m_vFlagPoints[i + 1],
+				m_vFlagPoints[i + 2]
+			};
+
+			// 获取点索引
+			int pointIndex = i / 3;
+
+			// 绘制蓝色点（所有点）
+			wss.str(L"");
+			wss.clear();
+			wss << L"点" << pointIndex + 1;
+			strText = wss.str().c_str();
+
+			// 如果是当前选中点，绘制绿色大点高亮
+			if (pointIndex == CurrentPointIndex)
 			{
-				wss.str(L"");
-				wss.clear();
-				wss << L"点" << (i/3)+1;
-				strText = wss.str().c_str();
-				m_ptrKit->View_draw_point(dPos, 0, 15, RGB(10, 100, 200), strText, RGB(255, 140, 0));
-				counter = 0;
-				
+				m_ptrKit->View_draw_point(currentPoint, 0, 30, RGB(0, 255, 0), strText, RGB(0, 255, 0));
 			}
+			m_ptrKit->View_draw_point(currentPoint, 0, 15, RGB(10, 100, 200), strText, RGB(255, 140, 0));
+		}
+		break;
+	}
+
+	case TrajCorrectDock::DrawSource::FromMeasurePoints:
+	{
+		int CurrentPointIndex = ui->listMeasurePoints->currentRow();
+		for (int i = 0; i < m_vMeasurePoints.size(); i += 3)
+		{
+			// 确保有完整的三个坐标
+			if (i + 2 >= m_vMeasurePoints.size()) break;
+
+			double currentPoint[3] = {
+				m_vMeasurePoints[i],
+				m_vMeasurePoints[i + 1],
+				m_vMeasurePoints[i + 2]
+			};
+
+			// 获取点索引
+			int pointIndex = i / 3;
+
+			// 绘制蓝色点（所有点）
+			wss.str(L"");
+			wss.clear();
+			wss << L"点" << pointIndex + 1;
+			strText = wss.str().c_str();
+			// 如果是当前选中点，绘制绿色大点高亮
+			if (pointIndex == CurrentPointIndex)
+			{
+				m_ptrKit->View_draw_point(currentPoint, 0, 30, RGB(0, 255, 0), strText, RGB(0, 255, 0));
+			}
+			m_ptrKit->View_draw_point(currentPoint, 0, 15, RGB(217, 83, 79), strText, RGB(255, 140, 0));
 
 		}
 		break;
-	case TrajCorrectDock::DrawSource::FromMeasurePoints:
-			
+	}
+		
+
+	case TrajCorrectDock::DrawSource::FromOriginPoint:
+	{
+		dPos0[0] = spnOriginx->value();
+		dPos0[1] = spnOriginy->value();
+		dPos0[2] = spnOriginz->value();
+
+		// ? 原点：红色大点 + "Origin" 标注
+		m_ptrKit->View_draw_point(dPos0, 0, 20, RGB(255, 0, 0), bstr, RGB(255, 0, 0));
+
+		// ? 获取方向
+		int directionIndex = ui->cmbBeamDir->currentIndex();
+		std::vector<double> direction(3, 0.0);
+
+		switch (directionIndex) {
+		case 0: direction = { 1.0, 0.0, 0.0 };  break;
+		case 1: direction = { -1.0, 0.0, 0.0 }; break;
+		case 2: direction = { 0.0, 1.0, 0.0 };  break;
+		case 3: direction = { 0.0, -1.0, 0.0 }; break;
+		default: direction = { 1.0, 0.0, 0.0 }; break;
+		}
+
+		double arrowLength = 500.0;
+		double arrowHeadLength = 100.0;
+		double arrowHeadWidth = 60.0;
+
+		// ? 箭头末端
+		double arrowEnd[3] = {
+			dPos0[0] + direction[0] * arrowLength,
+			dPos0[1] + direction[1] * arrowLength,
+			dPos0[2] + direction[2] * arrowLength
+		};
+
+		// ? 绘制箭头主体（红色线）
+		int lineSegments = 30;
+		for (int i = 1; i <= lineSegments; ++i) {
+			double t = static_cast<double>(i) / lineSegments;
+			double pointPos[3] = {
+				dPos0[0] + direction[0] * arrowLength * t,
+				dPos0[1] + direction[1] * arrowLength * t,
+				dPos0[2] + direction[2] * arrowLength * t
+			};
+			m_ptrKit->View_draw_point(pointPos, 0, 6, RGB(255, 0, 0), emptyText, RGB(255, 0, 0));
+		}
+
+		// ? 计算两个垂直向量 - 改进算法
+		std::vector<double> perp1(3, 0.0), perp2(3, 0.0);
+
+		// 找一个与 direction 不平行的向量
+		std::vector<double> helper(3, 0.0);
+		if (std::abs(direction[0]) < 0.9) {
+			helper = { 1.0, 0.0, 0.0 };  // 如果 direction 不主要沿 X，用 X 轴
+		}
+		else {
+			helper = { 0.0, 1.0, 0.0 };  // 否则用 Y 轴
+		}
+
+		// perp1 = direction × helper（叉积）
+		perp1[0] = direction[1] * helper[2] - direction[2] * helper[1];
+		perp1[1] = direction[2] * helper[0] - direction[0] * helper[2];
+		perp1[2] = direction[0] * helper[1] - direction[1] * helper[0];
+
+		// 归一化 perp1
+		double perp1_len = std::sqrt(perp1[0] * perp1[0] + perp1[1] * perp1[1] + perp1[2] * perp1[2]);
+		if (perp1_len > 1e-6) {
+			perp1[0] /= perp1_len;
+			perp1[1] /= perp1_len;
+			perp1[2] /= perp1_len;
+		}
+
+		// perp2 = direction × perp1（叉积）
+		perp2[0] = direction[1] * perp1[2] - direction[2] * perp1[1];
+		perp2[1] = direction[2] * perp1[0] - direction[0] * perp1[2];
+		perp2[2] = direction[0] * perp1[1] - direction[1] * perp1[0];
+
+		// 归一化 perp2
+		double perp2_len = std::sqrt(perp2[0] * perp2[0] + perp2[1] * perp2[1] + perp2[2] * perp2[2]);
+		if (perp2_len > 1e-6) {
+			perp2[0] /= perp2_len;
+			perp2[1] /= perp2_len;
+			perp2[2] /= perp2_len;
+		}
+
+		// ? 圆锥箭头头部
+		double arrowBase[3] = {
+			arrowEnd[0] - direction[0] * arrowHeadLength,
+			arrowEnd[1] - direction[1] * arrowHeadLength,
+			arrowEnd[2] - direction[2] * arrowHeadLength
+		};
+
+		int coneSegments = 12;
+		int coneHeightSegments = 8;
+
+		// 绘制圆锥表面
+		for (int i = 0; i < coneSegments; ++i) {
+			double angle1 = 2.0 * 3.14159265359 * i / coneSegments;
+			double angle2 = 2.0 * 3.14159265359 * (i + 1) / coneSegments;
+
+			double basePoint1[3] = {
+				arrowBase[0] + perp1[0] * arrowHeadWidth * std::cos(angle1) + perp2[0] * arrowHeadWidth * std::sin(angle1),
+				arrowBase[1] + perp1[1] * arrowHeadWidth * std::cos(angle1) + perp2[1] * arrowHeadWidth * std::sin(angle1),
+				arrowBase[2] + perp1[2] * arrowHeadWidth * std::cos(angle1) + perp2[2] * arrowHeadWidth * std::sin(angle1)
+			};
+
+			double basePoint2[3] = {
+				arrowBase[0] + perp1[0] * arrowHeadWidth * std::cos(angle2) + perp2[0] * arrowHeadWidth * std::sin(angle2),
+				arrowBase[1] + perp1[1] * arrowHeadWidth * std::cos(angle2) + perp2[1] * arrowHeadWidth * std::sin(angle2),
+				arrowBase[2] + perp1[2] * arrowHeadWidth * std::cos(angle2) + perp2[2] * arrowHeadWidth * std::sin(angle2)
+			};
+
+			for (int h = 0; h <= coneHeightSegments; ++h) {
+				double t = static_cast<double>(h) / coneHeightSegments;
+
+				double point1[3] = {
+					basePoint1[0] * (1 - t) + arrowEnd[0] * t,
+					basePoint1[1] * (1 - t) + arrowEnd[1] * t,
+					basePoint1[2] * (1 - t) + arrowEnd[2] * t
+				};
+
+				double point2[3] = {
+					basePoint2[0] * (1 - t) + arrowEnd[0] * t,
+					basePoint2[1] * (1 - t) + arrowEnd[1] * t,
+					basePoint2[2] * (1 - t) + arrowEnd[2] * t
+				};
+
+				m_ptrKit->View_draw_point(point1, 0, 6, RGB(255, 0, 0), emptyText, RGB(255, 0, 0));
+				m_ptrKit->View_draw_point(point2, 0, 6, RGB(255, 0, 0), emptyText, RGB(255, 0, 0));
+			}
+		}
+
+		// 绘制圆锥底部
+		for (int i = 0; i < coneSegments; ++i) {
+			for (int j = 1; j < coneSegments; ++j) {
+				double angle = 2.0 * 3.14159265359 * i / coneSegments;
+				double radius = arrowHeadWidth * j / coneSegments;
+
+				double point[3] = {
+					arrowBase[0] + perp1[0] * radius * std::cos(angle) + perp2[0] * radius * std::sin(angle),
+					arrowBase[1] + perp1[1] * radius * std::cos(angle) + perp2[1] * radius * std::sin(angle),
+					arrowBase[2] + perp1[2] * radius * std::cos(angle) + perp2[2] * radius * std::sin(angle)
+				};
+
+				m_ptrKit->View_draw_point(point, 0, 5, RGB(255, 0, 0), emptyText, RGB(255, 0, 0));
+			}
+		}
+
 		break;
-
-		case TrajCorrectDock::DrawSource::FromOriginPoint:
-			
-
-			dPos0[0] = spnOriginx->value();
-			dPos0[1] = spnOriginy->value();
-			dPos0[2] = spnOriginz->value();
-			m_ptrKit->View_draw_point(dPos0, 0, 20, RGB(255, 0, 0), bstr, RGB(255, 0, 0));
-			break;
+	}
+				
 	case TrajCorrectDock::DrawSource::FromRangePoints:
-		for (size_t i = 0; i < 6; i++)
+	{
+		for (int i = 0; i < 6; i++)
 		{
 			if (spinBoxes[i]->value() == 0)
 			{
@@ -416,6 +611,11 @@ void TrajCorrectDock::OnDraw()
 			lengh = xMax - xMin;
 			width = yMax - yMin;
 			height = zMax - zMin;
+
+			// ? 计算最大边长，用于确定点密度
+			double maxEdgeLength = (std::max)({ lengh, width, height });
+			double pointSpacing = 50.0;  // 点之间的均匀间距（可调整）
+
 			std::vector<std::array<double, 3>> vertices =
 			{
 				{xMin, yMin, zMin}, // 0
@@ -427,21 +627,31 @@ void TrajCorrectDock::OnDraw()
 				{xMax, yMax, zMax}, // 6
 				{xMin, yMax, zMax}  // 7
 			};
-			int segments = 10; // 
+
 			std::vector<std::pair<int, int>> edges =
 			{
 				{0, 1}, {1, 2}, {2, 3}, {3, 0}, // bottom face
 				{4, 5}, {5, 6}, {6, 7}, {7, 4}, // top face
 				{0, 4}, {1, 5}, {2, 6}, {3, 7}  // vertical edges
 			};
+
 			for (const auto& edge : edges)
 			{
 				auto p1 = vertices[edge.first];
 				auto p2 = vertices[edge.second];
 
-				for (int i = 0; i <= segments; ++i)
+				// ? 计算这条边的长度
+				double edgeLength = std::sqrt(
+					(p2[0] - p1[0]) * (p2[0] - p1[0]) +
+					(p2[1] - p1[1]) * (p2[1] - p1[1]) +
+					(p2[2] - p1[2]) * (p2[2] - p1[2])
+				);
+
+				// ? 根据边长动态计算分段数
+				int dynamicSegments = std::max<int>(1, static_cast<int>(std::round(edgeLength / pointSpacing)));
+				for (int i = 0; i <= dynamicSegments; ++i)
 				{
-					double t = static_cast<double>(i) / segments;
+					double t = static_cast<double>(i) / dynamicSegments;
 					double dPos[3] =
 					{
 						(1 - t) * p1[0] + t * p2[0],
@@ -455,8 +665,8 @@ void TrajCorrectDock::OnDraw()
 			}
 		}
 		break;
-	default:
-		break;
+	}
+	
 	}
 }
 
@@ -480,7 +690,7 @@ void TrajCorrectDock::OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int 
 		m_vFlagPoints.push_back(i_dPointZ);
 		myPointCounter = m_vFlagPoints.size() / 3;
 		listFlagPoints->clear();
-		for (size_t i = 0; i < myPointCounter; i++)
+		for (int i = 0; i < myPointCounter; i++)
 		{
 			listFlagPoints->addItem(QStringLiteral("点%1").arg(i+1));
 		}
@@ -494,7 +704,7 @@ void TrajCorrectDock::OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int 
 		break;
 	case TrajCorrectDock::PickSource::FromSpinRanges:
 		qDebug() << "It's OnElementPickup from class TrajCorrectDock";
-		
+		pick:
 		switch (rangeBoxIndex)
 		{
 		case 0:
@@ -516,23 +726,24 @@ void TrajCorrectDock::OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int 
 			zMaxspin->setValue(i_dPointZ);
 			break;
 		}
-		for (size_t i = 0; i < 6; i++)
+		spinBoxes[rangeBoxIndex]->setStyleSheet("PickSpinBox{border: 1px solid black}");
+		while(rangeBoxIndex<5)
 		{
-			if (spinBoxes[i]->value() == 0)
-			{
-				isFull = false;
-				break;
-			}
+			rangeBoxIndex++;
+			spinBoxes[rangeBoxIndex]->setStyleSheet("border: 3px solid blue");
+			return;  //退出函数，等待下一次拾取
 		}
-		if (isFull)
+		if (rangeBoxIndex == 5)
 		{
-			break;
+			spinBoxes[rangeBoxIndex]->setStyleSheet("border: 3px solid blue");
+			return;
 		}
-		else
-		{
-			m_ptrKit->Doc_end_module(cmd);
-			break;
-		}
+		//m_ptrKit->Doc_end_module(cmd);
+
+		//OnDraw();
+
+		break;
+	
 		
 
 		
@@ -555,25 +766,44 @@ void TrajCorrectDock::on_pickBox_blankAreaClicked()
 	m_drawSource = DrawSource::FromFlagPoints;
 }
 
+void TrajCorrectDock::on_listMeasurePoints_itemClicked(QListWidgetItem* item)
+{
+	//当点击measurePoints中的某一项时，进入标记点拾取状态
+	m_drawSource = DrawSource::FromMeasurePoints;
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	m_ptrKit->Doc_start_module(cmd);
+	OnDraw();
+}
+
+void TrajCorrectDock::on_listFlagPoints_itemClicked(QListWidgetItem* item)
+{
+	//当点击listFlagPoints中的某一项时，进入标记点拾取状态
+	m_drawSource = DrawSource::FromFlagPoints;
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	m_ptrKit->Doc_start_module(cmd);
+	OnDraw();
+}
+
 void TrajCorrectDock::pickRange()
 {
 	//#拾取相关：
 	//点击范围SpinBox时，进入拾取状态，从轨迹中拾取范围值
-	if(m_pickSource == PickSource::FromSpinRanges &&
-		m_drawSource == DrawSource::FromRangePoints)
-	{
-		//已经在拾取状态，避免重复触发
-		return;
-	}
+	//if(m_pickSource == PickSource::FromSpinRanges &&
+	//	m_drawSource == DrawSource::FromRangePoints)
+	//{
+	//	//已经在拾取状态，避免重复触发
+	//	return;
+	//}
 	m_pickSource = PickSource::FromSpinRanges;
 	m_drawSource = DrawSource::FromRangePoints;
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	m_ptrKit->Doc_start_module(cmd);
-	for (size_t i = 0; i < 6; i++)
+	OnDraw();
+	for (int i = 0; i < 6; i++)
 	{
 		spinBoxes[i]->setStyleSheet("PickSpinBox{border: 1px solid black}");
 	}
-	QObject *obj = sender();
+	QObject *obj = sender();    //槽函数专用，获取触发这个槽函数的对象指针
 	for (int i = 0; i < spinBoxes.size(); ++i) {
 		if (obj == spinBoxes[i]) {
 			spinBoxes[i]->setStyleSheet("border: 3px solid blue");
@@ -587,22 +817,21 @@ void TrajCorrectDock::pickRange()
 
 void TrajCorrectDock::pickOriginPoint()
 {
-	if(m_pickSource == PickSource::FromOriginPoint &&
-		m_drawSource == DrawSource::FromOriginPoint)
-	{
-		//已经在拾取状态，避免重复触发
-		return;
-	}
+	
 	m_pickSource = PickSource::FromOriginPoint;
 	m_drawSource = DrawSource::FromOriginPoint;
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	m_ptrKit->Doc_start_module(cmd);
+	OnDraw();
 	//视觉提示
 	spnOriginx->setStyleSheet("PickSpinBox{border: 3px solid blue}");
 	spnOriginy->setStyleSheet("PickSpinBox{border: 3px solid blue}");
 	spnOriginz->setStyleSheet("PickSpinBox{border: 3px solid blue}");
+}
 
-
+void TrajCorrectDock::on_cmbBeamDir_currentIndexChanged(int index)
+{
+	OnDraw();
 }
 
 void TrajCorrectDock::on_this_blankAreaClicked()
@@ -618,7 +847,7 @@ void TrajCorrectDock::on_this_blankAreaClicked()
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	m_ptrKit->Doc_end_module(cmd);
 	listFlagPoints->setStyleSheet("border: 1px solid black");
-	for (size_t i = 0; i < 6; i++)
+	for (int i = 0; i < 6; i++)
 	{
 		spinBoxes[i]->setStyleSheet("PickSpinBox{border: 1px solid black}");
 	}
@@ -629,229 +858,12 @@ void TrajCorrectDock::on_this_blankAreaClicked()
 }
 
 
-
-#pragma endregion 拾取相关函数
-
-#pragma region pq函数
-
-void TrajCorrectDock::getTrajPoints(double range[6], std::vector<std::vector<double>>& trajPointsToCorrect)
-{
-	////获取所有轨迹id
-	//BSTR sName;  
-	//BSTR sIDs;  
-	//m_ptrKit->pq_GetAllDataObjectsByType(80, &sName, &sIDs);
-	//ULONG ulPathID = 0;     
-	//INT nStartIndex = 0;      //轨迹点起始索引
-	//INT nCount = 5;           //批量获取轨迹点的数目
-	//INT nPostureType = 0;         //姿态表示方式 四元数0   欧拉角：1-4
-	//ULONG uCoordinateID = 0;       //在坐标系ID下表示
-	//m_ptrKit->pq_GetAllDataObjectsByType(80, &sName, &sIDs);
-	ULONG uID = 0;
-	getObjIdByName(PQ_PATH, L"", uID);
-	VARIANT varIDArray;
-	m_ptrKit->PQAPIGetPointsID(uID, &varIDArray);
-	GetAllPathID();
-}
-
-
-void TrajCorrectDock::getObjIdByName(PQDataType i_datatype, std::wstring i_wsName, ULONG & o_uID)
-{
-
-	VARIANT vNamePara;
-	vNamePara.parray = NULL;
-	VARIANT vIDPara;
-	vIDPara.parray = NULL;
-	m_ptrKit->Doc_get_obj_bytype(i_datatype, &vNamePara, &vIDPara);
-	LONG type = 80;  
-	BSTR sName;  
-	BSTR sIDs; 
-	m_ptrKit->pq_GetAllDataObjectsByType(i_datatype, &sName, &sIDs);
-	
-
-}
-
-void TrajCorrectDock::GetAllPathID()    //得到所有轨迹点ID
-{
-	//BSTR trajNames;
-	//BSTR trajIDs;
-	//
-	//m_ptrKit->pq_GetAllDataObjectsByType(PQ_PATH, &trajNames, &trajIDs);
-	//std::string sNames = (const char*)trajNames;
-	//std::stringstream ss(sNames);
-	//std::string item;
-	//unsigned long id;
-	//m_vAllPathNames.clear();
-	//while (std::getline(ss, item, '#')) {
-	//	if (!item.empty()) {
-	//		m_vAllPathNames.push_back(item);
-	//	}
-	//}
-	//std::string sIDs = (const char*)trajIDs;
-	//ss.clear();
-	//ss.str(sIDs);
-	//m_vAllPathIDs.clear();
-	//while (std::getline(ss,item,'#'))
-	//{
-	//	if (!item.empty()) {
-	//		id = std::stoul(item);
-	//		m_vAllPathIDs.push_back(id);
-	//	}
-	//}
-
-	//ULONG *bufID = nullptr;
-	//long lenID;
-	//VARIANT varTrajIDArray;
-	//m_vAllPointIDs.clear();
-	//for (size_t j = 0; j < m_vAllPathIDs.size(); j++)
-	//{
-	//	m_ptrKit->PQAPIGetPointsID(m_vAllPathIDs[j], &varTrajIDArray);
-
-	//	lenID = varTrajIDArray.parray->rgsabound[0].cElements; //元素个数
-	//	SafeArrayAccessData(varTrajIDArray.parray, (void**)&bufID);  //把地址赋给buffID
-	//	for (size_t i = 0; i < lenID; i++)
-	//	{
-	//		m_vAllPointIDs.push_back(bufID[i]);
-	//		m_mapAllPointIDs[m_vAllPathIDs[j]].push_back(bufID[i]);
-	//	}
-	//	SafeArrayUnaccessData(varTrajIDArray.parray);//释放
-	//}
-	////GetPointInfo();
-}
-
-void TrajCorrectDock::GetPointInfo()
-{
-	double x,y,z,q1,q2,q3,q4;
-	std::vector<double> posture;
-	ULONG ulPointID = 0;
-	INT nPostureType = 0;
-	INT nPostureCount = 0;
-	double* dPointPosture = new double;
-	double dVelocity = 0;
-	double dSpeedPercent = 0;
-	PQPointInstruction nInstruct = PQ_LINE;
-	INT nApproach = 0;
-	m_v2dAllPointsPositions.clear();
-
-	for (size_t i = 0; i < m_vAllPointIDs.size(); i++)
-	{
-		ulPointID = m_vAllPointIDs[i];
-		m_ptrKit->PQAPIGetPointInfo(ulPointID, QUATERNION , &nPostureCount, &dPointPosture,
-			&dVelocity, &dSpeedPercent, &nInstruct, &nApproach);
-		x = *dPointPosture;
-		y = *(dPointPosture + 1);
-		z = *(dPointPosture + 2);
-		q1 = *(dPointPosture + 3);
-		q2 = *(dPointPosture + 4);
-		q3 = *(dPointPosture + 5);
-		q4 = *(dPointPosture + 6);
-		posture.push_back(x); posture.push_back(y); posture.push_back(z);
-		posture.push_back(q1); posture.push_back(q2); posture.push_back(q3); posture.push_back(q4);
-		m_v2dAllPointsPositions.push_back(posture);
-		posture.clear();
-		m_ptrKit->PQAPIFree((LONG_PTR*)dPointPosture);
-	}
-	
-}
-
-void TrajCorrectDock::GetPoints2Correct(double range[6])
-{
-	//double xMin, xMax, yMin, yMax, zMin, zMax;
-	//xMin = (std::min)(range[0], range[1]);
-	//xMax = (std::max)(range[0], range[1]);
-	//yMin = (std::min)(range[2], range[3]);
-	//yMax = (std::max)(range[2], range[3]);
-	//zMin = (std::min)(range[4], range[5]);
-	//zMax = (std::max)(range[4], range[5]);
-	//double x, y, z;
-	//
-	////m_v2dPointsToCorrect.clear();
-	////for (const auto& point : m_v2dAllPointsPositions) {
-	////	x = point[0];
-	////	y = point[1];
-	////	z = point[2];
-
-	////	if (x >= xMin && x <= xMax
-	////		&& y >= yMin && y <= yMax
-	////		&& z >= zMin && z <= zMax)
-	////	{
-	////		m_v2dPointsToCorrect.push_back(point);
-	////	}
-
-	////}
-	//m_v2dPointsToCorrect.clear();
-	//m_vPointsToCorrectID.clear();
-	//for (size_t i = 0; i < m_v2dAllPointsPositions.size(); i++)
-	//{
-	//	const auto& point = m_v2dAllPointsPositions[i];
-	//	double x = point[0];
-	//	double y = point[1];
-	//	double z = point[2];
-
-	//	if (x >= xMin && x <= xMax &&
-	//		y >= yMin && y <= yMax &&
-	//		z >= zMin && z <= zMax)
-	//	{
-	//		m_v2dPointsToCorrect.push_back(point);
-	//		m_vPointsToCorrectID.push_back(m_vAllPointIDs[i]);
-	//	}
-	//}
-	//GetParentPath();
-}
-
-void TrajCorrectDock::GetParentPath()
-{
-	ULONG ulPointID = 0;
-	ULONG ulPathID = 0;
-	m_ptrKit->Point_get_parent_path(ulPointID, &ulPathID);
-	
-}
-
-void TrajCorrectDock::modifyPointsPoses(const std::vector<unsigned long>& CorrectPointID, const std::vector<std::vector<double>>& newPoints)
-{
-	int posCount = 7;
-	int posType = 0;
-	double dPosition[7] = { 0,0,0,0,0,0,0 };
-	size_t num = m_vPointsToCorrectID.size();
-	for (size_t i = 0; i < num; i++)
-	{
-		for (size_t j = 0; j < 7; j++)
-		{
-			dPosition[j] = m_v2dPointsToCorrect[i][j];
-		}
-		dPosition[1] = dPosition[1] + 100;
-		dPosition[2] = dPosition[2] - 100;
-		m_ptrKit->PQAPIModifyPointPosture(m_vPointsToCorrectID[i], dPosition, posCount, QUATERNION);
-	}
-	QMessageBox::StandardButton reply;
-	reply = QMessageBox::question(this,                         // 父窗口
-		QStringLiteral("提示"),                       // 标题
-		QStringLiteral(" 是否应用此修正 ？").arg(ui->editCorName->text()),   // 正文内容
-		QMessageBox::Yes | QMessageBox::No, // 按钮
-		QMessageBox::No);             // 默认选中 No
-	if (reply == QMessageBox::Yes)
-	{
-		return;
-	}
-	if (reply == QMessageBox::No)
-	{
-		
-		for (size_t i = 0; i < num; i++)
-		{
-			for (size_t j = 0; j < 7; j++)
-			{
-				dPosition[j] = m_v2dPointsToCorrect[i][j];
-			}
-			
-			m_ptrKit->PQAPIModifyPointPosture(m_vPointsToCorrectID[i], dPosition, posCount, QUATERNION);
-		}
-	}
-}
-
 void TrajCorrectDock::onPickSpinBoxValueChanged(int a)
 {
-	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-	m_ptrKit->Doc_end_module(cmd);
-	m_ptrKit->Doc_start_module(cmd);
+	//CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	//m_ptrKit->Doc_end_module(cmd);
+	//m_ptrKit->Doc_start_module(cmd);
+	OnDraw();
 }
 
 void TrajCorrectDock::on_spnOrigin_valueChanged(int a)
@@ -861,7 +873,24 @@ void TrajCorrectDock::on_spnOrigin_valueChanged(int a)
 	m_ptrKit->Doc_start_module(cmd);
 }
 
-#pragma endregion
+
+void TrajCorrectDock::on_spnBeamDeg_valueChanged(double a)
+{
+	//根据范围的最大值，计算下垂量
+	double maxRange = (std::max)({
+		abs(xMaxspin->value()),
+		abs(xMinspin->value()),
+		abs(yMaxspin->value()),
+		abs(yMinspin->value()),
+		abs(zMaxspin->value()),
+		abs(zMinspin->value())
+		});
+	double deflection = tan(a * 3.1415926 / 180) * maxRange;
+	ui->spnMaxDeflection->setValue(deflection);
+}
+
+#pragma endregion 拾取相关函数
+
 
 
 
@@ -900,6 +929,22 @@ void TrajCorrectDock::setView()
 	QString itemText = item->text();
 	itemText = itemText.replace("*", "");
 	item->setText(itemText);
+}
+
+void TrajCorrectDock::on_tabInput_currentChanged(int index)
+{
+	int grpHeight = ui->groupBox_2->height();
+	int myIndex = index;
+	if (myIndex == 1)
+	{
+		//ui->tabInput->setFixedHeight(100);
+		ui->groupBox_2->setFixedHeight(grpHeight - 160);
+	}
+	else
+	{
+		ui->groupBox_2->setFixedHeight(grpHeight + 160);
+	}
+		//ui->tabInput->setFixedHeight(260);
 }
 
 void TrajCorrectDock::setEdit()
@@ -979,8 +1024,8 @@ void TrajCorrectDock::on_btnRefresh_clicked()
 
 	//刷新ui->listMeasurePoints
 	ui->listMeasurePoints->clear();
-	size_t pointCount = myCor.m_measurePoints.size() / 3;
-	for (size_t i = 0; i < pointCount; i++)
+	int pointCount = myCor.m_measurePoints.size() / 3;
+	for (int i = 0; i < pointCount; i++)
 		ui->listMeasurePoints->addItem(QStringLiteral("点%1").arg(i + 1));
 	listFlagPoints->setPoints(myCor.m_flagPoints);
 
@@ -1033,7 +1078,7 @@ void TrajCorrectDock::on_btnImportMeasurePoints_clicked()
 	m_vMeasurePoints.clear();
 	importCsvPointsMeasure(fileName); //数据同步
 	int pointCount = m_vMeasurePoints.size() / 3;
-	for (size_t i = 0; i < pointCount; i++)
+	for (int i = 0; i < pointCount; i++)
 	{
 		ui->listMeasurePoints->addItem(QStringLiteral("点%1").arg(i + 1));
 	}//界面同步
@@ -1080,6 +1125,9 @@ void TrajCorrectDock::on_btnImportFlag_clicked()
 	file.close();
 	
 	qDebug() << "成功导入点数量：" << m_vMeasurePoints.size() / 3;
+	//同步到listFlagPoints
+	for(int i = 0; i < m_vFlagPoints.size() / 3; i++)
+		listFlagPoints->addItem(QStringLiteral("点%1").arg(i + 1));
 }
 
 void TrajCorrectDock::on_btnDevPage_clicked()
@@ -1113,7 +1161,7 @@ void TrajCorrectDock::initGroupBox_AttributeDefine(QListWidgetItem * item)
 	ui->editCorName->setText(cor.name());
 	ui->chkApplyCor->setChecked(cor.isApplied());
 	ui->comboCorType->setCurrentIndex(static_cast<int>(cor.m_interType));
-	for (size_t i = 0; i < 6; i++)
+	for (int i = 0; i < 6; i++)
 		spinBoxes[i]->setValue(cor.rang(i));
 	ui->chkIsPosCorrect->setChecked(cor.isPosCorrect());
 	spnOriginx->setValue(cor.vBeamOrigin[0]);
@@ -1122,8 +1170,8 @@ void TrajCorrectDock::initGroupBox_AttributeDefine(QListWidgetItem * item)
 
 	//这里是初始化两个列表控件
 	ui->listMeasurePoints->clear();
-	size_t pointCount = cor.m_measurePoints.size() / 3;  
-	for (size_t i = 0; i < pointCount; i++)
+	int pointCount = cor.m_measurePoints.size() / 3;  
+	for (int i = 0; i < pointCount; i++)
 		ui->listMeasurePoints->addItem(QStringLiteral("点%1").arg(i + 1));
 	listFlagPoints->setPoints(cor.m_flagPoints);
 	//初始化cmbBeamDir
@@ -1193,12 +1241,11 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 		my_isPosCor = true;
 	else
 		my_isPosCor = false;
-	for (size_t i = 0; i < 6; i++)
+	for (int i = 0; i < 6; i++)
 	{
 		my_range[i] = spinBoxes[i]->value();
 	}
 
-	GetPoints2Correct(my_range);
 	Eigen::Vector3d myOrigin = Eigen::Vector3d(
 		spnOriginx->value(),
 		spnOriginy->value(),
@@ -1247,7 +1294,6 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 	myCor.setRange(my_range);
 	myCor.setFlagPoints(m_vFlagPoints);
 	myCor.setMeasurePoints(m_vMeasurePoints);
-	myCor.set_m_v2dTrajPointsToCorrect(m_v2dPointsToCorrect);
 	myCor.setType(static_cast<Correction::interpolationType>(ui->cmbFittingType->currentIndex()));
 	myCor.setBeamOrigin(myOrig);
 	myCor.setBeamDir(myDirection);

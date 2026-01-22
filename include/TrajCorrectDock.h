@@ -82,6 +82,7 @@ private:
 	PickSpinBox* spnOriginx;
 	PickSpinBox* spnOriginy;
 	PickSpinBox* spnOriginz;
+	
 	QVector<PickSpinBox*> spinBoxes;
 	PickSource m_pickSource = PickSource::None;
 	DrawSource m_drawSource = DrawSource::None;
@@ -97,17 +98,6 @@ private:
 	std::vector<double> m_vMeasurePoints;
 	
 
-	std::vector<unsigned long> m_vAllPathIDs;
-	std::vector<std::string> m_vAllPathNames;
-	std::vector<unsigned long>m_vAllPointIDs;
-	std::vector<std::vector<double>> m_v2dAllPointsPositions;
-	std::vector<std::vector<double>> m_v2dPointsToCorrect;
-	std::vector<unsigned long> m_vPointsToCorrectID;
-	std::map<unsigned long, std::vector<unsigned long>> m_mapAllPointIDs;
-	std::map<unsigned long, std::vector<std::vector<double>>> m_mapAllPointPositions;
-	std::map<unsigned long, std::vector<std::vector<double>>> m_mapPointsToCorrect;
-	
-
 		/*-------------------------成员方法----------------------------*/
 
 	void importCsvPointsMeasure(const QString& filePath);
@@ -117,19 +107,13 @@ private:
 	void initGroupEmpty(const QString name);
 
 	/*-------------------------初始化函数----------------------------*/
-	void initDock();
+	void initDock(QWidget* contentWidget);
 	void InitLists();
 	void initPointLists();
 	void initGroupBox_AttributeDefine(QListWidgetItem *item);
 	void InitCustomWidget();
 	void setupConnections();
-	/*-------------------------pq工具函数----------------------------*/
-	void getObjIdByName(PQDataType i_datatype, std::wstring i_wsName, ULONG & o_uID);
-	void GetAllPathID();    //读取robx中所有轨迹ID, 名称, 
-	void GetPointInfo();    //读取robx中所有轨迹点ID, 位姿
-	void GetPoints2Correct(double range[6]);    //读取robx中作用域范围内的轨迹点ID, 位姿
-	void GetParentPath();
-	void modifyPointsPoses(const std::vector<unsigned long>& CorrectPointID, const std::vector<std::vector<double>>& newPoints);
+
 
 	/*-------------------------辅助函数----------------------------*/
 	
@@ -142,13 +126,17 @@ public slots:
 	void on_btnSave_clicked();
 	void on_btnRefresh_clicked();
 	void on_listCorrection_slectedItem(QListWidgetItem *item);
+	void on_listMeasurePoints_itemClicked(QListWidgetItem* item);
+	void on_listFlagPoints_itemClicked(QListWidgetItem* item);
 	void on_pickBox_blankAreaClicked();
 	void on_btnExportFlagPoints_clicked();
 	void on_btnImportMeasurePoints_clicked();
 	void on_btnImportFlag_clicked();
 	void on_spnOrigin_valueChanged(int a);
+	void on_spnBeamDeg_valueChanged(double a);
 	void pickRange();
 	void pickOriginPoint();
+	void on_cmbBeamDir_currentIndexChanged(int index);
 	void onPickSpinBoxValueChanged(int a);
 	void OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
 		double i_dPointX, double i_dPointY, double i_dPointZ);
@@ -156,6 +144,7 @@ public slots:
 	void OnDraw();
 	void setEdit();
 	void setView();
+	void on_tabInput_currentChanged(int index);
 	/*-------------------------测试槽----------------------------*/
 	void testConnection()
 	{

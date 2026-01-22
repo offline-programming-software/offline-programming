@@ -11,11 +11,20 @@ public:
 	~PickSpinBox();
 
 private:
+	bool m_emitted = false;
 
 protected:
 	void focusInEvent(QFocusEvent *event) override {
+		if (!m_emitted) {
+			m_emitted = true;
+			emit lineEditClicked();
+		}
 		QSpinBox::focusInEvent(event);
-		emit lineEditClicked();  // 自定义信号
+	}
+
+	void focusOutEvent(QFocusEvent* event) override {
+		m_emitted = false;
+		QSpinBox::focusOutEvent(event);
 	}
 
 signals:

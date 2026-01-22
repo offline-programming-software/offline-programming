@@ -19,52 +19,50 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	//添加菜单栏
 	SARibbonBar* bar = ribbonBar();
 
-	////设置按钮
-	//bar->applicationButton()->setText(QString::fromLocal8Bit ("  文件  "));
 
-
-	//添加菜单轨迹编程//
+	//添加编程仿真**菜单**//
 	SARibbonCategory* sence = bar->addCategoryPage("  编程仿真  ");
 
-	//添加文件Pannel
+	//添加文件**Pannel**
 	SARibbonPannel*  file = sence->addPannel("文件");
 	QAction* action1 = file->addAction("打开", QIcon(":/image/resource/open.png"), QToolButton::InstantPopup);
-	QAction* action2 = file->addAction("", QIcon(":/image/resource/save.png"), QToolButton::InstantPopup, SARibbonPannelItem::Small);
-	QAction* action3 = file->addAction(tr(""), QIcon(":/image/resource/new_1.png"), QToolButton::InstantPopup, SARibbonPannelItem::Small);
-	QAction* action4 = file->addAction(tr(""), QIcon(":/image/resource/icons8-close-32.png"), QToolButton::InstantPopup, SARibbonPannelItem::Small);
-	action4->setToolTip("关闭"); // 设置提示信息为 "Open File"
+	QAction* action2 = file->addAction("保存", QIcon(":/image/resource/save.png"), QToolButton::InstantPopup);
 
-	//添加场景搭建Pannel
+
+	//添加模型导入**pannel**
+	SARibbonPannel* impoertModel = sence->addPannel("模型导入");
+	QAction* action5 = impoertModel->addAction("外部模型导入", QIcon(":/image/resource/icons8-folder-32.png"), QToolButton::InstantPopup);
+	QAction* action24 = impoertModel->addAction("导入工具", QIcon(":/image/resource/icons8-imtool.png"), QToolButton::InstantPopup);
+	QAction* action20 = impoertModel->addAction("导入机构", QIcon(":/image/resource/2.png"), QToolButton::InstantPopup);
+	QAction* action22 = impoertModel->addAction("导入零件", QIcon(":/image/resource/icons-gear.png"), QToolButton::InstantPopup);
+
+
+	//添加场景搭建**Pannel**
 	SARibbonPannel*  import = sence->addPannel("场景搭建");
-	QAction* action5 = import->addAction("输入", QIcon(":/image/resource/icons8-folder-32.png"), QToolButton::InstantPopup);
 	QAction* action6 = import->addAction("三维球", QIcon(":/image/resource/5.png"), QToolButton::InstantPopup);
-	QAction* action7 = import->addAction("测量", QIcon(":/image/resource/icons8-Measure.png"), QToolButton::InstantPopup);
 	QAction* action8 = import->addAction("新建坐标系", QIcon(":/image/resource/icons8-coordinate-system-32.png"), QToolButton::InstantPopup);
 
-	//添加轨迹规划Pannel
+	//添加运动机构定义**Pannel**
+	SARibbonPannel* def = sence->addPannel("运动机构定义");
+	QAction* action19 = def->addAction("定义机构", QIcon(":/image/resource/1.png"), QToolButton::InstantPopup);
+
+	//添加喷涂工具**pannel**
+	SARibbonPannel* spy = sence->addPannel("喷涂工具");
+	QAction* action25 = spy->addAction("定义喷涂工具", QIcon(":/image/resource/pentu.png"), QToolButton::InstantPopup);
+	QAction* action26 = spy ->addAction("喷刷管理", QIcon(":/image/resource/icons8-spray.png"), QToolButton::InstantPopup);
+
+	//添加轨迹规划**Pannel**
 	SARibbonPannel*  path = sence->addPannel("轨迹规划");
-	QAction* action68 = path->addAction("工作空间定义", QIcon(":/image/resource/robot_space.svg"), QToolButton::InstantPopup);
 	QAction* action69 = path->addAction("区域划分", QIcon(":/image/resource/33.png"), QToolButton::InstantPopup);
-	QAction* action9 = path->addAction("生成轨迹", QIcon(":/image/resource/24.png"), QToolButton::InstantPopup);
-	QAction* action10 = path->addAction("随型喷涂轨迹", QIcon(":/image/resource/30.png"), QToolButton::InstantPopup);
-	QAction* action11 = path->addAction("线性喷涂轨迹", QIcon(":/image/resource/29.png"), QToolButton::InstantPopup);
-	QAction* action12 = path->addAction("路径导入", QIcon(":/image/resource/open.png"), QToolButton::InstantPopup);
-	QAction* action70 = path->addAction("站位计算", QIcon(":/image/resource/100.png"), QToolButton::InstantPopup);
+	QAction* action10 = path->addAction("喷涂路径生成", QIcon(":/image/resource/30.png"), QToolButton::InstantPopup);
 
-	//添加站位计算
-
-	//添加AGV
-	SARibbonPannel*  AGV = sence->addPannel("路径优化");
-	QAction* action65 = AGV->addAction("AGV路径优化", QIcon(":/image/resource/icons8-agv-32.png"), QToolButton::InstantPopup);
-
-
-	//添加轨迹修正
+	//添加轨迹修正**Pannel**
 	SARibbonPannel* correction = sence->addPannel("轨迹修正");
 	QAction* action101 = correction->addAction("弯曲变形配置", QIcon(":/image/resource/bendingFunc.png"), QToolButton::InstantPopup);
 	QAction* action102 = correction->addAction("弯曲变形管理", QIcon(":/image/resource/bendingmanager .png"), QToolButton::InstantPopup);
 	QAction* action103 = correction->addAction("对象位置修正", QIcon(":/image/resource/positioncorrect.png"), QToolButton::InstantPopup);
 
-	//添加仿真
+	//添加仿真**pannel**
 	SARibbonPannel*  complie = sence->addPannel("仿真调试");
 	QAction* action13 = complie->addAction("编译", QIcon(":/image/resource/compile.png"), QToolButton::InstantPopup);
 	QAction* action14 = complie->addAction("仿真", QIcon(":/image/resource/simulate.png"), QToolButton::InstantPopup);
@@ -72,202 +70,26 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	QAction* action100 = complie->addAction("批量后置", QIcon(":/image/resource/26.png"), QToolButton::InstantPopup);
 
 
-	//添加设置
-	SARibbonPannel*  set = sence->addPannel("设置");
-	QAction* action16 = set->addAction("地面", QIcon(":/image/resource/floor.png"), QToolButton::InstantPopup);
-	QAction* action17 = set->addAction("选项", QIcon(":/image/resource/icons8-automatic-100.png"), QToolButton::InstantPopup);
-	QAction* action18 = set->addAction("碰撞设置", QIcon(":/image/resource/28.png"), QToolButton::InstantPopup);
-
-	//添加定义机构
-	SARibbonCategory* definition = bar->addCategoryPage("定义机构");
-
-	//设置菜单栏名称
-	SARibbonPannel* pannel = definition->addPannel("机构");
-	//添加菜单栏
-	QAction* action19 = pannel->addAction("定义机构", QIcon(":/image/resource/1.png"), QToolButton::InstantPopup);
-	QAction* action20 = pannel->addAction("导入机构", QIcon(":/image/resource/2.png"), QToolButton::InstantPopup);
-
-
-	//设置菜单栏名称
-	SARibbonPannel* part = definition->addPannel("零件");
-	//添加菜单栏
-	QAction* action21 = part->addAction("定义零件", QIcon(":/image/resource/icons8-tool.png"), QToolButton::InstantPopup);
-	QAction* action22 = part->addAction("导入零件", QIcon(":/image/resource/icons-gear.png"), QToolButton::InstantPopup);
-
-	//设置菜单栏名称
-	SARibbonPannel* tool = definition->addPannel("工具");
-	//添加菜单栏
-	QAction* action23 = tool->addAction("定义工具", QIcon(":/image/resource/icons8-detool.png"), QToolButton::InstantPopup);
-	QAction* action24 = tool->addAction("导入工具", QIcon(":/image/resource/icons8-imtool.png"), QToolButton::InstantPopup);
-
-	//添加喷涂工具
-	SARibbonPannel* spy = definition->addPannel("喷涂工具");
-	QAction* action25 = spy->addAction("定义喷涂工具", QIcon(":/image/resource/pentu.png"), QToolButton::InstantPopup);
-	QAction* action26 = spy ->addAction("喷刷管理", QIcon(":/image/resource/icons8-spray.png"), QToolButton::InstantPopup);
-
-	//添加菜单定义//
-	SARibbonCategory* sketch = bar->addCategoryPage("自由绘制");
-
-	//设置菜单栏名称
-	SARibbonPannel* create = sketch->addPannel("创建草图");
-	//添加菜单栏
-	QAction* action27 = create->addAction("创建草图", QIcon(":/image/resource/9.png"), QToolButton::InstantPopup);
-	QAction* action28 = create->addAction("编辑草图", QIcon(":/image/resource/icons8-create-32.png"), QToolButton::InstantPopup);
-	//创建基本图元
-	SARibbonPannel* add = sketch->addPannel("创建基本图元");
-	QAction* action29 = add->addAction("点", QIcon(":/image/resource/10.png"), QToolButton::InstantPopup);
-	QAction* action30 = add->addAction("直线", QIcon(":/image/resource/11.png"), QToolButton::InstantPopup);
-	QAction* action31 = add->addAction("圆", QIcon(":/image/resource/12.png"), QToolButton::InstantPopup);
-	QAction* action32 = add->addAction("圆弧", QIcon(":/image/resource/13.png"), QToolButton::InstantPopup);
-	QAction* action33 = add->addAction("椭圆弧", QIcon(":/image/resource/14.png"), QToolButton::InstantPopup);
-	QAction* action34 = add->addAction("椭圆", QIcon(":/image/resource/21.png"), QToolButton::InstantPopup);
-	QAction* action35 = add->addAction("矩形", QIcon(":/image/resource/15.png"), QToolButton::InstantPopup);
-	QAction* action36 = add->addAction("正多边形", QIcon(":/image/resource/16.png"), QToolButton::InstantPopup);
-	QAction* action37 = add->addAction("键槽", QIcon(":/image/resource/17.png"), QToolButton::InstantPopup);
-	QAction* action38 = add->addAction("多段线", QIcon(":/image/resource/18.png"), QToolButton::InstantPopup);
-	QAction* action39 = add->addAction("圆角", QIcon(":/image/resource/19.png"), QToolButton::InstantPopup);
-	QAction* action40 = add->addAction("剪裁", QIcon(":/image/resource/20.png"), QToolButton::InstantPopup);
-
-
-	//添加菜单校准
-	SARibbonCategory* optimize = bar->addCategoryPage("路径优化");
-
-	SARibbonPannel* simulation = optimize->addPannel("仿真设置");
-	QAction* action41 = simulation->addAction("仿真", QIcon(":/image/resource/simulate.png"), QToolButton::InstantPopup);
-	QAction* action42 = simulation->addAction("动力学分析", QIcon(":/image/resource/33.png"), QToolButton::InstantPopup);
-	QAction* action43 = simulation->addAction("效能分析", QIcon(":/image/resource/32.png"), QToolButton::InstantPopup);
-
-	SARibbonPannel* path1 = optimize->addPannel("路径优化");
-	QAction* action44 = path1->addAction("路径分块", QIcon(":/image/resource/31.png"), QToolButton::InstantPopup);
-	QAction* action45 = path1->addAction("路径编辑", QIcon(":/image/resource/new_1.png"), QToolButton::InstantPopup);
-	QAction* action46 = path1->addAction("路径设置", QIcon(":/image/resource/icons8-settings-32.png"), QToolButton::InstantPopup);
-	QAction* action47 = path1->addAction("路径快排序", QIcon(":/image/resource/35.png"), QToolButton::InstantPopup);
-	QAction* action48 = path1->addAction("移动路径优化", QIcon(":/image/resource/34.png"), QToolButton::InstantPopup);
-
-	//添加菜单校准
-	SARibbonCategory* calibration = bar->addCategoryPage("校准");
-
-	//设置菜单栏名称
-	SARibbonPannel* adjust = calibration->addPannel("校准");
-	QAction* action49 = adjust->addAction("三维球", QIcon(":/image/resource/5.png"), QToolButton::InstantPopup);
-	QAction* action50 = adjust->addAction("建立坐标系", QIcon(":/image/resource/7.png"), QToolButton::InstantPopup);
-	QAction* action51 = adjust->addAction("三点校准", QIcon(":/image/resource/6.png"), QToolButton::InstantPopup);
-	QAction* action52 = adjust->addAction("点轴校准", QIcon(":/image/resource/8.png"), QToolButton::InstantPopup);
-	QAction* action53 = adjust->addAction("自动校准对象位置", QIcon(":/image/resource/icons8-approval-32.png"), QToolButton::InstantPopup);
-	QAction* action54 = adjust->addAction("自动校准AGV位置", QIcon(":/image/resource/icons8-agv-32.png"), QToolButton::InstantPopup);
-	QAction* action55 = adjust->addAction("校准实测曲面位置", QIcon(":/image/resource/27.png"), QToolButton::InstantPopup);
-
-	//添加菜单校准
-	SARibbonCategory* online = bar->addCategoryPage("在线仿真");
-
-	//设置菜单栏名称
-	SARibbonPannel* online_setup = online->addPannel("在线设置");
-	QAction* action56 = online_setup->addAction("加工进度同步", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
-	QAction* action57 = online_setup->addAction("变形修正定义", QIcon(":/image/resource/icons8-metamorphose-32.png"), QToolButton::InstantPopup);
-
-	SARibbonPannel* online_adjust = online->addPannel("在线修正");
-	QAction* action58 = online_adjust->addAction("在线修正", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
-
-	//添加
-	SARibbonCategory* otherCate = bar->addCategoryPage(tr("Other"));
-	SARibbonPannel* pannel2 = otherCate->addPannel(tr("other"));
-	QAction* action59 = pannel2->addAction("机器人库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-	QAction* action60 = pannel2->addAction("设备库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-	QAction* action61 = pannel2->addAction("机器人求解",QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-	QAction* action62 = pannel2->addAction("联动求解求解", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-	QAction* action63 = pannel2->addAction("输出动画到本地", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-	QAction* action64 = pannel2->addAction("输出视频", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-	QAction* actionLogger = pannel2->addAction("日志", QIcon(""), QToolButton::InstantPopup);
-
 	resize(800, 600);
 
 	connect(action1, SIGNAL(triggered()), this, SLOT(OnOpenRobx()));//打开
 	connect(action2, SIGNAL(triggered()), this, SLOT(OnSaveRobx()));//保存
-	connect(action3, SIGNAL(triggered()), this, SLOT(OnSaveasRobx()));//另存为
-	connect(action4, SIGNAL(triggered()), this, SLOT(on_close_robx()));//关闭
 	connect(action5, SIGNAL(triggered()), this, SLOT(on_input()));//输入
 	connect(action6, SIGNAL(triggered()), this, SLOT(on_proxy()));//三维球
-	connect(action7, SIGNAL(triggered()), this, SLOT(on_measurement()));//测量
 	connect(action8, SIGNAL(triggered()), this, SLOT(on_create_frame()));//新建坐标系
-
-	connect(action68, SIGNAL(triggered()), this, SLOT(on_define_space()));//机器人工作空间定义
 	connect(action69, SIGNAL(triggered()), this, SLOT(on_curse_part()));//喷涂区域划分
-	connect(action9, SIGNAL(triggered()), this, SLOT(on_create_path()));//生成轨迹
 	connect(action10, SIGNAL(triggered()), this, SLOT(on_campath_flat_surface()));//随性喷涂
-	connect(action11, SIGNAL(triggered()), this, SLOT(on_addlinearspraypath()));//线性喷涂
-	connect(action12, SIGNAL(triggered()), this, SLOT(on_insert_path()));//导入路径
-	connect(action70, SIGNAL(triggered()), this, SLOT(on_pos_cal()));//站位计算
-
-	connect(action65, SIGNAL(triggered()), this, SLOT(on_AGV_path()));//导入路径
-
 	connect(action13, SIGNAL(triggered()), this, SLOT(OnCompile()));//编译
 	connect(action14, SIGNAL(triggered()), this, SLOT(on_simulate()));//仿真
 	connect(action15, SIGNAL(triggered()), this, SLOT(on_post()));//后置
 	connect(action100, SIGNAL(triggered()), this, SLOT(on_numPost()));
-
-	connect(action16, SIGNAL(triggered()), this, SLOT(on_floor()));//地面
-	connect(action17, SIGNAL(triggered()), this, SLOT(on_motion_option()));//选项
-	connect(action18, SIGNAL(triggered()), this, SLOT(on_collision_option()));//碰撞设置
-
 	connect(action19, SIGNAL(triggered()), this, SLOT(on_defining_institutions()));//定义机构
 	connect(action20, SIGNAL(triggered()), this, SLOT(on_import_institutions()));//导入机构
-	connect(action21, SIGNAL(triggered()), this, SLOT(on_defining_part()));//定义零件
 	connect(action22, SIGNAL(triggered()), this, SLOT(on_import_part()));//导入零件
-	connect(action23, SIGNAL(triggered()), this, SLOT(on_defining_tool()));//导入工具
 	connect(action24, SIGNAL(triggered()), this, SLOT(on_import_tool()));//导入工具
 	connect(action25, SIGNAL(triggered()), this, SLOT(on_rocreate_sprayingtool()));//定义喷涂工具
 	connect(action26, SIGNAL(triggered()), this, SLOT(on_roobjassistor_manage()));//喷刷管理
-
-	connect(action27, SIGNAL(triggered()), this, SLOT(on_create_newsketch()));//创建草图
-	connect(action28, SIGNAL(triggered()), this, SLOT(on_edit_wkptsketch()));//编辑草图
-	connect(action29, SIGNAL(triggered()), this, SLOT(on_sketcher_createpoint()));//点
-	connect(action30, SIGNAL(triggered()), this, SLOT(on_sketcher_line()));//直线
-	connect(action31, SIGNAL(triggered()), this, SLOT(on_sketcher_circ()));//圆
-	connect(action32, SIGNAL(triggered()), this, SLOT(on_sketcher_arc()));//圆弧
-	connect(action33, SIGNAL(triggered()), this, SLOT(on_sketcher_ellipticalarc()));//椭圆弧
-	connect(action34, SIGNAL(triggered()), this, SLOT(on_sketcher_ellipse()));//椭圆
-	connect(action35, SIGNAL(triggered()), this, SLOT(on_sketcher_rectangle()));//矩形
-	connect(action36, SIGNAL(triggered()), this, SLOT(on_sketcher_regpolygon()));//正多边形
-	connect(action37, SIGNAL(triggered()), this, SLOT(on_sketcher_slot()));//键槽
-	connect(action38, SIGNAL(triggered()), this, SLOT(on_sketcher_polyline()));//多段线
-	connect(action39, SIGNAL(triggered()), this, SLOT(on_sketcher_fillet()));//圆角
-	connect(action40, SIGNAL(triggered()), this, SLOT(on_sketcher_triming()));//裁剪
-
-	connect(action41, SIGNAL(triggered()), this, SLOT(on_simulate()));//仿真
-	connect(action42, SIGNAL(triggered()), this, SLOT(on_kinetic_analysis()));//动力学分析
-	connect(action43, SIGNAL(triggered()), this, SLOT(on_effectiveness_analysis()));//效能分析
-
-	connect(action44, SIGNAL(triggered()), this, SLOT(on_path_partion()));//路径分块
-	connect(action45, SIGNAL(triggered()), this, SLOT(on_path_edit()));//路径编辑
-	connect(action46, SIGNAL(triggered()), this, SLOT(on_path_set_up()));//路径设置
-	connect(action47, SIGNAL(triggered()), this, SLOT(on_path_sort()));//路径块排序
-	connect(action48, SIGNAL(triggered()), this, SLOT(on_path_optimize()));//移动路径优化
-
-	connect(action49, SIGNAL(triggered()), this, SLOT(on_proxy()));//三维球
-	connect(action50, SIGNAL(triggered()), this, SLOT(on_create_frame()));//创建坐标系
-	connect(action51, SIGNAL(triggered()), this, SLOT(on_AlignPart3Point()));//三点校准
-	connect(action52, SIGNAL(triggered()), this, SLOT(on_AlignPartPointAxis()));//点轴校准
-	connect(action53, SIGNAL(triggered()), this, SLOT(on_proxy()));//自动校准对象位置
-	connect(action54, SIGNAL(triggered()), this, SLOT(on_proxy()));//自动校准AGV位置
-	connect(action55, SIGNAL(triggered()), this, SLOT(on_proxy()));//校准实测曲面位置
-
-	connect(action56, SIGNAL(triggered()), this, SLOT(on_sync()));//加工进度同步
-	connect(action57, SIGNAL(triggered()), this, SLOT(on_deformation_correction()));//变形修正定义
-	connect(action58, SIGNAL(triggered()), this, SLOT(on_action()));//在线修正
-
-	connect(action59, SIGNAL(triggered()), this, SLOT(on_choose_robot()));//机器人库
-	connect(action60, SIGNAL(triggered()), this, SLOT(on_choosetool()));//工具库
-	connect(action61, SIGNAL(triggered()), this, SLOT(on_kinematics()));//机器人逆解
-	connect(action62, SIGNAL(triggered()), this, SLOT(on_linkage()));//机器人联动求解
-	connect(action63, SIGNAL(triggered()), this, SLOT(on_animation()));//输出视频到本地
-	connect(action64, SIGNAL(triggered()), this, SLOT(on_video()));//输出动画
 	connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
-	connect(actionLogger, SIGNAL(triggered()), this, SLOT(on_logger_open()));//输出动画
-
-
-	
-
-
 	InitPQKit();
 }
 
