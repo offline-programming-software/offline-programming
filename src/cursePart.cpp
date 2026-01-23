@@ -1,8 +1,12 @@
 #include "cursePart.h"
 
-cursePart::cursePart(QWidget *parent)
+cursePart::cursePart(QWidget *parent,
+	CComPtr<IPQPlatformComponent> ptrKit,
+	CPQKitCallback* ptrKitCallback)
 	: QDialog(parent)
 	, ui(new Ui::cursePartClass())
+	, m_ptrKit(ptrKit)
+	, m_ptrKitCallback(ptrKitCallback)
 {
 	ui->setupUi(this);
 
@@ -21,6 +25,294 @@ cursePart::cursePart(QWidget *parent)
 
 	//初始化数据
 	init();
+
+	isPickupActive = false; // 重置拾取状态
+	isPreview = false;//是否进行预览
+
+	// 使用封装好的函数获取机器人列表
+	PQDataType robotType = PQ_ROBOT;
+	QMap<ULONG, QString> robotMap = getObjectsByType(robotType);
+
+	// 使用封装函数获取喷涂机器人名称列表
+	QStringList robotNames = getSprayRobotNames(PQ_MECHANISM_ROBOT, robotMap);
+
+	if (robotNames.isEmpty()) {
+		QMessageBox::information(this, "提示", "当前没有可用的喷涂机器人！");
+		delete ui;
+		return;
+	}
+
+	// 将机器人名称设置到对话框中
+	for (const QString& name : robotNames) {
+		curseDialog->setRobotOptions(name);
+	}
+
+
+	// 连接机器人选择改变信号
+	connect(curseDialog, &cursePart::robotSelectionChanged, this, [this, robotMap](const QString& robotName) {
+		updateRailOptions(robotName, robotMap);
+	});
+
+	// 初始设置轨道信息
+	QString currentRobot = robotNames.isEmpty() ? "" : robotNames.first();
+	updateRailOptions(currentRobot, robotMap);
+
+
+	// 对于曲面选取
+	curseDialog->setModal(true);
+	curseDialog->setWindowModality(Qt::ApplicationModal);
+
+	// 连接拾取按钮信号 - 启动拾取模块
+	connect(curseDialog, &cursePart::pickUpSignal, this, [this]() {
+		if (!isPickupActive && !isPreview) {
+			// 启动拾取模块
+			CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+			HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+			if (SUCCEEDED(hr)) {
+				isPickupActive = true;
+				isPreview = false; // 确保预览模式关闭
+				curseDialog->setModal(false);
+				curseDialog->setWindowModality(Qt::NonModal);
+				qDebug() << "曲面拾取模块已启动，请在3D窗口中点击元素";
+			}
+			else {
+				QMessageBox::warning(this, "错误", "启动曲面拾取模块失败！");
+			}
+		}
+		else {
+			QString mode = isPreview ? "预览模式" : "曲面拾取模式";
+			qDebug() << mode << "已在运行中";
+		}
+	});
+
+	// 连接关闭拾取按钮信号
+	connect(curseDialog, &cursePart::closeSignal, this, [this]() {
+		if (isPickupActive || isPreview) {
+			isPickupActive = false;
+			isPreview = false;
+			curseDialog->setModal(true);
+			CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+			HRESULT hr = m_ptrKit->Doc_end_module(cmd);
+			curseDialog->setWindowModality(Qt::ApplicationModal);
+			qDebug() << "拾取模块已停止";
+		}
+	});
+
+	// 删除信号
+	connect(curseDialog, &cursePart::deleteSelectedSurfaces, this, &MainWindow::onDeleteSelectedSurfaces);
+
+	// 计算选中曲面的最小包围盒
+	connect(curseDialog, &cursePart::calculateAABB, this, [this]() {
+		for (const auto& pair : pickupMap) {
+			unsigned long key = pair.first;
+			const std::vector<std::wstring>& values = pair.second;
+			long lCount = 0;
+			m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);//获取顶点个数
+			std::vector<double> dSrc(3 * lCount, 0);
+			double* dSrcPosition = dSrc.data();//顶点位置（通过一维数组表示）
+			BSTR sName;
+			m_ptrKit->Doc_get_obj_name(key, &sName);
+			m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);//获取顶点位置
+			for (const auto& value : values) {
+				for (long i = 0; i < lCount; i++) {
+					double dPosition[3] = { dSrcPosition[3 * i],dSrcPosition[3 * i + 1],dSrcPosition[3 * i + 2] };
+					double dTol = 10;
+					LONG bPointOnSurface = 0;
+					std::vector<wchar_t> buffer(value.begin(), value.end());
+					buffer.push_back(L'\0'); // 添加终止符
+					LPWSTR name = buffer.data();
+					m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);//检查顶点是否在曲面上
+
+					if (bPointOnSurface) {
+						m_vPosition.push_back(dPosition[0]);
+						m_vPosition.push_back(dPosition[1]);
+						m_vPosition.push_back(dPosition[2]);
+					}
+				}
+			}
+		}
+		box.minPoint = { 0,0,0 };
+		box.maxPoint = { 0,0,0 };
+
+		std::vector<Point3D> curse;
+		for (int i = 0; i < m_vPosition.size(); i += 3) {
+			Point3D p;
+			p.x = m_vPosition[i];
+			p.y = m_vPosition[i + 1];
+			p.z = m_vPosition[i + 2];
+			curse.push_back(p);
+		}
+
+		box = calculateAABB(curse);
+
+		std::vector<Point3D> box_8 = box.getCorners();
+
+		for (int i = 0; i < 8; i++) {
+			ABBPosition.push_back(box_8[i].x);
+			ABBPosition.push_back(box_8[i].y);
+			ABBPosition.push_back(box_8[i].z);
+		}
+	});
+
+	// 设置坐标系
+	PQDataType CoodernateType = PQ_COORD;
+	QMap<ULONG, QString> CoodernateMap = getObjectsByType(CoodernateType);
+
+	// 创建一个新的QMap，先插入"世界坐标系"，再插入原有的数据
+	QMap<ULONG, QString> newCoodernateMap;
+	newCoodernateMap.insert(0, "世界坐标系");  // 先插入首位
+
+	// 将原有数据插入到后面（键值从1开始）
+	for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
+		newCoodernateMap.insert(it.key(), it.value());
+	}
+
+	CoodernateMap = newCoodernateMap;  // 替换原来的map
+	QStringList CoodernateNames = CoodernateMap.values();
+	curseDialog->setCoodernateOptions(CoodernateNames);
+
+	//创建点阵
+	connect(curseDialog, &cursePart::spaceSetting, this, [this, CoodernateMap]() {
+
+		//获取设置好的坐标轴
+
+		QString coordanateName = curseDialog->getCoodernateSelection();
+		ULONG selectCoorID = CoodernateMap.key(coordanateName);
+
+
+		//记录坐标系的位置和姿态  采用欧拉角XYZ表示
+		double coordanate[6];
+		if (selectCoorID == 0) {
+			for (int i = 0; i < 6; i++) {
+				coordanate[i] = 0;
+			}
+		}
+		else {
+
+			int nCount = 0;
+			double* dPosture = nullptr;
+			m_ptrKit->Doc_get_coordinate_posture(selectCoorID, EULERANGLEXYZ, &nCount, &dPosture, 0);
+
+			for (int i = 0; i < 6; i++) {
+				coordanate[i] = dPosture[i];
+			}
+
+			m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
+		}
+
+
+		std::vector<std::vector<double>> axisVector;
+		axisVector = getCoordinateAxesFromEuler(coordanate);
+
+		//根据选择的主法矢选择坐标轴方向向量
+		QString mainVectorText = curseDialog->getComboBox_4();
+		std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
+
+		//根据选择的主划分方向
+		QString mainDivisionDirectionText = curseDialog->getComboBox_5();
+		std::vector<double> mainDivisionDirection = getAxisVector(axisVector, mainDivisionDirectionText);
+
+		// 2. 生成点阵参数                
+		double spacing = curseDialog->geteditSelection().toDouble();
+
+		Point3D viewDirection(mainVector[0], mainVector[1], mainVector[2]); // 从Y轴方向观看
+		std::vector<Point3D> corners = box.getCorners();
+		// 自动选择最近的面并生成点阵
+		std::vector<Point3D> result = createGridOnClosestSurface(corners, spacing, spacing, viewDirection);
+		double* dIntersetionpoint = nullptr;
+
+		double maxtheta = 0;
+		for (const auto& key : pickupMap) {
+			unsigned long k = key.first;
+			for (const auto value : key.second) {
+				CComBSTR whSurfaceName = value.c_str();
+				double* dIntersetionpoint = nullptr;
+				int nArrsize = 1;
+				for (Point3D P : result) {
+					double dPosition[3] = { P.x,P.y,P.z };
+					m_ptrKit->Part_get_ray_surface_intersetion(whSurfaceName, dPosition, mainVector.data(),
+						&dIntersetionpoint, &nArrsize);
+					Eigen::Vector3d v1(mainVector[0], mainVector[1], mainVector[2]);
+					Eigen::Vector3d v2(dIntersetionpoint[3], dIntersetionpoint[4], dIntersetionpoint[5]);
+					Eigen::Vector3d v1_norm = v1.normalized();
+					Eigen::Vector3d v2_norm = v2.normalized();
+
+					// 计算点积并限制范围
+					double dot = v1_norm.dot(v2_norm);
+					dot = std::max(-1.0, std::min(1.0, dot));
+
+					maxtheta = std::max(std::acos(dot), maxtheta);
+				}
+				m_ptrKit->PQAPIFree((LONG_PTR*)dIntersetionpoint);
+			}
+		}
+		maxtheta = maxtheta * 180 / M_PI;
+		curseDialog->setTextBrowser2(QString("%1").arg(maxtheta) + "°");
+
+	});
+
+	connect(curseDialog, &cursePart::calculateSpace, this, [this]() {
+
+
+		Point3D direction(0, 1, 0);
+		curseDialog->setTextEdit("500");
+		curseDialog->setTextEdit2("500");
+		int length = curseDialog->getTextEdit().toDouble();
+		int width = curseDialog->getTextEdit2().toDouble();
+		auto grid = createGridOnClosestSurface(box, length, width, direction);
+
+		for (auto p : grid) {
+			points.push_back(p.x);
+			points.push_back(p.y);
+			points.push_back(p.z);
+		}
+
+		QString value1 = QString("%1").arg(points[0]);
+		QString value2 = QString("%1").arg(points[1]);
+		QString value3 = QString("%1").arg(points[2]);
+
+		curseDialog->setTextEditValues(value1, value2, value3);
+	});
+
+	connect(curseDialog, &cursePart::previewSignal, this, [this]() {
+		// 启动拾取模块
+		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+		HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+		if (SUCCEEDED(hr)) {
+			isPoint = true;
+		}
+
+	});
+
+	connect(curseDialog, &cursePart::areaPosition, this, [this]() {
+		std::vector<double> areaPosition;
+		areaPosition = curseDialog->getVertexValues();
+		std::vector<double> difference;
+		for (int i = 0; i < areaPosition.size(); i++) {
+			double diff = areaPosition[i] - points[i];
+			difference.push_back(diff);
+		}
+
+		for (int i = 0; i < points.size(); i += 3) {
+			points[i] = points[i] + difference[0];
+			points[i + 1] = points[i + 1] + difference[1];
+			points[i + 2] = points[i + 2] + difference[2];
+		}
+	});
+
+	// 对话框关闭时清理资源
+	connect(curseDialog, &cursePart::finished, this, [this](int result) {
+		Q_UNUSED(result)
+			// 停止任何正在运行的模块
+			if (isPickupActive || isPreview) {
+				CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+				m_ptrKit->Doc_end_module(cmd);
+			}
+		isPickupActive = false;
+		isPreview = false;
+		curseDialog = nullptr;
+	});
+
 
 }
 
@@ -544,4 +836,221 @@ std::vector<double> cursePart::getVertexValues()
 	return result;
 }
 
+QMap<ULONG, QString> cursePart::getObjectsByType(PQDataType objType)
+{
+	QMap<ULONG, QString> objectMap;
 
+	VARIANT namesVariant;
+	VariantInit(&namesVariant);
+	namesVariant.parray = NULL;
+
+	VARIANT idsVariant;
+	VariantInit(&idsVariant);
+	idsVariant.parray = NULL;
+
+	HRESULT hr = m_ptrKit->Doc_get_obj_bytype(objType, &namesVariant, &idsVariant);
+	if (FAILED(hr)) {
+		qDebug() << "获取对象列表失败，类型:" << objType << "错误码:" << hr;
+		VariantClear(&namesVariant);
+		VariantClear(&idsVariant);
+		return objectMap;
+	}
+
+	// 提取名称数组
+	QStringList names = extractStringArrayFromVariant(namesVariant);
+	// 提取ID数组
+	QList<long> ids = extractLongArrayFromVariant(idsVariant);
+
+	// 构建映射关系
+	int minSize = qMin(names.size(), ids.size());
+	for (int i = 0; i < minSize; i++) {
+		objectMap[ids[i]] = names[i];
+	}
+
+	VariantClear(&namesVariant);
+	VariantClear(&idsVariant);
+
+	qDebug() << "成功获取对象列表，类型:" << objType << "数量:" << objectMap.size();
+	return objectMap;
+}
+
+QStringList cursePart::extractStringArrayFromVariant(const VARIANT& variant)
+{
+	QStringList result;
+
+	if ((variant.vt & VT_ARRAY) == 0 || variant.vt != (VT_ARRAY | VT_BSTR)) {
+		qDebug() << "VARIANT 类型错误，期望VT_ARRAY|VT_BSTR，实际类型:" << variant.vt;
+		return result;
+	}
+
+	SAFEARRAY* array = variant.parray;
+	if (!array || array->cDims != 1) {
+		qDebug() << "SAFEARRAY 无效或维度不正确";
+		return result;
+	}
+
+	// 获取数组边界
+	long lowerBound, upperBound;
+	HRESULT hr = SafeArrayGetLBound(array, 1, &lowerBound);
+	if (FAILED(hr)) {
+		qDebug() << "获取数组下边界失败，错误码:" << hr;
+		return result;
+	}
+
+	hr = SafeArrayGetUBound(array, 1, &upperBound);
+	if (FAILED(hr)) {
+		qDebug() << "获取数组上边界失败，错误码:" << hr;
+		return result;
+	}
+
+	long elementCount = upperBound - lowerBound + 1;
+	if (elementCount <= 0) {
+		qDebug() << "数组元素数量为0或负数:" << elementCount;
+		return result;
+	}
+
+	// 访问数组数据
+	BSTR* data = nullptr;
+	hr = SafeArrayAccessData(array, (void**)&data);
+	if (FAILED(hr)) {
+		qDebug() << "SafeArrayAccessData 失败，错误码:" << hr;
+		return result;
+	}
+
+	// 提取所有字符串元素
+	for (long i = 0; i < elementCount; i++) {
+		if (data[i] != nullptr) {
+			QString str = QString::fromWCharArray(data[i]);
+			result.append(str);
+		}
+		else {
+			result.append(QString()); // 空字符串处理
+		}
+	}
+
+	// 取消数据访问
+	SafeArrayUnaccessData(array);
+
+	return result;
+}
+
+QList<long> cursePart::extractLongArrayFromVariant(const VARIANT& variant)
+{
+	QList<long> result;
+
+	if ((variant.vt & VT_ARRAY) == 0) {
+		qDebug() << "VARIANT 类型错误，实际类型:" << variant.vt;
+		return result;
+	}
+
+	SAFEARRAY* array = variant.parray;
+	if (!array || array->cDims != 1) {
+		qDebug() << "SAFEARRAY 无效或维度不正确";
+		return result;
+	}
+
+	long lowerBound, upperBound;
+	SafeArrayGetLBound(array, 1, &lowerBound);
+	SafeArrayGetUBound(array, 1, &upperBound);
+
+	long elementCount = upperBound - lowerBound + 1;
+	if (elementCount <= 0) {
+		return result;
+	}
+
+	result.reserve(elementCount);
+
+	VARTYPE vt;
+	SafeArrayGetVartype(array, &vt);
+
+	HRESULT hr = SafeArrayLock(array);
+	if (FAILED(hr)) {
+		qDebug() << "锁定数组失败，错误码:" << hr;
+		return result;
+	}
+
+	void* data = array->pvData;
+	for (long i = 0; i < elementCount; i++) {
+		long value = 0;
+		switch (vt) {
+		case VT_I4:
+			value = static_cast<LONG*>(data)[i];
+			break;
+		case VT_I2:
+			value = static_cast<SHORT*>(data)[i];
+			break;
+		case VT_UI4:
+			value = static_cast<ULONG*>(data)[i];
+			break;
+		default:
+			qDebug() << "不支持的数组元素类型:" << vt;
+			break;
+		}
+		result.append(value);
+	}
+
+	SafeArrayUnlock(array);
+	return result;
+}
+
+
+QStringList cursePart::getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap)
+{
+	QStringList robotNames;
+
+	if (robotMap.isEmpty()) {
+		return robotNames; // 返回空列表
+	}
+
+	// 遍历机器人映射表，筛选指定类型的机器人
+	for (auto it = robotMap.constBegin(); it != robotMap.constEnd(); ++it) {
+		long id = it.key();    // 获取机器人ID
+		QString name = it.value(); // 获取机器人名称
+
+		PQRobotType robotType = PQ_MECHANISM_ROBOT;
+		HRESULT hr = m_ptrKit->Robot_get_type(id, &robotType);
+
+		if (SUCCEEDED(hr) && robotType == mechanismType) {
+			robotNames.append(name);
+		}
+	}
+
+	return robotNames;
+}
+
+void cursePart::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID)
+{
+	VARIANT vNamePara;
+	vNamePara.parray = NULL;
+	VARIANT vIDPara;
+	vIDPara.parray = NULL;
+	m_ptrKit->Doc_get_obj_bytype(i_nType, &vNamePara, &vIDPara);
+	if (NULL == vNamePara.parray || NULL == vIDPara.parray)
+	{
+		return;
+	}
+	//缓存指定对象名称
+	BSTR* bufName;
+	long lenName = vNamePara.parray->rgsabound[0].cElements;
+	SafeArrayAccessData(vNamePara.parray, (void**)&bufName);
+	int nTarIndex = 0;
+	if (!i_wsName.empty())
+	{
+		for (int i = 0; i < lenName; i++)
+		{
+			if (0 == i_wsName.compare(bufName[i]))
+			{
+				nTarIndex = i;
+			}
+		}
+	}
+	SafeArrayUnaccessData(vNamePara.parray);
+
+
+	//缓存指定对象ID
+	ULONG* bufID;
+	long lenID = vIDPara.parray->rgsabound[0].cElements;
+	SafeArrayAccessData(vIDPara.parray, (void**)&bufID);
+	o_uID = bufID[nTarIndex];
+	SafeArrayUnaccessData(vIDPara.parray);
+}

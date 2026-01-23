@@ -7,6 +7,9 @@
 #include <qDebug>
 #include <QTimer>
 #include "ui_cursePart.h"
+#include "PQKitCallback.h"
+
+#import "RPC.tlb" no_namespace, named_guids, raw_interfaces_only, raw_native_types
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class cursePartClass; };
@@ -17,7 +20,9 @@ class cursePart : public QDialog
 	Q_OBJECT
 
 public:
-	cursePart(QWidget *parent = nullptr);
+	cursePart(QWidget *parent = nullptr,
+		CComPtr<IPQPlatformComponent> ptrKit = nullptr,
+		CPQKitCallback* ptrKitCallback = nullptr);
 	~cursePart();
 
 	// 机器人选项设置
@@ -96,6 +101,20 @@ private slots:
 	void on_coordanateTextChanged(int state);//选择主划分方向
 	void on_confirm_clicked(); //最后确认按钮
 
+private:
+	Ui::cursePartClass *ui;
+	CComPtr<IPQPlatformComponent> m_ptrKit;
+	CPQKitCallback* m_ptrKitCallback;
+
+	bool isPickupActive = false;       // 使用成员变量而不是局部变量
+	bool isPreview = false;
+	bool isPoint = false;
+
+	int indx = 0;
+
+	double x_value;
+	double y_value;
+	double z_value;
 
 private:
 	void setupConnections();    // 初始化连接
@@ -103,10 +122,19 @@ private:
 	void setStepsExplanation();
 	void init();
 
-	Ui::cursePartClass *ui;
-	int indx = 0;
+	// 根据类型获取对象列表
+	QMap<ULONG, QString> getObjectsByType(PQDataType objType);
 
-	double x_value;
-	double y_value;
-	double z_value;
+	// 从VARIANT中提取字符串数组
+	QStringList extractStringArrayFromVariant(const VARIANT& variant);
+
+	// 从VARIANT中提取长整型数组
+	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
+
+	//获取机器人列表
+	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);
+
+	//获取id
+	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);
+
 };
