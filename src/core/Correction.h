@@ -4,6 +4,7 @@
 #include<vector>
 #include <nlohmann/json.hpp>
 #include<Eigen/dense>
+#include <Windows.h>
 
 using namespace Eigen;
 struct coeffs
@@ -17,6 +18,18 @@ struct coeffs
 		b0(0), b1(0), b2(0), b3(0), b4(0), b5(0),
 		c0(0), c1(0), c2(0), c3(0), c4(0), c5(0) {
 	}
+};
+
+struct trajPoint
+{
+	double x;
+	double y;
+	double z;
+	double q1;
+	double q2;
+	double q3;
+	double q4;
+	ULONG id;
 };
 inline void to_json(nlohmann::json& j, const coeffs& c)
 {
@@ -114,6 +127,8 @@ public:
 	std::vector<double> flagPoints() const { return m_flagPoints; }
 	std::vector<double> measurePoints() const { return m_measurePoints; }
 	bool isApplied() const { return m_isApply; }
+	// 在 getter-----------  部分添加
+	std::vector<ULONG> getTrajPointIDsToCorrect() const { return m_vTrajPointIDsToCorrect; }
 	//------getter-----------
 
 	//------setter-----------
@@ -126,33 +141,47 @@ public:
 	void setIsPosCorrect(bool flag) { m_isPosCorrect = flag; }
 	void setFlagPoints(const std::vector<double> flagPoints) { m_flagPoints = flagPoints; }
 	void setMeasurePoints(const std::vector<double> measurePoints) { m_measurePoints = measurePoints; }
-	void set_m_v2dTrajPointsToCorrect(const std::vector<std::vector<double>> trajPoint2Correct) { m_v2dTrajPointsToCorrect = trajPoint2Correct; }
+	void set_m_v2dTrajPointsToCorrect(const std::vector<std::array<double,7>> trajPoint2Correct) { m_v2dTrajPointsToCorrect = trajPoint2Correct; }
 	void setIsApply(bool isChecked) { m_isApply = isChecked; }
 	void setBeamDir(const std::vector<double> &dir) { vBeamDirection = dir; }
 	void setBeamOrigin(const std::vector<double>& orig) { vBeamOrigin = orig; }
+	void setBendingDeg(double deg) { m_bendingDeg = deg; }
 	//------setter-----------
 public:	
 	QString m_name = "null";/**修正名称*/
+	//选项
 	interpolationType m_interType = interpolationType::Liner;/**默认插值类型*/
-	double m_bendingDeg = 0.0;
+	bool m_isApply = false;/**是否应用*/
 	bool m_isPosCorrect = false; /**是否修正姿态*/
+
+	//待修正轨迹点
+	std::vector<std::array<double,7>> m_v2dTrajPointsToCorrect; /**待修正轨迹点*/
+	std::vector<trajPoint> m_trajPointsToCorrect; /**待修正轨迹点*/
+	std::vector<trajPoint> m_originTrajPoints; /**原始轨迹点*/
+	//作用域
 	std::array<double, 6> m_range = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; /**作用域*/
-	std::vector<std::vector<double>> m_v2dTrajPointsToCorrect; /**待修正轨迹点*/
+
+	//约束点&弯曲量输入
+	double m_bendingDeg = 0.0;
 	std::vector<double> m_flagPoints; /**标志点*/
 	std::vector<double> m_measurePoints;/**测量点*/
-	bool m_isApply = false;/**是否应用*/
-	coeffs m_coeffs; /**修正函数系数*/
+
+	//beamFream
 	Eigen::Vector3d beamOrigin; /**梁的原点位置*/
 	Eigen::Vector3d beamDirection; /**梁的方向*/
 	std::vector<double> vBeamOrigin = {0.0,0.0,0.0}; /**用于json存储的梁原点位置*/
 	std::vector<double> vBeamDirection = { 1.0,0.0,0.0 };
-	Eigen::MatrixX3d TBO; /**梁坐标系到机器人基坐标系的变换矩阵*/
+	Eigen::Matrix4d m_TBO; /**梁坐标系到机器人基坐标系的变换矩阵*/
 	Eigen::MatrixX3d DeltaXYZ;
-	
 
-	
-	
-	
+	//计算结果	
+	coeffs m_coeffs; /**修正函数系数*/
+	std::vector<std::array<double,7>> m_v2dOffSets; /**修正量*/
+	std::vector<ULONG> m_vTrajPointIDsToCorrect; /**待修正轨迹点ID列表*/
+
+	//父类修正对象
+	Correction* m_parentCorrection = nullptr;
+private:
 
 
 private:
@@ -169,6 +198,7 @@ private:
 		
 
 public:
+	//算法部分
 	//属性编辑界面
 	/**
 	 * @brief 计算参数，程序总入口
@@ -179,7 +209,12 @@ public:
 	/**
 	 * 计算待修正轨迹点.
 	 */
-	std::vector<std::array<double, 7>> getTrajPoints2Correct(const std::array<double, 6>& range);
+	void prepareTrajPoints2Correct(const std::vector<std::array<double, 7>>& ptList);
+	/**
+	 * fn 
+	 * @brief 计算单个点的修正量
+	 */
+	void calPointOffset();
 	/**
 	 * @brief 计算修正量，程序总入口
 	 */

@@ -11,6 +11,7 @@
 #include <sstream>   // 用于数字转字符串
 #include <comdef.h>  // 包含 CComBSTR 所需头文件
 #include <algorithm>
+#include<qscrollbar.h>
 #include "robxFileIO.h"
 
 TrajCorrectDock::TrajCorrectDock(
@@ -18,7 +19,7 @@ TrajCorrectDock::TrajCorrectDock(
 	CPQKitCallback *ptrKitCallback, 
 	QWidget *parent
 )
-	: QDockWidget("mywidget",parent), 
+	: QDockWidget(u8"变形修正设置",parent), 
 	  m_ptrKit(ptrKit),
 	  m_ptrKitCallback2(ptrKitCallback), 
 	  ui(new Ui::DockContent())
@@ -64,7 +65,7 @@ TrajCorrectDock::TrajCorrectDock(
 	}
 	InitLists();
 
-	setWindowTitle(QString::fromLocal8Bit("弯曲变形配置"));
+	setWindowTitle(QString::fromLocal8Bit("变形修正设置"));
 	
 	//增加一些帮助
 	QPixmap pixmap(":/image/resource/QuestionMark.png");  
@@ -262,6 +263,10 @@ void TrajCorrectDock::initGroupEmpty(const QString name) {
 	for (PickSpinBox* p : spinBoxes) {
 		p->setValue(0);
 	}
+	spnOriginx->setValue(0);
+	spnOriginy->setValue(0);
+	spnOriginz->setValue(0);
+	ui->spnDeg->setValue(0);
 	listFlagPoints->clear();
 	ui->listMeasurePoints->clear();
 	ui->cmbFittingType->setCurrentIndex(0);
@@ -341,7 +346,7 @@ void TrajCorrectDock::setupConnections()
 
 	//devPage
 	testConnection();
-	connect(ui->btnDevPage, &QPushButton::clicked, this, &TrajCorrectDock::on_btnDevPage_clicked);
+	//connect(ui->btnDevPage, &QPushButton::clicked, this, &TrajCorrectDock::on_btnDevPage_clicked);
 	connect(ui->btnCal, &QPushButton::clicked, this, &TrajCorrectDock::on_btnCal_clicked);
 	
 	//---------------pq回调信号--------------------------
@@ -700,7 +705,8 @@ void TrajCorrectDock::OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int 
 		spnOriginx->setValue(i_dPointX);
 		spnOriginy->setValue(i_dPointY);
 		spnOriginz->setValue(i_dPointZ);
-		m_ptrKit->Doc_end_module(cmd);
+		OnDraw();
+		
 		break;
 	case TrajCorrectDock::PickSource::FromSpinRanges:
 		qDebug() << "It's OnElementPickup from class TrajCorrectDock";
@@ -938,11 +944,17 @@ void TrajCorrectDock::on_tabInput_currentChanged(int index)
 	if (myIndex == 1)
 	{
 		//ui->tabInput->setFixedHeight(100);
-		ui->groupBox_2->setFixedHeight(grpHeight - 160);
+		ui->groupBox_2->setFixedHeight(grpHeight + 160);
+		//ui->btnSave的位置也要调整，
+		int btnSaveY = ui->groupBox_2->pos().y() + ui->groupBox_2->height() + 10;  // 增加10像素间距
+		ui->btnSave->move(ui->btnSave->pos().x(), btnSaveY);
 	}
 	else
 	{
-		ui->groupBox_2->setFixedHeight(grpHeight + 160);
+		ui->groupBox_2->setFixedHeight(grpHeight - 160);
+		// 恢复 btnSave 的位置
+		int btnSaveY = ui->groupBox_2->pos().y() + ui->groupBox_2->height() + 10;
+		ui->btnSave->move(ui->btnSave->pos().x(), btnSaveY);
 	}
 		//ui->tabInput->setFixedHeight(260);
 }
@@ -993,10 +1005,14 @@ void TrajCorrectDock::on_btnNewCorrection_clicked()
 	initGroupEmpty(itemName);
 	setView();
 	m_correctionList.append(newCor);
-	ui->edtLog->appendPlainText(QStringLiteral(">>新建修正对象：%1").arg(itemName));
-	ui->edtLog->appendPlainText(QStringLiteral(">>请在属性定义中设置修正对象属性"));
-	ui->edtLog->appendPlainText(QStringLiteral(">>当前的item数目：%1").arg(m_correctionItems.count()));
-	ui->edtLog->appendPlainText(QStringLiteral(">>当前的correction数目：%1").arg(m_correctionList.count()));
+	ui->editCorName->setFocus();                    // 设置焦点到 editCorName
+	ui->editCorName->selectAll();
+	scroll->verticalScrollBar()->setValue(0);
+	scroll->horizontalScrollBar()->setValue(0);
+
+	
+
+	
 }
 
 void TrajCorrectDock::on_btnDeleteCorrection_clicked()
@@ -1167,6 +1183,7 @@ void TrajCorrectDock::initGroupBox_AttributeDefine(QListWidgetItem * item)
 	spnOriginx->setValue(cor.vBeamOrigin[0]);
 	spnOriginy->setValue(cor.vBeamOrigin[1]);
 	spnOriginz->setValue(cor.vBeamOrigin[2]);
+	ui->spnDeg->setValue(cor.m_bendingDeg);
 
 	//这里是初始化两个列表控件
 	ui->listMeasurePoints->clear();
@@ -1236,6 +1253,7 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 	//保存属性到当前选中correction对象
 	QString myName = ui->editCorName->text();
 	double my_range[6];
+	double my_bendingDeg = ui->spnDeg->value();
 	bool my_isPosCor;
 	if (ui->chkIsPosCorrect->isChecked())
 		my_isPosCor = true;
@@ -1298,6 +1316,7 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 	myCor.setBeamOrigin(myOrig);
 	myCor.setBeamDir(myDirection);
 	myCor.setType(myType);
+	myCor.setBendingDeg(my_bendingDeg);
 	
 
 

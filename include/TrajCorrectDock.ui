@@ -6,9 +6,27 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1053</width>
-    <height>1176</height>
+    <width>315</width>
+    <height>1018</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>315</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>315</width>
+    <height>16777215</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>TrajCorrectDock</string>
@@ -26,7 +44,7 @@
     </rect>
    </property>
    <property name="title">
-    <string>弯曲变形列表</string>
+    <string>变形修正列表</string>
    </property>
    <widget class="QListWidget" name="listCorrections">
     <property name="geometry">
@@ -91,7 +109,7 @@
      <x>0</x>
      <y>300</y>
      <width>301</width>
-     <height>671</height>
+     <height>511</height>
     </rect>
    </property>
    <property name="sizePolicy">
@@ -113,7 +131,7 @@
 </string>
    </property>
    <property name="title">
-    <string>弯曲变形函数配置</string>
+    <string>变形修正属性配置</string>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0,0,0,0,0,0,0,0,0,1">
     <item>
@@ -496,7 +514,7 @@
          </font>
         </property>
         <property name="text">
-         <string>变形参数定义方式</string>
+         <string>变形参数定义</string>
         </property>
        </widget>
       </item>
@@ -530,71 +548,8 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
-      <widget class="QWidget" name="tab_2">
-       <attribute name="title">
-        <string>约束点输入</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_2" columnstretch="10,0,11">
-        <item row="2" column="0">
-         <widget class="QPushButton" name="btnFlagPointsExport">
-          <property name="text">
-           <string>导出</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2">
-         <widget class="QPushButton" name="btnMeasurePtsInport">
-          <property name="text">
-           <string>导入</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>标志点        </string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QWidget" name="widget" native="true">
-          <layout class="QVBoxLayout" name="verticalLayout_4">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <layout class="QVBoxLayout" name="verticalLayout">
-             <property name="spacing">
-              <number>0</number>
-             </property>
-            </layout>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QLabel" name="label_17">
-          <property name="text">
-           <string>测量点</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QListWidget" name="listMeasurePoints"/>
-        </item>
-       </layout>
-      </widget>
       <widget class="QWidget" name="tab">
        <attribute name="title">
         <string>角度输入</string>
@@ -710,6 +665,69 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="tab_2">
+       <attribute name="title">
+        <string>约束点输入</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_2" columnstretch="10,0,11">
+        <item row="2" column="0">
+         <widget class="QPushButton" name="btnFlagPointsExport">
+          <property name="text">
+           <string>导出</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QPushButton" name="btnMeasurePtsInport">
+          <property name="text">
+           <string>导入</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>标志点        </string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QWidget" name="widget" native="true">
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_17">
+          <property name="text">
+           <string>测量点</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QListWidget" name="listMeasurePoints"/>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
     <item>
@@ -778,8 +796,8 @@
   <widget class="QPushButton" name="btnSave">
    <property name="geometry">
     <rect>
-     <x>220</x>
-     <y>1110</y>
+     <x>205</x>
+     <y>820</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -1093,19 +1111,6 @@
      <string>delete all</string>
     </property>
    </widget>
-  </widget>
-  <widget class="QPushButton" name="btnDevPage">
-   <property name="geometry">
-    <rect>
-     <x>120</x>
-     <y>1110</y>
-     <width>93</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>log</string>
-   </property>
   </widget>
   <widget class="QCheckBox" name="chkIsTwisted">
    <property name="geometry">

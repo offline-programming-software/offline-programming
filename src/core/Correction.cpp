@@ -6,7 +6,7 @@
 #include<iostream>
 #include<filesystem>
 #include<iomanip>
-#include "Correction.h"
+#include "core\Correction.h"
 
 
 
@@ -100,6 +100,7 @@ private:
 
 coeffs Correction::calCoeffs()
 {
+	
 	//构造齐次变换矩阵，将坐标点变换到尾梁坐标系：
 	//R = [beamDirection, [0,0,1]^T, zDirection]
 	
@@ -124,7 +125,16 @@ coeffs Correction::calCoeffs()
 	Eigen::Matrix4d TBO = TOB.inverse();
 	//printTBO
 	std::cout << "TBO: \n" << TBO << std::endl;
+	m_TBO = TBO;
 	
+	if (m_bendingDeg != 0)
+	{
+		//优先采用简单弯曲量输入模式
+		m_coeffs.a0 = 0.0;
+		m_coeffs.a1 = -tan(m_bendingDeg * M_PI / 180.0); //弯曲角度转弯曲斜率
+		return m_coeffs;
+	}
+
 	//从	 m_flagPoints; 和 m_measurePoints读取数据点转化为matrixx3d
 	//然后再应用变换TBO 将其从大地坐标系下转换为尾梁坐标系下
 	size_t flagPointsCount = m_flagPoints.size() / 3;
@@ -188,6 +198,79 @@ coeffs Correction::calCoeffs()
 }
 
 
+
+void Correction::prepareTrajPoints2Correct(const std::vector<std::array<double, 7>>& ptList)
+{
+	//输入一大堆点，检查m_range，返回需要修正的点（注：点的结构为：x,y,z,q1,q2,q3,q4）
+	std::vector<std::array<double, 7>> v2dPtsToCorrect;
+	for (const std::array<double,7>& point : ptList)
+	{
+		if (point[0] >= m_range[0] && point[0] <= m_range[1] &&
+			point[1] >= m_range[2] && point[1] <= m_range[3] &&
+			point[2] >= m_range[4] && point[2] <= m_range[5])
+		{
+			v2dPtsToCorrect.push_back(point);
+		}
+	}
+	this->m_v2dTrajPointsToCorrect = v2dPtsToCorrect;
+}
+
+void Correction::calPointOffset()
+{
+	//修改 m_v2dOffSets;
+	//单个OffSets形式：{deltaX,deltaY,deltaZ,deltaQ1,deltaQ2,deltaQ3,deltaQ4}
+	//目前函数功能不完善，只能计算Z方向的修正量
+	//实现方法：
+	//1. 先将m_v2dTrajPointsToCorrect转换到尾梁坐标系下(TBO)
+	//2. m_coeffs的a1为尾梁的斜率，计算deltaZ
+	//3. 修改m_v2dOffSets
+// 修改 m_v2dOffSets;
+	// 单个OffSets形式：{deltaX,deltaY,deltaZ,deltaQ1,deltaQ2,deltaQ3,deltaQ4}
+	// 目前函数功能不完善，只能计算Z方向的修正量
+	// 实现方法：
+	// 1. 先将m_v2dTrajPointsToCorrect转换到尾梁坐标系下(TBO)
+	// 2. m_coeffs的a1为尾梁的斜率，计算deltaZ
+	// 3. 修改m_v2dOffSets
+
+	if (m_v2dTrajPointsToCorrect.empty()) {
+		std::cout << "警告: 没有轨迹点需要修正" << std::endl;
+		return;
+	}
+	m_v2dOffSets.clear();
+
+	// 遍历每个需要修正的轨迹点
+	for (const auto& point : m_v2dTrajPointsToCorrect) {
+		// 提取位置信息
+		Eigen::Vector4d homoPoint(point[0], point[1], point[2], 1.0);
+
+		// 转换到尾梁坐标系
+		Eigen::Vector4d pointInBeamFrame = m_TBO * homoPoint;
+		double x_beam = pointInBeamFrame(0);
+		double y_beam = pointInBeamFrame(1);
+		double z_beam = pointInBeamFrame(2);
+
+		// 计算修正量
+		std::array<double, 7> offset = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+
+		if (m_interType == interpolationType::Liner) {
+			// 线性拟合: v(x) = a0 + a1*x
+			// deltaZ = -v(x) = -(a0 + a1*x)
+			double v_x = m_coeffs.a0 + m_coeffs.a1 * x_beam;
+			offset[2] = v_x;  // deltaZ
+		}
+		else if (m_interType == interpolationType::Timoshenko) {
+			
+		}
+
+		// 四元素部分暂时不修改（保持为0）
+		// offset[3-6] 对应 deltaQ1, deltaQ2, deltaQ3, deltaQ4
+
+		m_v2dOffSets.push_back(offset);
+	}
+
+	std::cout << "点偏移计算完成，共计算 " << m_v2dOffSets.size()
+		<< " 个点的修正量" << std::endl;
+}
 
 Eigen::MatrixX3d Correction::HT(Eigen::MatrixX3d pointSet, Eigen::Matrix4d TransformMatrix)
 {

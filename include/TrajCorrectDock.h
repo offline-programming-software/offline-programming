@@ -7,7 +7,7 @@
 #include "PQKitInitThread.h"
 #include "PQKitCallback.h"
 #include"pickWidget.h"
-#include"Correction.h"
+#include"core\Correction.h"
 #include<vector>
 #include"PickSpinBox.h"
 #include<Eigen/Core>

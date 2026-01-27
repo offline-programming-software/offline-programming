@@ -40,11 +40,12 @@
 #include "boundBox.h"
 #include "robxFileIO.h"
 #include "TrajCorrectDock.h"
-#include"BendingCorrectDock.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
+
+class CorrectionModel;
 
 class MainWindow : public SARibbonMainWindow
 {
@@ -70,6 +71,10 @@ private:
 	QWidget* m_pPQPlatformView;
 	QWidget* m_pPQModeTreeView;
 	QWidget* m_pPQDebugView;
+
+	//数据模型
+	CorrectionModel* m_correctionModel;
+	QVector<Correction> m_corList;
 
 private:
 	void closeEvent(QCloseEvent* event);
@@ -195,6 +200,8 @@ protected slots:
 	void on_pos_cal();
 	void on_AGV_path();
 	void on_trajCorrectdock_open();
+	void on_bendingManagerWidget_open();
+	void on_PositionCorrectWidget_open();
 
 };
 #endif 

@@ -9,6 +9,11 @@
 #include <QWindow>
 #include <QChart>
 #include <string>
+#include"ui\PositionCorrectWidget.h"
+#include"ui\BendingManagerWidget.h"
+#include"model\CorrectionModel.h"
+#include"core\Correction.h"
+#include"ui\PositionCorrectWidget.h"
 
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
@@ -53,14 +58,15 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 
 	//添加轨迹规划**Pannel**
 	SARibbonPannel*  path = sence->addPannel("轨迹规划");
+	QAction* pathGen = path->addAction("轨迹生成", QIcon(""),QToolButton::InstantPopup);
 	QAction* action69 = path->addAction("区域划分", QIcon(":/image/resource/33.png"), QToolButton::InstantPopup);
 	QAction* action10 = path->addAction("喷涂路径生成", QIcon(":/image/resource/30.png"), QToolButton::InstantPopup);
 
 	//添加轨迹修正**Pannel**
 	SARibbonPannel* correction = sence->addPannel("轨迹修正");
-	QAction* action101 = correction->addAction("弯曲变形配置", QIcon(":/image/resource/bendingFunc.png"), QToolButton::InstantPopup);
-	QAction* action102 = correction->addAction("弯曲变形管理", QIcon(":/image/resource/bendingmanager .png"), QToolButton::InstantPopup);
-	QAction* action103 = correction->addAction("对象位置修正", QIcon(":/image/resource/positioncorrect.png"), QToolButton::InstantPopup);
+	QAction* action101 = correction->addAction("变形修正设置", QIcon(":/image/resource/bendingFunc.png"), QToolButton::InstantPopup);
+	QAction* action102 = correction->addAction("对象变形修正", QIcon(":/image/resource/bendingmanager .png"), QToolButton::InstantPopup);
+	QAction* action103 = correction->addAction("对象偏移修正", QIcon(":/image/resource/positioncorrect.png"), QToolButton::InstantPopup);
 
 	//添加仿真**pannel**
 	SARibbonPannel*  complie = sence->addPannel("仿真调试");
@@ -78,7 +84,8 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	connect(action6, SIGNAL(triggered()), this, SLOT(on_proxy()));//三维球
 	connect(action8, SIGNAL(triggered()), this, SLOT(on_create_frame()));//新建坐标系
 	connect(action69, SIGNAL(triggered()), this, SLOT(on_curse_part()));//喷涂区域划分
-	connect(action10, SIGNAL(triggered()), this, SLOT(on_campath_flat_surface()));//随性喷涂
+	connect(action10, SIGNAL(triggered()), this, SLOT(on_campath_flat_surface()));//随形喷涂
+	connect(pathGen, SIGNAL(triggered()), this, SLOT(on_create_path()));
 	connect(action13, SIGNAL(triggered()), this, SLOT(OnCompile()));//编译
 	connect(action14, SIGNAL(triggered()), this, SLOT(on_simulate()));//仿真
 	connect(action15, SIGNAL(triggered()), this, SLOT(on_post()));//后置
@@ -90,7 +97,15 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	connect(action25, SIGNAL(triggered()), this, SLOT(on_rocreate_sprayingtool()));//定义喷涂工具
 	connect(action26, SIGNAL(triggered()), this, SLOT(on_roobjassistor_manage()));//喷刷管理
 	connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
+	connect(action102, &QAction::triggered, this, &MainWindow::on_bendingManagerWidget_open);
+	connect(action103, &QAction::triggered, this, &MainWindow::on_PositionCorrectWidget_open);
+
 	InitPQKit();
+
+	//临时
+
+
+
 }
 
 
@@ -138,6 +153,7 @@ BSTR QStringToBSTR(const QString& str)
 
 void MainWindow::OnOpenRobx()
 {
+	
 	QString fileName = QFileDialog::getOpenFileName(this, tr("open robx file"), "",
 		tr("Robx files(*.robx)"));
 
@@ -157,8 +173,17 @@ void MainWindow::OnOpenRobx()
 	CComBSTR bsPara = "";
 	CComBSTR bsCmd = "RO_CMD_FILE_OPEN";
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsPara, varPara, &lResult);
-
 	RobxFileIO::downloadJson(RobxFileIO::GlobalPath());
+
+
+
+	//#临时：
+	RobxIO* io = new RobxIO();
+	io->updateData(m_corList, "correctionList.json");
+	delete io;
+	m_correctionModel = new CorrectionModel(this);
+	m_correctionModel->setCorrections(m_corList);
+
 }
 
 void MainWindow::OnSaveRobx()
@@ -1444,6 +1469,18 @@ void MainWindow::on_trajCorrectdock_open()
 }
 
 
+void MainWindow::on_bendingManagerWidget_open()
+{
+	BendingManagerWidget* widget = new BendingManagerWidget(m_ptrKit, m_ptrKitCallback, m_correctionModel);
+	widget->show();
+}
+
+void MainWindow::on_PositionCorrectWidget_open()
+{
+	PositionCorrectWidget* widget = new PositionCorrectWidget(m_ptrKit, m_ptrKitCallback);
+	widget->show();
+}
+
 void MainWindow::on_effectiveness_analysis()
 {
 	effectiveness_analysis dlg;
@@ -1907,6 +1944,9 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	}
 	else
 	{
+		m_ptrKit->pq_CloseDocument(robxName);
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
 		RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
 	}
 }

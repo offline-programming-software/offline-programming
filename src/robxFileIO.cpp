@@ -7,7 +7,10 @@
 #include <archive_entry.h>
 #include<iostream>
 #include<Windows.h>
-#include"correction.h"
+#include"core/Correction.h"
+#include<cstdio>
+#include <thread>
+#include <chrono>
 using json = nlohmann::json;
 
 RobxIO::RobxIO()
@@ -44,7 +47,8 @@ void RobxIO::writeData(const QVector<Correction>& list,
 		{"isApply", c.m_isApply},
 		{"origin", c.vBeamOrigin },
 		{ "direction", c.vBeamDirection },
-		{"coeff",c.m_coeffs }
+		{"coeff",c.m_coeffs },
+		{ "bendingDeg",c.m_bendingDeg }
 		};
 		j.push_back(jc);
 	}
@@ -166,6 +170,8 @@ void RobxIO::updateData(QVector<Correction>& list,
 			item.at("direction").get_to(c.vBeamDirection);
 		if (item.contains("coeff"))
 			item.at("coeff").get_to(c.m_coeffs);
+		if(item.contains("bendingDeg"))
+			c.m_bendingDeg = item.at("bendingDeg").get<double>();
 		list.push_back(c);
 	}
 }
@@ -245,6 +251,7 @@ void RobxIO::updateData(QVector<workSpaceInformation>& list,
 //		std::string buffer(
 //			(std::istreambuf_iterator<char>(ifs)),
 //			std::istreambuf_iterator<char>());
+
 //
 //		archive_write_data(a, buffer.data(), buffer.size());
 //
@@ -263,18 +270,29 @@ void RobxFileIO::uploadJson(std::wstring& robxPath)
 	std::vector<std::string> list = { "temp/" };
 	std::string tempPath = "./temp";
 
-	try {
+
 		if (fs::exists(robxPath) && fs::is_regular_file(robxPath)) {
-			fs::remove(robxPath);  // 删除单个文件
 			std::cout << "文件删除成功\n";
+			auto perms = std::filesystem::status(robxPath).permissions();
+			// 修复 E0711 错误：perms & perms::owner_write 返回 perms 类型，不能直接用于条件判断
+// 需显式转换为 bool 类型
+			std::filesystem::permissions(
+				robxPath,
+				std::filesystem::perms::owner_write,
+				std::filesystem::perm_options::add
+			);
+			std::cout << ((static_cast<bool>(perms & std::filesystem::perms::owner_write)) ? "writeable" : "read-only") << std::endl;
+			BOOL ok = DeleteFileW(robxPath.c_str());
+
+			if (!ok) {
+				DWORD err = GetLastError();
+				std::wcout << L"DeleteFileW failed, err=" << err << std::endl;
+			}
 		}
 		else {
 			std::cout << "文件不存在或不是普通文件\n";
 		}
-	}
-	catch (const fs::filesystem_error& e) {
-		std::cerr << "错误: " << e.what() << '\n';
-	}
+	
 
 	writeRobx(robxPath, list);
 
@@ -353,7 +371,6 @@ std::wstring to_wide_string(const std::string& input)
 // 主函数：写 .robx
 void writeRobx(const std::wstring& outname, const std::vector<std::string>& dirList) {
 	
-
 	struct archive* a = archive_write_new();
 	archive_write_set_format_zip(a);
 	// 文件使用 Deflate 最大压缩
