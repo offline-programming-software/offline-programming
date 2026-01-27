@@ -74,44 +74,11 @@ private:
 private:
 	void closeEvent(QCloseEvent* event);
 
-	//区域划分变量
-	cursePart* curseDialog = nullptr;  // 保存对话框指针
-	bool isPickupActive = false;       // 使用成员变量而不是局部变量
-	bool isPreview = false;
-	bool isPoint = false;
-
-	//机器人工作空间定义
-	robotSpaceDefine* spaceDialog = nullptr;
-	QString axisName;
-	int axisIdx;//坐标轴ID
-
-	std::vector<double> axisPosture;
-
 	QStringList extractStringArrayFromVariant(const VARIANT& variant);//提取variant中数据
 	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
 	 
-	//实现曲面的选取
-	std::map<ULONG, std::vector<std::wstring>> pickupMap;//用于记录选取的曲面
-	void onDeleteSelectedSurfaces(const QStringList& surfaceNames);//删除选中的曲面
-	std::vector<double> calculateAABBCornersFromPickupMap(const std::map<unsigned long, 
-		std::vector<std::wstring>>& pickupMap);//设置工作空间八个角点
-
-	//包围盒
-	AABB box;
-	std::vector<double> m_vPosition;
-	std::vector<double> ABBPosition;//包围盒八个角点
-	std::vector<double> points;
-
-	//坐标轴方向向量计算
-	std::vector<std::vector<double>> getCoordinateAxesFromEuler(double* eulerAngles);
-
-	//利用复选框中的string中选择方向向量
-	std::vector<double> getAxisVector(const std::vector<std::vector<double>>& axis, const QString& name);
-
 	QString generatePathGroupPostContent(long robotId, BSTR pathGroupId,
 	const QString& robotName, const QString& pathGroupName);//获取轨迹点名字
-	void CreateBoundingBox();
-	void updateRailOptions(const QString& robotName, const QMap<ULONG, QString>& robotMap);
 
 protected slots:
 	//PQKit slots

@@ -1,11 +1,13 @@
 #pragma once
 #pragma execution_character_set("utf-8")
+#define NOMINMAX 
 
 #include <QDialog>
 #include <QStringListModel>
 #include <QMessageBox>
 #include <qDebug>
 #include <QTimer>
+#include "boundBox.h"
 #include "ui_cursePart.h"
 #include "PQKitCallback.h"
 
@@ -68,7 +70,7 @@ signals:
 	void closeSignal();  // 关闭获取数据信号
 	void dialogShown();  // 对话框显示信号
 	void cancel(int result);//关闭界面
-	void calculateAABB();
+	void calculateBoundingBox();
 	void robotSelectionChanged(const QString& robotName);  // 机器人选择变化信号
 	void deleteSelectedSurfaces(const QStringList& deletedSurfaceNames);  // 删除选中项信号
 	void previewSignal();  // 预览信号
@@ -76,6 +78,7 @@ signals:
 	void calculateSpace();
 	void confirm();
 	void areaPosition();
+	
 
 protected:
 
@@ -100,6 +103,9 @@ private slots:
 
 	void on_coordanateTextChanged(int state);//选择主划分方向
 	void on_confirm_clicked(); //最后确认按钮
+	void OnDraw();
+	void OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
+		double i_dPointX, double i_dPointY, double i_dPointZ);
 
 private:
 	Ui::cursePartClass *ui;
@@ -109,6 +115,15 @@ private:
 	bool isPickupActive = false;       // 使用成员变量而不是局部变量
 	bool isPreview = false;
 	bool isPoint = false;
+
+	////包围盒
+	AABB box;
+	std::vector<double> m_vPosition;
+	std::vector<double> ABBPosition;//包围盒八个角点
+	std::vector<double> points;
+
+	//实现曲面的选取
+	std::map<ULONG, std::vector<std::wstring>> pickupMap;//用于记录选取的曲面
 
 	int indx = 0;
 
@@ -121,6 +136,20 @@ private:
 	void setupGraphicsScenes(); // 初始化图形场景
 	void setStepsExplanation();
 	void init();
+	void onDeleteSelectedSurfaces(const QStringList& surfaceNames);//删除选中的曲面
+
+	void updateRailOptions(const QString & robotName, const QMap<ULONG, QString>& robotMap);
+
+	std::vector<double> calculateAABBCornersFromPickupMap(const std::map<unsigned long,
+		std::vector<std::wstring>>&pickupMap);//设置工作空间八个角点
+
+	void CreateBoundingBox();
+
+	//利用复选框中的string中选择方向向量
+	std::vector<double> getAxisVector(const std::vector<std::vector<double>>& axis, const QString& name);
+
+	//坐标轴方向向量计算
+	std::vector<std::vector<double>> getCoordinateAxesFromEuler(double* eulerAngles);
 
 	// 根据类型获取对象列表
 	QMap<ULONG, QString> getObjectsByType(PQDataType objType);
