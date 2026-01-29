@@ -886,3 +886,190 @@ spacePoint Workspace::optimizeCenterPoint(ULONG robotID,
 
 	return bestCenter;
 }
+
+// 辅助函数：归一化方向向量
+std::vector<double> normalizeVector(const std::vector<double>& vec) {
+	if (vec.size() < 3) return vec;
+
+	double length = sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
+	if (length == 0) return vec;
+
+	return { vec[0] / length, vec[1] / length, vec[2] / length };
+}
+
+// 辅助函数：计算向量投影到指定方向上的分量
+double projectToDirection(const spacePoint& point, const std::vector<double>& direction) {
+	if (direction.size() < 3) return 0.0;
+
+	std::vector<double> normDir = normalizeVector(direction);
+	return point.x * normDir[0] + point.y * normDir[1] + point.z * normDir[2];
+}
+
+// 改进的计算导轨式机器人联动工作空间函数
+Workspace Workspace::calculateRailRobotWorkspace(
+	ULONG robotID,
+	const std::vector<double>& railDirection,
+	double spraySpeed,
+	double railSpeed,
+	const spacePoint& initialCenter,
+	double initialStepSize,
+	double thickness,
+	double theta,
+	const std::vector<double>& direction,
+	int samplePointsPerFace,
+	double minStepSize)
+{
+	// 首先计算基础工作空间
+	std::vector<spacePoint> baseCornerPoints = calculateExpandableWorkspace(
+		robotID,
+		initialCenter,
+		initialStepSize,
+		thickness,
+		theta,
+		direction,
+		samplePointsPerFace,
+		minStepSize
+	);
+
+	if (baseCornerPoints.empty()) {
+		return Workspace(initialCenter, spacePoint(0, 0, 0), m_ptrKit, m_ptrKitCallback, direction);
+	}
+
+	// 计算基础工作空间的尺寸
+	spacePoint minPoint = baseCornerPoints[0];
+	spacePoint maxPoint = baseCornerPoints[0];
+
+	for (const auto& point : baseCornerPoints) {
+		minPoint.x = std::min(minPoint.x, point.x);
+		minPoint.y = std::min(minPoint.y, point.y);
+		minPoint.z = std::min(minPoint.z, point.z);
+		maxPoint.x = std::max(maxPoint.x, point.x);
+		maxPoint.y = std::max(maxPoint.y, point.y);
+		maxPoint.z = std::max(maxPoint.z, point.z);
+	}
+
+	spacePoint baseSize = spacePoint(
+		maxPoint.x - minPoint.x,
+		maxPoint.y - minPoint.y,
+		maxPoint.z - minPoint.z
+	);
+
+	// 计算导轨方向上的宽度
+	// 通过将所有角点投影到导轨方向上来计算宽度
+	std::vector<double> projections;
+	for (const auto& point : baseCornerPoints) {
+		double proj = projectToDirection(point, railDirection);
+		projections.push_back(proj);
+	}
+
+	double minProj = *std::min_element(projections.begin(), projections.end());
+	double maxProj = *std::max_element(projections.begin(), projections.end());
+	double railWidth = maxProj - minProj;
+
+	// 计算所需时间：工作空间在此方向的宽度/(喷涂速度-导轨运动速度)
+	double timeRequired = 0;
+	if (spraySpeed > railSpeed) {
+		timeRequired = railWidth / (spraySpeed - railSpeed);
+	}
+	else {
+		// 如果导轨速度大于等于喷涂速度，则无法有效覆盖
+		timeRequired = railWidth / 0.001; // 使用一个很小的速度差，避免除零
+	}
+
+	// 计算导轨方向上的扩张长度：时间 × 导轨运动速度
+	double expansionLength = timeRequired * railSpeed;
+
+	// 获取导轨方向的单位向量
+	std::vector<double> railUnitVector = normalizeVector(railDirection);
+	spacePoint railVec(railUnitVector[0], railUnitVector[1], railUnitVector[2]);
+
+	// 根据导轨方向计算新的中心点和尺寸
+	spacePoint newCenter = initialCenter;
+	spacePoint newSize = baseSize;
+
+	// 沿导轨方向扩展工作空间
+	// 扩展后的工作空间在导轨方向上的尺寸变为原来的尺寸加上扩张长度
+	// 同时调整中心点位置
+	newCenter = newCenter + railVec * (expansionLength / 2.0);
+	// 为了在导轨方向上扩展，我们需要增加对应方向的尺寸
+	// 这里我们假设导轨方向与某个坐标轴平行或接近平行
+
+	// 为了更好地处理任意方向的导轨，我们使用局部坐标系
+	LocalCoordinateSystem tempCoordSystem(initialCenter, direction);
+
+	// 正确的坐标转换：获取世界坐标系下的导轨方向
+	spacePoint worldRailDirection = railVec;  // railVec已经是世界坐标系下的方向
+
+	// 计算扩展量在各轴上的分量
+	double xExpansion = std::abs(worldRailDirection.x) * expansionLength;
+	double yExpansion = std::abs(worldRailDirection.y) * expansionLength;
+	double zExpansion = std::abs(worldRailDirection.z) * expansionLength;
+
+	// 更新尺寸和中心点
+	newSize.x += xExpansion;
+	newSize.y += yExpansion;
+	newSize.z += zExpansion;
+
+	// 调整中心点
+	newCenter.x += (worldRailDirection.x * expansionLength) / 2.0;
+	newCenter.y += (worldRailDirection.y * expansionLength) / 2.0;
+	newCenter.z += (worldRailDirection.z * expansionLength) / 2.0;
+
+	// 创建并返回扩展的工作空间
+	return Workspace(newCenter, newSize, m_ptrKit, m_ptrKitCallback, direction);
+}
+
+// 新增函数：支持多个导轨方向的联动工作空间计算
+Workspace Workspace::calculateMultiRailRobotWorkspace(
+	ULONG robotID,
+	const std::vector<std::vector<double>>& railDirections,
+	const std::vector<double>& spraySpeeds,
+	const std::vector<double>& railSpeeds,
+	const spacePoint& initialCenter,
+	double initialStepSize,
+	double thickness,
+	double theta,
+	const std::vector<double>& direction,
+	int samplePointsPerFace,
+	double minStepSize)
+{
+	// 验证输入参数
+	if (railDirections.size() != spraySpeeds.size() || railDirections.size() != railSpeeds.size()) {
+		throw std::invalid_argument("Rail directions, spray speeds, and rail speeds must have the same size");
+	}
+
+	// 首先计算基础工作空间
+	Workspace currentWorkspace = calculateRailRobotWorkspace(
+		robotID,
+		railDirections[0],
+		spraySpeeds[0],
+		railSpeeds[0],
+		initialCenter,
+		initialStepSize,
+		thickness,
+		theta,
+		direction,
+		samplePointsPerFace,
+		minStepSize
+	);
+
+	// 对于后续的导轨方向，依次扩展工作空间
+	for (size_t i = 1; i < railDirections.size(); ++i) {
+		// 使用当前工作空间的中心点和尺寸作为下一个扩展的起点
+		currentWorkspace = calculateRailRobotWorkspace(
+			robotID,
+			railDirections[i],
+			spraySpeeds[i],
+			railSpeeds[i],
+			currentWorkspace.m_center,
+			initialStepSize,
+			currentWorkspace.m_size.z, // 保持当前Z方向的尺寸
+			theta,
+			direction,
+			samplePointsPerFace,
+			minStepSize
+		);
+	}
+
+	return currentWorkspace;
+}

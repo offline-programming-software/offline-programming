@@ -102,7 +102,7 @@ public:
 	void writeData(const QVector<Correction>& list,
 		const std::string& fileName);
 
-	void writeData(const QVector<workSpace>& list,
+	void writeData(const QVector<RobotWorkspaceBoundary>& list,
 		const std::string& fileName);
 
 	void writeData(const QVector<workSpaceInformation>& list,
@@ -119,7 +119,7 @@ public:
 	void updateData(QVector<Correction>& list,
 		const std::string& fileName);
 
-	void updateData(QVector<workSpace>& list,
+	void updateData(QVector<RobotWorkspaceBoundary>& list,
 		const std::string& fileName);
 
 	void updateData(QVector<workSpaceInformation>& list,

@@ -42,11 +42,13 @@ struct spacePoint {
 	}
 };
 
-struct workSpace {
+struct RobotWorkspaceBoundary {
 
 	ULONG robotID;
 	double thickness;
 	double theta;
+	bool isLink;
+	std::vector<QString> railName;
 	std::vector<double> points;
 };
 
@@ -264,6 +266,32 @@ public:
 	std::vector<spacePoint> RobotWorkspace(
 		const std::map<std::pair<double, double>, std::vector<spacePoint>>& aabbMap,
 		double targetThick, double targetTheta);
+
+	Workspace calculateRailRobotWorkspace(
+		ULONG robotID,
+		const std::vector<double>& railDirection,
+		double spraySpeed,
+		double railSpeed,
+		const spacePoint& initialCenter,
+		double initialStepSize,
+		double thickness,
+		double theta,
+		const std::vector<double>& direction,
+		int samplePointsPerFace,
+		double minStepSize);
+
+	Workspace calculateMultiRailRobotWorkspace(
+		ULONG robotID,
+		const std::vector<std::vector<double>>& railDirections,
+		const std::vector<double>& spraySpeeds,
+		const std::vector<double>& railSpeeds,
+		const spacePoint& initialCenter,
+		double initialStepSize,
+		double thickness,
+		double theta,
+		const std::vector<double>& direction,
+		int samplePointsPerFace,
+		double minStepSize);
 
 	//5、中心点优化方法
 	spacePoint optimizeCenterPoint(ULONG robotID,

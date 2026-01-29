@@ -77,7 +77,7 @@ private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
 	RobxIO *m_io;
-	QVector<workSpace> m_list;
+	QVector<RobotWorkspaceBoundary> m_list;
 	// 修改：使用 QMap 按机器人名称存储工作空间信息
 	QMap<QString, QVector<workSpaceInformation>> m_spaceInformation;
 

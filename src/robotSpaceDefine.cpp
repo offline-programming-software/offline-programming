@@ -233,10 +233,12 @@ void robotSpaceDefine::onAddAxis()
 			1500, 0, 22.5, direction, 5, 10.0);
 
 		for (const auto& keyValuePair : inputMap) { // 遍历map
-			workSpace ws;
+			RobotWorkspaceBoundary ws;
 			ws.robotID = robotID; // 设置robotID
 			ws.thickness = keyValuePair.first.first;  // 键(pair)的第一个double
 			ws.theta = keyValuePair.first.second;     // 键(pair)的第二个double
+			ws.isLink = hasGuideRail;
+			ws.railName.push_back(guideName);
 
 			// 转换 vector<spacePoint> 到 vector<double>
 			for (const auto& sp : keyValuePair.second) { // 遍历vector<spacePoint>

@@ -430,8 +430,8 @@
       </layout>
      </widget>
      <widget class="QWidget" name="page_3">
-      <layout class="QGridLayout" name="gridLayout_14">
-       <item row="0" column="0" rowspan="3">
+      <layout class="QGridLayout" name="gridLayout_14" columnstretch="1,1" columnminimumwidth="0,0">
+       <item row="0" column="0">
         <layout class="QVBoxLayout" name="verticalLayout_8" stretch="8,2">
          <item>
           <widget class="QGraphicsView" name="graphicsView_3"/>
@@ -455,173 +455,73 @@
         </layout>
        </item>
        <item row="0" column="1">
-        <widget class="QGroupBox" name="groupBox_4">
-         <property name="title">
-          <string>最大偏差夹角</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_9" columnstretch="1,4,6">
-          <item row="0" column="0">
-           <spacer name="horizontalSpacer_8">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>30</width>
-              <height>18</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item row="0" column="1">
-           <layout class="QVBoxLayout" name="verticalLayout_9">
-            <item>
-             <widget class="QLabel" name="label_6">
-              <property name="text">
-               <string>采样点间距</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_7">
-              <property name="text">
-               <string>最大偏差角</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="0" column="2">
-           <layout class="QVBoxLayout" name="verticalLayout_11">
-            <item>
-             <widget class="QTextEdit" name="textEdit">
-              <property name="minimumSize">
-               <size>
-                <width>194</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>194</width>
-                <height>30</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QTextBrowser" name="textBrowser_1">
-              <property name="minimumSize">
-               <size>
-                <width>194</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>194</width>
-                <height>30</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <layout class="QVBoxLayout" name="verticalLayout_14">
          <item>
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+          <widget class="QGroupBox" name="groupBox_4">
+           <property name="title">
+            <string>最大偏差夹角</string>
            </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_9">
-           <property name="text">
-            <string>计算</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="2" column="1">
-        <widget class="QGroupBox" name="groupBox_5">
-         <property name="title">
-          <string>划分区域大小</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_10">
-          <item row="0" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="1,4,6">
-            <item>
-             <spacer name="horizontalSpacer_9">
+           <layout class="QGridLayout" name="gridLayout_9" columnstretch="1,4,6">
+            <item row="0" column="0">
+             <spacer name="horizontalSpacer_8">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
-                <width>40</width>
-                <height>20</height>
+                <width>30</width>
+                <height>18</height>
                </size>
               </property>
              </spacer>
             </item>
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_16">
+            <item row="0" column="1">
+             <layout class="QVBoxLayout" name="verticalLayout_9">
               <item>
-               <widget class="QLabel" name="label_8">
+               <widget class="QLabel" name="label_6">
                 <property name="text">
-                 <string>划分块长</string>
+                 <string>采样点间距</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="label_9">
+               <widget class="QLabel" name="label_7">
                 <property name="text">
-                 <string>划分块宽</string>
+                 <string>最大偏差角</string>
                 </property>
                </widget>
               </item>
              </layout>
             </item>
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_15">
+            <item row="0" column="2">
+             <layout class="QVBoxLayout" name="verticalLayout_11">
               <item>
-               <widget class="QTextEdit" name="textEdit_1">
+               <widget class="QTextEdit" name="textEdit">
                 <property name="minimumSize">
                  <size>
-                  <width>0</width>
+                  <width>194</width>
                   <height>30</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>16777215</width>
+                  <width>194</width>
                   <height>30</height>
                  </size>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QTextEdit" name="textEdit_2">
+               <widget class="QTextBrowser" name="textBrowser_1">
                 <property name="minimumSize">
                  <size>
-                  <width>0</width>
+                  <width>194</width>
                   <height>30</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>16777215</width>
+                  <width>194</width>
                   <height>30</height>
                  </size>
                 </property>
@@ -630,46 +530,150 @@
              </layout>
             </item>
            </layout>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
+          </widget>
+         </item>
          <item>
-          <spacer name="horizontalSpacer_16">
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_9">
+             <property name="text">
+              <string>计算</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_5">
+           <property name="title">
+            <string>划分区域大小</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_10">
+            <item row="0" column="0">
+             <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="1,4,6">
+              <item>
+               <spacer name="horizontalSpacer_9">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_16">
+                <item>
+                 <widget class="QLabel" name="label_8">
+                  <property name="text">
+                   <string>划分块长</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_9">
+                  <property name="text">
+                   <string>划分块宽</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_15">
+                <item>
+                 <widget class="QTextEdit" name="textEdit_1">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>16777215</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QTextEdit" name="textEdit_2">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>16777215</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <item>
+            <spacer name="horizontalSpacer_16">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_10">
+             <property name="text">
+              <string>计算</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_2">
            <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+            <enum>Qt::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
-             <height>20</height>
+             <width>20</width>
+             <height>157</height>
             </size>
            </property>
           </spacer>
          </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_10">
-           <property name="text">
-            <string>计算</string>
-           </property>
-          </widget>
-         </item>
         </layout>
-       </item>
-       <item row="4" column="1">
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>157</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>

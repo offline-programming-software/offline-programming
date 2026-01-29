@@ -50,23 +50,34 @@ void RobxIO::writeData(const QVector<Correction>& list,
 	ofs.close();
 }
 
-void RobxIO::writeData(const QVector<workSpace>& list, const std::string & fileName)
+void RobxIO::writeData(const QVector<RobotWorkspaceBoundary>& list, const std::string & fileName)
 {
 	json j = json::array();
 
 	for (const auto& ws : list) {
 		json jws;
-		jws = {
-			{"robotID", ws.robotID},
-			{"thickness", ws.thickness},
-			{"theta", ws.theta},
-			{"points", ws.points}
-		};
+		// 使用显式的赋值方式，避免使用初始化列表导致的问题
+		jws["robotID"] = ws.robotID;
+		jws["thickness"] = ws.thickness;
+		jws["theta"] = ws.theta;
+		jws["isLink"] = ws.isLink;
+
+		// 将QString向量转换为std::string向量后再序列化
+		std::vector<std::string> tempRailNames;
+		for (const auto& qstr : ws.railName) {
+			tempRailNames.push_back(qstr.toStdString());
+		}
+		jws["railName"] = tempRailNames;
+		jws["points"] = ws.points;
+
 		j.push_back(jws);
 	}
 
 	std::string fullPath = m_tempDir + "/" + fileName;
 	std::ofstream ofs(fullPath);
+	if (!ofs.is_open()) {
+		throw std::runtime_error("Cannot open file for writing: " + fullPath);
+	}
 	ofs << j.dump(4);
 	ofs.close();
 }
@@ -153,27 +164,40 @@ void RobxIO::updateData(QVector<Correction>& list,
 	}
 }
 
-void RobxIO::updateData(QVector<workSpace>& list, const std::string & fileName)
+void RobxIO::updateData(QVector<RobotWorkspaceBoundary>& list, const std::string & fileName)
 {
 	std::string fullPath = m_tempDir + "/" + fileName;
-	std::ifstream ifs(fullPath); if (!ifs.is_open())
+
+	std::ifstream ifs(fullPath);
+	if (!ifs.is_open())
 		return;
+
 	json j;
 	ifs >> j;
 	ifs.close();
 
 	list.clear();
 	for (const auto& item : j) {
-		workSpace ws;
+		RobotWorkspaceBoundary ws;
 
 		ws.robotID = item.at("robotID").get<ULONG>();
 		ws.thickness = item.at("thickness").get<double>();
 		ws.theta = item.at("theta").get<double>();
+		ws.isLink = item.value("isLink", false); // 默认值为false
+
+		// 处理QString类型的railName
+		std::vector<std::string> tempRailNames = item.value("railName", std::vector<std::string>{});
+		ws.railName.clear();
+		for (const auto& str : tempRailNames) {
+			ws.railName.push_back(QString::fromStdString(str));
+		}
+
 		ws.points = item.at("points").get<std::vector<double>>();
+
 		list.push_back(ws);
 	}
-		
 }
+
 
 void RobxIO::updateData(QVector<workSpaceInformation>& list,
 	const std::string& fileName)
