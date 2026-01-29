@@ -44,7 +44,6 @@ robotSpaceDefine::robotSpaceDefine(QWidget *parent,
 		this, &robotSpaceDefine::onRobotChanged);
 
 	m_io = new RobxIO();
-	m_io->updateData(m_list, "workspace.json");
 
 	// 加载所有机器人的数据
 	for (const QString& robotName : robotNames) {
@@ -52,6 +51,11 @@ robotSpaceDefine::robotSpaceDefine(QWidget *parent,
 		QVector<workSpaceInformation> robotData;
 		m_io->updateData(robotData, filename.toStdString().c_str());
 		m_spaceInformation[robotName] = robotData;
+
+		QString workSpaceName = QString("workspace_%1.json").arg(robotName);
+		QVector<RobotWorkspaceBoundary> workSpaceData;
+		m_io->updateData(workSpaceData, workSpaceName.toStdString().c_str());
+		m_list[robotName] = workSpaceData;
 	}
 
 	// 加载当前选中机器人的数据到表格
@@ -238,7 +242,15 @@ void robotSpaceDefine::onAddAxis()
 			ws.thickness = keyValuePair.first.first;  // 键(pair)的第一个double
 			ws.theta = keyValuePair.first.second;     // 键(pair)的第二个double
 			ws.isLink = hasGuideRail;
-			ws.railName.push_back(guideName);
+			ws.CoordinateName = axisName;
+			ws.DirectionName = mainNormalVector;
+
+			if (hasGuideRail) {
+				ws.railName.push_back(guideName);
+			}
+			else {
+				ws.railName.push_back("");
+			}
 
 			// 转换 vector<spacePoint> 到 vector<double>
 			for (const auto& sp : keyValuePair.second) { // 遍历vector<spacePoint>
@@ -248,10 +260,12 @@ void robotSpaceDefine::onAddAxis()
 				ws.points.push_back(sp.z);
 			}
 
-			m_list.push_back(ws);
+			m_list[robotName].push_back(ws);
 		}
 
-		m_io->writeData(m_list, "workspace.json");
+		QString filename = QString("workspace_%1.json").arg(robotName);
+
+		m_io->writeData(m_list[robotName], filename.toStdString().c_str());
 
 		if (hasGuideRail) {
 			addAxisInfo(number, axisName, mainNormalVector, hasGuideRail, guideName);

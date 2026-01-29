@@ -50,24 +50,27 @@ void RobxIO::writeData(const QVector<Correction>& list,
 	ofs.close();
 }
 
-void RobxIO::writeData(const QVector<RobotWorkspaceBoundary>& list, const std::string & fileName)
+void RobxIO::writeData(const QVector<RobotWorkspaceBoundary>& list, const std::string& fileName)
 {
 	json j = json::array();
 
 	for (const auto& ws : list) {
+		// 手动构建 JSON 对象，避免初始化列表与 QString 的兼容性问题
 		json jws;
-		// 使用显式的赋值方式，避免使用初始化列表导致的问题
 		jws["robotID"] = ws.robotID;
 		jws["thickness"] = ws.thickness;
 		jws["theta"] = ws.theta;
 		jws["isLink"] = ws.isLink;
+		jws["CoordinateName"] = ws.CoordinateName.toStdString();
+		jws["DirectionName"] = ws.DirectionName.toStdString();
 
-		// 将QString向量转换为std::string向量后再序列化
-		std::vector<std::string> tempRailNames;
-		for (const auto& qstr : ws.railName) {
-			tempRailNames.push_back(qstr.toStdString());
+		// 序列化 railName（std::vector<QString>）
+		std::vector<std::string> railNameStrs;
+		for (const QString& qstr : ws.railName) {
+			railNameStrs.push_back(qstr.toStdString());
 		}
-		jws["railName"] = tempRailNames;
+		jws["railName"] = railNameStrs;
+
 		jws["points"] = ws.points;
 
 		j.push_back(jws);
@@ -164,13 +167,13 @@ void RobxIO::updateData(QVector<Correction>& list,
 	}
 }
 
-void RobxIO::updateData(QVector<RobotWorkspaceBoundary>& list, const std::string & fileName)
+void RobxIO::updateData(QVector<RobotWorkspaceBoundary>& list, const std::string& fileName)
 {
 	std::string fullPath = m_tempDir + "/" + fileName;
-
 	std::ifstream ifs(fullPath);
-	if (!ifs.is_open())
+	if (!ifs.is_open()) {
 		return;
+	}
 
 	json j;
 	ifs >> j;
@@ -183,12 +186,16 @@ void RobxIO::updateData(QVector<RobotWorkspaceBoundary>& list, const std::string
 		ws.robotID = item.at("robotID").get<ULONG>();
 		ws.thickness = item.at("thickness").get<double>();
 		ws.theta = item.at("theta").get<double>();
-		ws.isLink = item.value("isLink", false); // 默认值为false
+		ws.isLink = item.value("isLink", false); // 提供默认值增强健壮性
 
-		// 处理QString类型的railName
+		// 反序列化 QString 字段
+		ws.CoordinateName = QString::fromStdString(item.value("CoordinateName", std::string{}));
+		ws.DirectionName = QString::fromStdString(item.value("DirectionName", std::string{}));
+
+		// 反序列化 railName（std::vector<QString>）
 		std::vector<std::string> tempRailNames = item.value("railName", std::vector<std::string>{});
 		ws.railName.clear();
-		for (const auto& str : tempRailNames) {
+		for (const std::string& str : tempRailNames) {
 			ws.railName.push_back(QString::fromStdString(str));
 		}
 

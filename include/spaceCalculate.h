@@ -48,6 +48,8 @@ struct RobotWorkspaceBoundary {
 	double thickness;
 	double theta;
 	bool isLink;
+	QString CoordinateName;
+	QString DirectionName;
 	std::vector<QString> railName;
 	std::vector<double> points;
 };
