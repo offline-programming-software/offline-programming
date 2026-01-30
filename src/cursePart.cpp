@@ -1,6 +1,7 @@
 #include "cursePart.h"
 #include <Eigen/Dense>
 #include <algorithm>
+#include "parseJSON.h"
 
 cursePart::cursePart(QWidget *parent,
 	CComPtr<IPQPlatformComponent> ptrKit,
@@ -18,340 +19,11 @@ cursePart::cursePart(QWidget *parent,
 	// 设置图形场景
 	setupGraphicsScenes();
 
-	// 连接按钮信号到槽函数
-	setupConnections();
-
 	// 设置步骤解释
 	setStepsExplanation();
 
 	//初始化数据
 	init();
-
-	connect(m_ptrKitCallback, &CPQKitCallback::signalDraw, this, &cursePart::OnDraw);
-	connect(m_ptrKitCallback, &CPQKitCallback::signalElementPickup, this, &cursePart::OnElementPickup);
-
-	isPickupActive = false; // 重置拾取状态
-	isPreview = false;//是否进行预览
-
-	// 使用封装好的函数获取机器人列表
-	PQDataType robotType = PQ_ROBOT;
-	QMap<ULONG, QString> robotMap = getObjectsByType(robotType);
-
-	// 使用封装函数获取喷涂机器人名称列表
-	QStringList robotNames = getSprayRobotNames(PQ_MECHANISM_ROBOT, robotMap);
-
-	if (robotNames.isEmpty()) {
-		QMessageBox::information(this, "提示", "当前没有可用的喷涂机器人！");
-		delete ui;
-		return;
-	}
-
-	// 将机器人名称设置到对话框中
-	for (const QString& name : robotNames) {
-		setRobotOptions(name);
-	}
-
-
-	// 连接机器人选择改变信号
-	connect(this, &cursePart::robotSelectionChanged, this, [this, robotMap](const QString& robotName) {
-		updateRailOptions(robotName, robotMap);
-	});
-
-	// 初始设置轨道信息
-	QString currentRobot = robotNames.isEmpty() ? "" : robotNames.first();
-	updateRailOptions(currentRobot, robotMap);
-
-
-	// 对于曲面选取
-	this->setModal(true);
-	this->setWindowModality(Qt::ApplicationModal);
-
-	// 连接拾取按钮信号 - 启动拾取模块
-	connect(this, &cursePart::pickUpSignal, this, [this]() {
-		if (!isPickupActive && !isPreview) {
-			// 启动拾取模块
-			CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-			HRESULT hr = m_ptrKit->Doc_start_module(cmd);
-			if (SUCCEEDED(hr)) {
-				isPickupActive = true;
-				isPreview = false; // 确保预览模式关闭
-				this->setModal(false);
-				this->setWindowModality(Qt::NonModal);
-				qDebug() << "曲面拾取模块已启动，请在3D窗口中点击元素";
-			}
-			else {
-				QMessageBox::warning(this, "错误", "启动曲面拾取模块失败！");
-			}
-		}
-		else {
-			QString mode = isPreview ? "预览模式" : "曲面拾取模式";
-			qDebug() << mode << "已在运行中";
-		}
-	});
-
-	// 连接关闭拾取按钮信号
-	connect(this, &cursePart::closeSignal, this, [this]() {
-		if (isPickupActive || isPreview) {
-			isPickupActive = false;
-			isPreview = false;
-			this->setModal(true);
-			CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-			HRESULT hr = m_ptrKit->Doc_end_module(cmd);
-			this->setWindowModality(Qt::ApplicationModal);
-			qDebug() << "拾取模块已停止";
-		}
-	});
-
-	// 删除信号
-	connect(this, &cursePart::deleteSelectedSurfaces, this, &cursePart::onDeleteSelectedSurfaces);
-
-	// 计算选中曲面的最小包围盒 - 重命名信号
-	connect(this, &cursePart::calculateBoundingBox, this, [this]() {
-		for (const auto& pair : pickupMap) {
-			unsigned long key = pair.first;
-			const std::vector<std::wstring>& values = pair.second;
-			long lCount = 0;
-			m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);//获取顶点个数
-			std::vector<double> dSrc(3 * lCount, 0);
-			double* dSrcPosition = dSrc.data();//顶点位置（通过一维数组表示）
-			BSTR sName;
-			m_ptrKit->Doc_get_obj_name(key, &sName);
-			m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);//获取顶点位置
-			for (const auto& value : values) {
-				for (long i = 0; i < lCount; i++) {
-					double dPosition[3] = { dSrcPosition[3 * i],dSrcPosition[3 * i + 1],dSrcPosition[3 * i + 2] };
-					double dTol = 10;
-					LONG bPointOnSurface = 0;
-					std::vector<wchar_t> buffer(value.begin(), value.end());
-					buffer.push_back(L'\0'); // 添加终止符
-					LPWSTR name = buffer.data();
-					m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);//检查顶点是否在曲面上
-
-					if (bPointOnSurface) {
-						m_vPosition.push_back(dPosition[0]);
-						m_vPosition.push_back(dPosition[1]);
-						m_vPosition.push_back(dPosition[2]);
-					}
-				}
-			}
-		}
-		box.minPoint = { 0,0,0 };
-		box.maxPoint = { 0,0,0 };
-
-		std::vector<Point3D> curse;
-		for (int i = 0; i < m_vPosition.size(); i += 3) {
-			Point3D p;
-			p.x = m_vPosition[i];
-			p.y = m_vPosition[i + 1];
-			p.z = m_vPosition[i + 2];
-			curse.push_back(p);
-		}
-
-		box = calculateAABB(curse);
-
-		std::vector<Point3D> box_8 = box.getCorners();
-
-		for (int i = 0; i < 8; i++) {
-			ABBPosition.push_back(box_8[i].x);
-			ABBPosition.push_back(box_8[i].y);
-			ABBPosition.push_back(box_8[i].z);
-		}
-	});
-
-	// 设置坐标系
-	PQDataType CoodernateType = PQ_COORD;
-	QMap<ULONG, QString> CoodernateMap = getObjectsByType(CoodernateType);
-
-	// 创建一个新的QMap，先插入"世界坐标系"，再插入原有的数据
-	QMap<ULONG, QString> newCoodernateMap;
-	newCoodernateMap.insert(0, "世界坐标系");  // 先插入首位
-
-	// 将原有数据插入到后面（键值从1开始）
-	for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
-		newCoodernateMap.insert(it.key(), it.value());
-	}
-
-	CoodernateMap = newCoodernateMap;  // 替换原来的map
-	QStringList CoodernateNames = CoodernateMap.values();
-	setCoodernateOptions(CoodernateNames);
-
-	//创建点阵
-	connect(this, &cursePart::spaceSetting, this, [this, CoodernateMap]() {
-
-		//获取设置好的坐标轴
-
-		QString coordanateName = this->getCoodernateSelection();
-		ULONG selectCoorID = CoodernateMap.key(coordanateName);
-
-
-		//记录坐标系的位置和姿态  采用欧拉角XYZ表示
-		double coordanate[6];
-		if (selectCoorID == 0) {
-			for (int i = 0; i < 6; i++) {
-				coordanate[i] = 0;
-			}
-		}
-		else {
-
-			int nCount = 0;
-			double* dPosture = nullptr;
-			m_ptrKit->Doc_get_coordinate_posture(selectCoorID, EULERANGLEXYZ, &nCount, &dPosture, 0);
-
-			for (int i = 0; i < 6; i++) {
-				coordanate[i] = dPosture[i];
-			}
-
-			m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
-		}
-
-
-		std::vector<std::vector<double>> axisVector;
-		axisVector = getCoordinateAxesFromEuler(coordanate);
-
-		//根据选择的主法矢选择坐标轴方向向量
-		QString mainVectorText = this->getComboBox_4();
-		std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
-
-		//根据选择的主划分方向
-		QString mainDivisionDirectionText = this->getComboBox_5();
-		std::vector<double> mainDivisionDirection = getAxisVector(axisVector, mainDivisionDirectionText);
-
-		// 2. 生成点阵参数                
-		double spacing = this->geteditSelection().toDouble();
-
-		Point3D viewDirection(mainVector[0], mainVector[1], mainVector[2]); // 从Y轴方向观看
-		std::vector<Point3D> corners = box.getCorners();
-		// 自动选择最近的面并生成点阵
-		std::vector<Point3D> result = createGridOnClosestSurface(corners, spacing, spacing, viewDirection);
-		double* dIntersetionpoint = nullptr;
-
-		double maxtheta = 0;
-		for (const auto& key : pickupMap) {
-			unsigned long k = key.first;
-			for (const auto value : key.second) {
-				CComBSTR whSurfaceName = value.c_str();
-				double* dIntersetionpoint = nullptr;
-				int nArrsize = 1;
-				for (Point3D P : result) {
-					double dPosition[3] = { P.x,P.y,P.z };
-					m_ptrKit->Part_get_ray_surface_intersetion(whSurfaceName, dPosition, mainVector.data(),
-						&dIntersetionpoint, &nArrsize);
-					if (dIntersetionpoint != nullptr && nArrsize >= 6) {
-						Eigen::Vector3d v1(mainVector[0], mainVector[1], mainVector[2]);
-						Eigen::Vector3d v2(dIntersetionpoint[3], dIntersetionpoint[4], dIntersetionpoint[5]);
-						Eigen::Vector3d v1_norm = v1.normalized();
-						Eigen::Vector3d v2_norm = v2.normalized();
-
-						// 计算点积并限制范围
-						double dot = v1_norm.dot(v2_norm);
-						dot = std::max(-1.0, std::min(1.0, dot));
-
-						maxtheta = std::max(std::acos(dot), maxtheta);
-					}
-				}
-				if (dIntersetionpoint != nullptr) {
-					m_ptrKit->PQAPIFree((LONG_PTR*)dIntersetionpoint);
-				}
-			}
-		}
-		maxtheta = maxtheta * 180 / M_PI;
-		this->setTextBrowser2(QString("%1").arg(maxtheta) + "°");
-
-	});
-
-	connect(this, &cursePart::calculateSpace, this, [this]() {
-
-
-		Point3D direction(0, 1, 0);
-		this->setTextEdit("500");
-		this->setTextEdit2("500");
-		int length = this->getTextEdit().toDouble();
-		int width = this->getTextEdit2().toDouble();
-		auto grid = createGridOnClosestSurface(box, length, width, direction);
-
-		for (auto p : grid) {
-			points.push_back(p.x);
-			points.push_back(p.y);
-			points.push_back(p.z);
-		}
-
-		QString value1 = QString("%1").arg(points[0]);
-		QString value2 = QString("%1").arg(points[1]);
-		QString value3 = QString("%1").arg(points[2]);
-
-		this->setTextEditValues(value1, value2, value3);
-	});
-
-	connect(this, &cursePart::previewSignal, this, [this]() {
-		// 启动拾取模块
-		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-		HRESULT hr = m_ptrKit->Doc_start_module(cmd);
-		if (SUCCEEDED(hr)) {
-			isPoint = true;
-		}
-
-	});
-
-	connect(this, &cursePart::areaPosition, this, [this]() {
-		std::vector<double> areaPosition;
-		areaPosition = this->getVertexValues();
-		std::vector<double> difference;
-		for (int i = 0; i < areaPosition.size(); i++) {
-			double diff = areaPosition[i] - points[i];
-			difference.push_back(diff);
-		}
-
-		for (int i = 0; i < points.size(); i += 3) {
-			points[i] = points[i] + difference[0];
-			points[i + 1] = points[i + 1] + difference[1];
-			points[i + 2] = points[i + 2] + difference[2];
-		}
-	});
-
-	// 对话框关闭时清理资源
-	connect(this, &QDialog::finished, this, [this](int result) {
-		Q_UNUSED(result)
-			// 停止任何正在运行的模块
-			if (isPickupActive || isPreview) {
-				CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-				m_ptrKit->Doc_end_module(cmd);
-			}
-		isPickupActive = false;
-		isPreview = false;
-	});
-}
-
-cursePart::~cursePart()
-{
-	delete ui;
-}
-
-void cursePart::init() {
-	ui->textEdit->setPlainText("500");//初始化间距
-
-	ui->pushButton_1->setEnabled(false);
-	ui->pushButton_3->setEnabled(false);
-	ui->comboBox_2->setEnabled(false);//设置联动轴复选框不能使用
-
-	ui->horizontalSlider->setMinimum(-50);
-	ui->horizontalSlider->setMaximum(50);
-	ui->horizontalSlider->setValue(0);  // 设置为中间点
-
-	ui->verticalSlider->setMinimum(-50);
-	ui->verticalSlider->setMaximum(50);
-	ui->verticalSlider->setValue(0);  // 设置为中间点
-
-	ui->comboBox_3->clear();
-	ui->comboBox_1->clear();
-
-	ui->comboBox_5->addItem("Y轴方向");
-	ui->comboBox_5->addItem("Z轴方向");
-
-}
-
-void cursePart::setupConnections()
-{
-	// 页面导航按钮
 	//上一页按钮
 	QPushButton* prevButton = ui->pushButton_1;
 	connect(prevButton, &QPushButton::clicked, this, &cursePart::on_prev_page_clicked);
@@ -382,6 +54,8 @@ void cursePart::setupConnections()
 	connect(ui->pushButton_3, &QPushButton::clicked, this, &cursePart::on_previewButton_clicked);
 	connect(ui->pushButton_9, &QPushButton::clicked, this, &cursePart::on_spaceSettingButton_clicked);
 
+	connect(ui->pushButton_10, &QPushButton::clicked, this, &cursePart::on_calculate_workspace);//计算出workspace
+
 	// 组合框和文本编辑框
 	connect(ui->comboBox_1, &QComboBox::currentTextChanged, this, &cursePart::on_comboBox_currentTextChanged);
 	connect(ui->comboBox_4, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &cursePart::on_coordanateTextChanged);
@@ -394,7 +68,98 @@ void cursePart::setupConnections()
 
 	connect(ui->horizontalSlider, &QSlider::valueChanged, this, &cursePart::on_horizontalSlider_valueChanged);
 	connect(ui->verticalSlider, &QSlider::valueChanged, this, &cursePart::on_verticalSlider_valueChanged);
+
+	connect(m_ptrKitCallback, &CPQKitCallback::signalDraw, this, &cursePart::OnDraw);
+	connect(m_ptrKitCallback, &CPQKitCallback::signalElementPickup, this, &cursePart::OnElementPickup);
 }
+
+cursePart::~cursePart()
+{
+	delete ui;
+}
+
+
+//设置界面参数
+void cursePart::init() {
+
+	isPickupActive = false; // 重置拾取状态
+	isPreview = false;//是否进行预览
+
+	// 使用封装好的函数获取机器人列表
+	PQDataType robotType = PQ_ROBOT;
+	m_robotMap = getObjectsByType(robotType);
+
+	// 使用封装函数获取喷涂机器人名称列表
+	QStringList robotNames = getSprayRobotNames(PQ_MECHANISM_ROBOT, m_robotMap);
+
+	if (robotNames.isEmpty()) {
+		QMessageBox::information(this, "提示", "当前没有可用的喷涂机器人！");
+		delete ui;
+		return;
+	}
+
+	// 将机器人名称设置到对话框中
+	ui->comboBox_1->addItems(robotNames);
+	if (!robotNames.isEmpty()) {
+		ui->comboBox_1->setCurrentIndex(0);
+	}
+
+	// 初始设置轨道信息
+	QString currentRobot = robotNames.isEmpty() ? "" : robotNames.first();
+	updateRailOptions(currentRobot, m_robotMap);
+
+
+	// 设置坐标系
+	PQDataType CoodernateType = PQ_COORD;
+	CoodernateMap = getObjectsByType(CoodernateType);
+
+	// 创建一个新的QMap，先插入"世界坐标系"，再插入原有的数据
+	QMap<ULONG, QString> newCoodernateMap;
+	newCoodernateMap.insert(0, "世界坐标系");  // 先插入首位
+
+	// 将原有数据插入到后面（键值从1开始）
+	for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
+		newCoodernateMap.insert(it.key(), it.value());
+	}
+
+	CoodernateMap = newCoodernateMap;  // 替换原来的map
+	QStringList CoodernateNames = CoodernateMap.values();
+
+	ui->comboBox_3->addItems(CoodernateNames);
+	if (!CoodernateNames.isEmpty()) {
+		ui->comboBox_3->setCurrentIndex(0);
+	}
+
+	ui->textEdit->setPlainText("500");//初始化间距
+
+	ui->pushButton_1->setEnabled(false);
+	ui->pushButton_3->setEnabled(false);
+	ui->comboBox_2->setEnabled(false);//设置联动轴复选框不能使用
+
+	ui->horizontalSlider->setMinimum(-50);
+	ui->horizontalSlider->setMaximum(50);
+	ui->horizontalSlider->setValue(0);  // 设置为中间点
+
+	ui->verticalSlider->setMinimum(-50);
+	ui->verticalSlider->setMaximum(50);
+	ui->verticalSlider->setValue(0);  // 设置为中间点
+
+	ui->comboBox_5->addItem("Y轴方向");
+	ui->comboBox_5->addItem("Z轴方向");
+
+	// 初始化变量
+	x_value = 0.0;
+	y_value = 0.0;
+	z_value = 0.0;
+
+	// 初始化包围盒相关数据
+	m_vPosition.clear();
+	ABBPosition.clear();
+	points.clear();
+	pickupMap.clear();
+
+}
+
 
 void cursePart::setupGraphicsScenes()
 {
@@ -476,67 +241,6 @@ void cursePart::setStepsExplanation()
 
 }
 
-void cursePart::setRobotOptions(const QStringList& robotOptions)
-{
-	ui->comboBox_1->addItems(robotOptions);
-	if (!robotOptions.isEmpty()) {
-		ui->comboBox_1->setCurrentIndex(0);
-	}
-}
-
-void cursePart::setRobotOptions(const QString& robotOption)
-{
-	if (!robotOption.isEmpty()) {
-		ui->comboBox_1->addItem(robotOption);
-		ui->comboBox_1->setCurrentIndex(0);
-	}
-}
-
-void cursePart::setCoodernateOptions(const QStringList& coordinateOptions)
-{
-	ui->comboBox_3->addItems(coordinateOptions);
-	if (!coordinateOptions.isEmpty()) {
-		ui->comboBox_3->setCurrentIndex(0);
-	}
-}
-
-void cursePart::setCoodernateOptions(const QString& coordinateOption)
-{
-
-	if (!coordinateOption.isEmpty()) {
-		ui->comboBox_3->addItem(coordinateOption);
-		ui->comboBox_3->setCurrentIndex(0);
-	}
-}
-
-QString cursePart::getCoodernateSelection() const
-{
-	return ui->comboBox_3->currentText();
-}
-
-QString cursePart::getRobotSelection() const
-{
-	return ui->comboBox_1->currentText();
-}
-
-void cursePart::setRailOptions(const QStringList& railOptions)
-{
-	ui->comboBox_2->clear();
-	ui->comboBox_2->addItems(railOptions);
-	if (!railOptions.isEmpty()) {
-		ui->comboBox_2->setCurrentIndex(0);
-	}
-}
-
-void cursePart::setRailOptions(const QString& railOption)
-{
-	ui->comboBox_2->clear();
-	if (!railOption.isEmpty()) {
-		ui->comboBox_2->addItem(railOption);
-		ui->comboBox_2->setCurrentIndex(0);
-	}
-}
-
 void cursePart::addItemToListView(const QString& item)
 {
 	QAbstractItemModel* model = ui->listView->model();
@@ -553,37 +257,6 @@ void cursePart::addItemToListView(const QString& item)
 	}
 }
 
-void cursePart::addItemsToListView(const QStringList& items)
-{
-	QAbstractItemModel* model = ui->listView->model();
-	if (!model) {
-		model = new QStringListModel(this);
-		ui->listView->setModel(model);
-	}
-
-	QStringListModel* listModel = qobject_cast<QStringListModel*>(model);
-	if (listModel) {
-		QStringList currentItems = listModel->stringList();
-		currentItems.append(items);
-		listModel->setStringList(currentItems);
-	}
-}
-
-QString cursePart::getComboBox_4() const
-{
-	return ui->comboBox_4->currentText();
-}
-
-QString cursePart::getComboBox_5() const
-{
-	return ui->comboBox_5->currentText();
-}
-
-QString cursePart::geteditSelection() const
-{
-	return ui->textEdit->toPlainText();
-}
-
 void cursePart::on_textEdit_4_textChanged()
 {
 	QString text = ui->textEdit->toPlainText().trimmed();
@@ -592,7 +265,6 @@ void cursePart::on_textEdit_4_textChanged()
 
 void cursePart::on_horizontalSlider_valueChanged(int value)
 {
-
 	// 计算百分比变化：value范围是-50到50，对应-50%到+50%
 	double percentage = value / 100.0; // 转换为小数形式
 
@@ -602,12 +274,34 @@ void cursePart::on_horizontalSlider_valueChanged(int value)
 	// 更新textEdit_3的显示
 	ui->textEdit_3->setPlainText(QString::number(newValue, 'f', 2));
 
-	emit areaPosition();
+	// 实现onAreaPosition()功能
+	std::vector<double> areaPosition;
+	areaPosition = [this]() {
+		std::vector<double> result;
+		double x_value = ui->textEdit_3->toPlainText().toDouble();
+		double y_value = ui->textEdit_4->toPlainText().toDouble();
+		double z_value = ui->textEdit_5->toPlainText().toDouble();
+
+		result.push_back(x_value);
+		result.push_back(y_value);
+		result.push_back(z_value);
+		return result;
+	}();
+	std::vector<double> difference;
+	for (int i = 0; i < areaPosition.size(); i++) {
+		double diff = areaPosition[i] - points[i];
+		difference.push_back(diff);
+	}
+
+	for (int i = 0; i < points.size(); i += 3) {
+		points[i] = points[i] + difference[0];
+		points[i + 1] = points[i + 1] + difference[1];
+		points[i + 2] = points[i + 2] + difference[2];
+	}
 }
 
 void cursePart::on_verticalSlider_valueChanged(int value)
 {
-
 	// 计算百分比变化：value范围是-50到50，对应-50%到+50%
 	double percentage = value / 100.0; // 转换为小数形式
 
@@ -617,16 +311,42 @@ void cursePart::on_verticalSlider_valueChanged(int value)
 	// 更新textEdit_3的显示
 	ui->textEdit_5->setPlainText(QString::number(newValue, 'f', 2));
 
-	emit areaPosition();
+	// 实现onAreaPosition()功能
+	std::vector<double> areaPosition;
+	areaPosition = [this]() {
+		std::vector<double> result;
+		double x_value = ui->textEdit_3->toPlainText().toDouble();
+		double y_value = ui->textEdit_4->toPlainText().toDouble();
+		double z_value = ui->textEdit_5->toPlainText().toDouble();
+
+		result.push_back(x_value);
+		result.push_back(y_value);
+		result.push_back(z_value);
+		return result;
+	}();
+	std::vector<double> difference;
+	for (int i = 0; i < areaPosition.size(); i++) {
+		double diff = areaPosition[i] - points[i];
+		difference.push_back(diff);
+	}
+
+	for (int i = 0; i < points.size(); i += 3) {
+		points[i] = points[i] + difference[0];
+		points[i + 1] = points[i + 1] + difference[1];
+		points[i + 2] = points[i + 2] + difference[2];
+	}
 }
 
-void cursePart::on_coordanateTextChanged(int state)
+void cursePart::on_coordanateTextChanged()
 {
 	// 阻塞 comboBox_5 的信号，防止在清空和添加项时触发不必要的信号（如 currentIndexChanged）
 	ui->comboBox_5->blockSignals(true);
 
 	// 清空 comboBox_5
 	ui->comboBox_5->clear();
+
+	// 获取当前状态 - 使用comboBox_4的当前索引
+	int state = ui->comboBox_4->currentIndex();
 
 	// 根据状态添加不同的项
 	if (state < 2) {
@@ -653,7 +373,59 @@ void cursePart::on_coordanateTextChanged(int state)
 
 void cursePart::on_confirm_clicked()
 {
-	emit confirm();
+	// 确认按钮逻辑
+	done(QDialog::Rejected);
+	this->close();
+
+}
+
+void cursePart::on_calculate_workspace()
+{
+	QString robotName = ui->comboBox_1->currentText();
+	ULONG robotID = 0;
+
+	QString coordinateName = ui->comboBox_3->currentText();
+	QString directionName = ui->comboBox_4->currentText();
+
+	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
+	bool isLink = ui->checkBox->isChecked();
+	double theta = ui->textBrowser_1->toPlainText().toDouble();
+
+	QString railName = ui->comboBox_2->currentText();
+
+	// 实现onCalculateSpace()功能 - 计算点阵
+	Point3D direction(0, 1, 0);
+	ui->textEdit_1->setPlainText("500");
+	ui->textEdit_2->setPlainText("500");
+	int length = ui->textEdit_1->toPlainText().toDouble();
+	int width = ui->textEdit_2->toPlainText().toDouble();
+
+	// 使用之前计算的包围盒信息生成点阵
+	auto grid = createGridOnClosestSurface(box, length, width, direction);
+
+	points.clear(); // 清空之前的点数据
+	for (auto p : grid) {
+		points.push_back(p.x);
+		points.push_back(p.y);
+		points.push_back(p.z);
+	}
+
+	if (!points.empty()) {
+		QString value1 = QString("%1").arg(points[0]);
+		QString value2 = QString("%1").arg(points[1]);
+		QString value3 = QString("%1").arg(points[2]);
+
+		ui->textEdit_3->setPlainText(value1);
+		ui->textEdit_4->setPlainText(value2);
+		ui->textEdit_5->setPlainText(value3);
+
+		// 更新x_value和z_value
+		x_value = points[0];
+		z_value = points[2];
+	}
+
+	// 输出使用厚度的调试信息
+	qDebug() << "当前使用的厚度值：" << m_thickness << "mm";
 }
 
 // 页面导航槽函数
@@ -682,7 +454,16 @@ void cursePart::on_next_page_clicked()
 		ui->pushButton_4->setEnabled(true);
 	}
 
-	emit closeSignal();
+	// 实现onCloseSignal()功能
+	if (isPickupActive || isPreview) {
+		isPickupActive = false;
+		isPreview = false;
+		this->setModal(true);
+		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+		HRESULT hr = m_ptrKit->Doc_end_module(cmd);
+		this->setWindowModality(Qt::ApplicationModal);
+		qDebug() << "拾取模块已停止";
+	}
 }
 
 void cursePart::on_prev_page_clicked()
@@ -699,43 +480,222 @@ void cursePart::on_prev_page_clicked()
 
 void cursePart::on_cancel_clicked()
 {
-	emit cancel(QDialog::Rejected);
+	done(QDialog::Rejected);
 	this->close();
 }
 
 
 void cursePart::on_pickUpButton_clicked()
 {
-	emit pickUpSignal();
+	// 实现onPickUpSignal()功能
+	if (!isPickupActive && !isPreview) {
+		// 启动拾取模块
+		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+		HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+		if (SUCCEEDED(hr)) {
+			isPickupActive = true;
+			isPreview = false; // 确保预览模式关闭
+			this->setModal(false);
+			this->setWindowModality(Qt::NonModal);
+			qDebug() << "曲面拾取模块已启动，请在3D窗口中点击元素";
+		}
+		else {
+			QMessageBox::warning(this, "错误", "启动曲面拾取模块失败！");
+		}
+	}
+	else {
+		QString mode = isPreview ? "预览模式" : "曲面拾取模式";
+		qDebug() << mode << "已在运行中";
+	}
 }
 
 void cursePart::on_finishButton_clicked()
 {
-	emit calculateBoundingBox();
-	emit closeSignal();
+	
+	// 实现onCloseSignal()功能
+	if (isPickupActive || isPreview) {
+		isPickupActive = false;
+		isPreview = false;
+		this->setModal(true);
+		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+		HRESULT hr = m_ptrKit->Doc_end_module(cmd);
+		this->setWindowModality(Qt::ApplicationModal);
+		qDebug() << "拾取模块已停止";
+	}
 }
 
 void cursePart::on_previewButton_clicked()
 {
-	emit previewSignal();
+	// 实现onPreviewSignal()功能
+	// 启动拾取模块
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+	if (SUCCEEDED(hr)) {
+		isPoint = true;
+		isPickupActive = false; // 关闭拾取模式
+	}
 }
 
 void cursePart::on_spaceSettingButton_clicked()
 {
+	// 实现onCalculateBoundingBox()功能
+	m_vPosition.clear(); // 清空之前的数据
+
+	// 从拾取的曲面中提取点
+	for (const auto& pair : pickupMap) {
+		unsigned long key = pair.first;
+		const std::vector<std::wstring>& values = pair.second;
+		long lCount = 0;
+		m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);
+		std::vector<double> dSrc(3 * lCount, 0);
+		double* dSrcPosition = dSrc.data();
+		m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
+		for (const auto& value : values) {
+			for (long i = 0; i < lCount; i++) {
+				double dPosition[3] = { dSrcPosition[3 * i],dSrcPosition[3 * i + 1],dSrcPosition[3 * i + 2] };
+				double dTol = 10;
+				LONG bPointOnSurface = 0;
+				std::vector<wchar_t> buffer(value.begin(), value.end());
+				buffer.push_back(L'\0');
+				LPWSTR name = buffer.data();
+				m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
+				if (bPointOnSurface) {
+					m_vPosition.push_back(dPosition[0]);
+					m_vPosition.push_back(dPosition[1]);
+					m_vPosition.push_back(dPosition[2]);
+				}
+			}
+		}
+	}
+
+	if (m_vPosition.empty()) {
+		qDebug() << "没有找到有效的曲面点";
+		return;
+	}
+
+	// 计算包围盒
+	box.minPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
+	box.maxPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
+
+	for (size_t i = 0; i < m_vPosition.size(); i += 3) {
+		box.minPoint.x = std::min(box.minPoint.x, m_vPosition[i]);
+		box.minPoint.y = std::min(box.minPoint.y, m_vPosition[i + 1]);
+		box.minPoint.z = std::min(box.minPoint.z, m_vPosition[i + 2]);
+
+		box.maxPoint.x = std::max(box.maxPoint.x, m_vPosition[i]);
+		box.maxPoint.y = std::max(box.maxPoint.y, m_vPosition[i + 1]);
+		box.maxPoint.z = std::max(box.maxPoint.z, m_vPosition[i + 2]);
+	}
+
+	std::vector<Point3D> box_8 = box.getCorners();
+	ABBPosition.clear();
+	for (int i = 0; i < 8; i++) {
+		ABBPosition.push_back(box_8[i].x);
+		ABBPosition.push_back(box_8[i].y);
+		ABBPosition.push_back(box_8[i].z);
+	}
+
 	QString text = ui->textEdit->toPlainText().trimmed();
 	bool ok;
-	int number = text.toInt(&ok);
+	double spacing = text.toDouble(&ok);
 
-	if (ok) {
-		emit spaceSetting(number);
-		qDebug() << "Valid number:" << number;
-		emit calculateSpace();
+	if (ok && spacing > 0) {
+		// 获取坐标系和方向
+		QString coordanateName = ui->comboBox_3->currentText();
+		QString mainVectorText = ui->comboBox_4->currentText();
+		QString mainDivisionDirectionText = ui->comboBox_5->currentText();
+
+		// 获取坐标系姿态
+		ULONG selectCoorID = 0;
+		PQDataType CoodernateType = PQ_COORD;
+		selectCoorID = CoodernateMap.key(coordanateName);
+
+		double coordanate[6] = { 0 };
+		if (selectCoorID != 0) {
+			int nCount = 0;
+			double* dPosture = nullptr;
+			m_ptrKit->Doc_get_coordinate_posture(selectCoorID, EULERANGLEXYZ, &nCount, &dPosture, 0);
+			if (dPosture) {
+				for (int i = 0; i < 6; i++) coordanate[i] = dPosture[i];
+				m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
+			}
+		}
+
+		// 获取轴向量
+		std::vector<std::vector<double>> axisVector = getCoordinateAxesFromEuler(coordanate);
+		std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
+		std::vector<double> mainDivisionDirection = getAxisVector(axisVector, mainDivisionDirectionText);
+
+		// 计算最大角度
+		Point3D viewDirection(mainVector[0], mainVector[1], mainVector[2]);
+		std::vector<Point3D> corners = box.getCorners();
+		std::vector<Point3D> result = createGridOnClosestSurface(corners, spacing, spacing, viewDirection);
+
+		double maxtheta = 0;
+		for (const auto& key : pickupMap) {
+			unsigned long k = key.first;
+			for (const auto value : key.second) {
+				CComBSTR whSurfaceName = value.c_str();
+				for (Point3D P : result) {
+					double dPosition[3] = { P.x,P.y,P.z };
+					double* dIntersetionpoint = nullptr;
+					int nArrsize = 1;
+					m_ptrKit->Part_get_ray_surface_intersetion(whSurfaceName, dPosition, mainVector.data(),
+						&dIntersetionpoint, &nArrsize);
+					if (dIntersetionpoint != nullptr && nArrsize >= 6) {
+						Eigen::Vector3d v1(mainVector[0], mainVector[1], mainVector[2]);
+						Eigen::Vector3d v2(dIntersetionpoint[3], dIntersetionpoint[4], dIntersetionpoint[5]);
+						Eigen::Vector3d v1_norm = v1.normalized();
+						Eigen::Vector3d v2_norm = v2.normalized();
+						double dot = std::max(-1.0, std::min(1.0, v1_norm.dot(v2_norm)));
+						maxtheta = std::max(std::acos(dot), maxtheta);
+					}
+					if (dIntersetionpoint != nullptr) {
+						m_ptrKit->PQAPIFree((LONG_PTR*)dIntersetionpoint);
+					}
+				}
+			}
+		}
+		maxtheta = maxtheta * 180 / M_PI;
+		ui->textBrowser_1->setPlainText(QString("%1").arg(maxtheta) + "°");
+
+		// 计算厚度
+		if (ABBPosition.size() == 24) {
+			std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
+			if (mainVector.size() == 3) {
+				// 标准化方向向量
+				double norm = sqrt(mainVector[0] * mainVector[0] + mainVector[1] * mainVector[1] + mainVector[2] * mainVector[2]);
+				if (norm > 0) {
+					mainVector[0] /= norm;
+					mainVector[1] /= norm;
+					mainVector[2] /= norm;
+				}
+
+				// 计算8个角点在方向上的投影
+				std::vector<double> projections;
+				for (int i = 0; i < 8; i++) {
+					double x = ABBPosition[i * 3];
+					double y = ABBPosition[i * 3 + 1];
+					double z = ABBPosition[i * 3 + 2];
+					double projection = x * mainVector[0] + y * mainVector[1] + z * mainVector[2];
+					projections.push_back(projection);
+				}
+
+				if (!projections.empty()) {
+					double minProj = *std::min_element(projections.begin(), projections.end());
+					double maxProj = *std::max_element(projections.begin(), projections.end());
+					m_thickness = maxProj - minProj;
+					ui->textBrowser_2->setPlainText(QString::number(m_thickness, 'f', 2));
+					qDebug() << "厚度计算完成：" << m_thickness << "mm";
+				}
+			}
+		}
 	}
 	else {
-		qDebug() << "Invalid input";
-		QMessageBox::warning(this, "Warning", "Invalid input");
+		QMessageBox::warning(this, "Warning", "请输入有效的间距值");
 	}
 }
+
 
 void cursePart::on_deleteButton_clicked()
 {
@@ -780,65 +740,67 @@ void cursePart::on_deleteButton_clicked()
 	selectionModel->clearSelection();
 
 	if (!deletedSurfaceNames.isEmpty()) {
-		emit deleteSelectedSurfaces(deletedSurfaceNames);
+		// 实现onDeleteSelectedSurfaces(deletedSurfaceNames)功能
+		if (deletedSurfaceNames.isEmpty()) {
+			qDebug() << "没有需要删除的曲面";
+			return;
+		}
+
+		// 从 pickupMap 中删除指定的曲面
+		int deletedCount = 0;
+
+		for (const QString& surfaceName : deletedSurfaceNames) {
+			// 将 QString 转换为 std::wstring
+			std::wstring wSurfaceName = surfaceName.toStdWString();
+
+			// 遍历 pickupMap 查找并删除对应的曲面
+			auto it = pickupMap.begin();
+			while (it != pickupMap.end()) {
+				auto& surfaces = it->second;
+				auto surfaceIt = std::find(surfaces.begin(), surfaces.end(), wSurfaceName);
+
+				if (surfaceIt != surfaces.end()) {
+					// 找到曲面，从向量中删除
+					surfaces.erase(surfaceIt);
+					deletedCount++;
+					qDebug() << "已从 pickupMap 中删除曲面:" << surfaceName;
+
+					// 如果该键对应的向量为空，可以选择删除整个键值对
+					if (surfaces.empty()) {
+						it = pickupMap.erase(it);
+					}
+					else {
+						++it;
+					}
+
+					// 假设曲面名称在 pickupMap 中唯一，找到后跳出内层循环
+					break;
+				}
+				else {
+					++it;
+				}
+			}
+		}
+
+		qDebug() << "总共删除了" << deletedCount << "个曲面";
 	}
 }
 
 void cursePart::on_comboBox_currentTextChanged(const QString& text)
 {
-	emit robotSelectionChanged(text);
+	updateRailOptions(text, m_robotMap);
 }
 
-void cursePart::setTextBrowser2(const QString& text)
+void cursePart::onDialogFinished(int result)
 {
-	ui->textBrowser_1->setPlainText(text);
-}
-
-// 设置textEdit的值
-void cursePart::setTextEdit(const QString& text)
-{
-	ui->textEdit_1->setPlainText(text);
-}
-
-void cursePart::setTextEdit2(const QString& text)
-{
-	ui->textEdit_2->setPlainText(text);
-}
-
-// 获取textEdit的值
-QString cursePart::getTextEdit() const
-{
-	return ui->textEdit_1->toPlainText();
-}
-
-QString cursePart::getTextEdit2() const
-{
-	return ui->textEdit_2->toPlainText();
-}
-
-
-void cursePart::setTextEditValues(const QString& text3, const QString& text5, const QString& text6)
-{
-	ui->textEdit_3->setPlainText(text3);
-	ui->textEdit_4->setPlainText(text5);
-	ui->textEdit_5->setPlainText(text6);
-
-	x_value = text3.toDouble();
-	y_value = text5.toDouble();
-	z_value = text6.toDouble();
-}
-
-std::vector<double> cursePart::getVertexValues()
-{
-	std::vector<double> result;
-	double x_value = ui->textEdit_3->toPlainText().toDouble();
-	double y_value = ui->textEdit_4->toPlainText().toDouble();
-	double z_value = ui->textEdit_5->toPlainText().toDouble();
-
-	result.push_back(x_value);
-	result.push_back(y_value);
-	result.push_back(z_value);
-	return result;
+	Q_UNUSED(result)
+		// 停止任何正在运行的模块
+		if (isPickupActive || isPreview) {
+			CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+			m_ptrKit->Doc_end_module(cmd);
+		}
+	isPickupActive = false;
+	isPreview = false;
 }
 
 QMap<ULONG, QString> cursePart::getObjectsByType(PQDataType objType)
@@ -1060,53 +1022,6 @@ void cursePart::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG 
 	SafeArrayUnaccessData(vIDPara.parray);
 }
 
-//处理删除曲面的槽函数
-void cursePart::onDeleteSelectedSurfaces(const QStringList& surfaceNames)
-{
-	if (surfaceNames.isEmpty()) {
-		qDebug() << "没有需要删除的曲面";
-		return;
-	}
-
-	// 从 pickupMap 中删除指定的曲面
-	int deletedCount = 0;
-
-	for (const QString& surfaceName : surfaceNames) {
-		// 将 QString 转换为 std::wstring
-		std::wstring wSurfaceName = surfaceName.toStdWString();
-
-		// 遍历 pickupMap 查找并删除对应的曲面
-		auto it = pickupMap.begin();
-		while (it != pickupMap.end()) {
-			auto& surfaces = it->second;
-			auto surfaceIt = std::find(surfaces.begin(), surfaces.end(), wSurfaceName);
-
-			if (surfaceIt != surfaces.end()) {
-				// 找到曲面，从向量中删除
-				surfaces.erase(surfaceIt);
-				deletedCount++;
-				qDebug() << "已从 pickupMap 中删除曲面:" << surfaceName;
-
-				// 如果该键对应的向量为空，可以选择删除整个键值对
-				if (surfaces.empty()) {
-					it = pickupMap.erase(it);
-				}
-				else {
-					++it;
-				}
-
-				// 假设曲面名称在 pickupMap 中唯一，找到后跳出内层循环
-				break;
-			}
-			else {
-				++it;
-			}
-		}
-	}
-
-	qDebug() << "总共删除了" << deletedCount << "个曲面";
-
-}
 
 std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<unsigned long,
 	std::vector<std::wstring>>&pickupMap)
@@ -1154,9 +1069,9 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 				m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
 
 				if (bPointOnSurface) {
-					ABBPosition.push_back(dPosition[0]);
-					ABBPosition.push_back(dPosition[1]);
-					ABBPosition.push_back(dPosition[2]);
+					surfacePoints.push_back(dPosition[0]);
+					surfacePoints.push_back(dPosition[1]);
+					surfacePoints.push_back(dPosition[2]);
 				}
 			}
 		}
@@ -1164,32 +1079,34 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 
 	// 计算AABB包围盒
 	AABB box;
-	box.minPoint = { 0, 0, 0 };
-	box.maxPoint = { 0, 0, 0 };
 
-	// 将点转换为Point3D格式
-	std::vector<Point3D> cursePoints;
+	if (surfacePoints.empty()) {
+		return resultPositions; // 返回空结果
+	}
+
+	box.minPoint = { surfacePoints[0], surfacePoints[1], surfacePoints[2] };
+	box.maxPoint = { surfacePoints[0], surfacePoints[1], surfacePoints[2] };
+
 	for (size_t i = 0; i < surfacePoints.size(); i += 3) {
 		if (i + 2 < surfacePoints.size()) {
-			Point3D p;
-			p.x = surfacePoints[i];
-			p.y = surfacePoints[i + 1];
-			p.z = surfacePoints[i + 2];
-			cursePoints.push_back(p);
+			box.minPoint.x = std::min(box.minPoint.x, surfacePoints[i]);
+			box.minPoint.y = std::min(box.minPoint.y, surfacePoints[i + 1]);
+			box.minPoint.z = std::min(box.minPoint.z, surfacePoints[i + 2]);
+
+			box.maxPoint.x = std::max(box.maxPoint.x, surfacePoints[i]);
+			box.maxPoint.y = std::max(box.maxPoint.y, surfacePoints[i + 1]);
+			box.maxPoint.z = std::max(box.maxPoint.z, surfacePoints[i + 2]);
 		}
 	}
 
 	// 计算AABB并获取8个角点
-	if (!cursePoints.empty()) {
-		box = calculateAABB(cursePoints);
-		std::vector<Point3D> boxCorners = box.getCorners();
+	std::vector<Point3D> boxCorners = box.getCorners();
 
-		// 将角点坐标展平为连续数组
-		for (const auto& corner : boxCorners) {
-			resultPositions.push_back(corner.x);
-			resultPositions.push_back(corner.y);
-			resultPositions.push_back(corner.z);
-		}
+	// 将角点坐标展平为连续数组
+	for (const auto& corner : boxCorners) {
+		resultPositions.push_back(corner.x);
+		resultPositions.push_back(corner.y);
+		resultPositions.push_back(corner.z);
 	}
 	return resultPositions;
 }
@@ -1309,7 +1226,11 @@ void cursePart::updateRailOptions(const QString & robotName, const QMap<ULONG, Q
 	}
 
 	// 更新对话框中的轨道选项
-	this->setRailOptions(rail);
+	ui->comboBox_2->clear();
+	ui->comboBox_2->addItems(rail);
+	if (!rail.isEmpty()) {
+		ui->comboBox_2->setCurrentIndex(0);
+	}
 }
 
 
