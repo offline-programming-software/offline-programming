@@ -79,14 +79,14 @@ private:
 
 	// 新增：包围盒在选择方向上的厚度
 	double m_thickness = 0.0;
-
+	QString m_tempDir = "./temp/jsons/";
 
 
 private:
 
 	void setupGraphicsScenes(); // 初始化图形场景
-	void setStepsExplanation();
-	void init();
+	void setStepsExplanation();// 设置每个界面的功能介绍
+	void init(); //初始化界面
 	void updateRailOptions(const QString & robotName, const QMap<ULONG, QString>& robotMap);
 	void addItemToListView(const QString& item);
 	std::vector<double> calculateAABBCornersFromPickupMap(const std::map<unsigned long,

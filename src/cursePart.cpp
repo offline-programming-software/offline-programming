@@ -393,6 +393,21 @@ void cursePart::on_calculate_workspace()
 
 	QString railName = ui->comboBox_2->currentText();
 
+	QString thickness = ui->textBrowser_2->toPlainText();
+
+	QString jsonName = m_tempDir + "workspace_" + robotName + ".json";
+
+	parseJSON queryHelper(jsonName.toStdString());
+	std::map<std::string, json> conditions;
+	conditions["robotID"] = robotID;
+	conditions["isLink"] = isLink;
+	conditions["CoordinateName"] = coordinateName.toStdString();
+	conditions["DirectionName"] = directionName.toStdString();
+	conditions["railName"] = railName.toStdString();
+
+	auto andResults = queryHelper.findObjectsByMultipleKeys(conditions);
+
+
 	// 实现onCalculateSpace()功能 - 计算点阵
 	Point3D direction(0, 1, 0);
 	ui->textEdit_1->setPlainText("500");
@@ -541,59 +556,61 @@ void cursePart::on_spaceSettingButton_clicked()
 	// 实现onCalculateBoundingBox()功能
 	m_vPosition.clear(); // 清空之前的数据
 
-	// 从拾取的曲面中提取点
-	for (const auto& pair : pickupMap) {
-		unsigned long key = pair.first;
-		const std::vector<std::wstring>& values = pair.second;
-		long lCount = 0;
-		m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);
-		std::vector<double> dSrc(3 * lCount, 0);
-		double* dSrcPosition = dSrc.data();
-		m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
-		for (const auto& value : values) {
-			for (long i = 0; i < lCount; i++) {
-				double dPosition[3] = { dSrcPosition[3 * i],dSrcPosition[3 * i + 1],dSrcPosition[3 * i + 2] };
-				double dTol = 10;
-				LONG bPointOnSurface = 0;
-				std::vector<wchar_t> buffer(value.begin(), value.end());
-				buffer.push_back(L'\0');
-				LPWSTR name = buffer.data();
-				m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
-				if (bPointOnSurface) {
-					m_vPosition.push_back(dPosition[0]);
-					m_vPosition.push_back(dPosition[1]);
-					m_vPosition.push_back(dPosition[2]);
-				}
-			}
-		}
-	}
+	//// 从拾取的曲面中提取点(获取曲面上的顶点)
+	//for (const auto& pair : pickupMap) {
+	//	unsigned long key = pair.first;
+	//	const std::vector<std::wstring>& values = pair.second;
+	//	long lCount = 0;
+	//	m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);
+	//	std::vector<double> dSrc(3 * lCount, 0);
+	//	double* dSrcPosition = dSrc.data();
+	//	m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
+	//	for (const auto& value : values) {
+	//		for (long i = 0; i < lCount; i++) {
+	//			double dPosition[3] = { dSrcPosition[3 * i],dSrcPosition[3 * i + 1],dSrcPosition[3 * i + 2] };
+	//			double dTol = 10;
+	//			LONG bPointOnSurface = 0;
+	//			std::vector<wchar_t> buffer(value.begin(), value.end());
+	//			buffer.push_back(L'\0');
+	//			LPWSTR name = buffer.data();
+	//			m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
+	//			if (bPointOnSurface) {
+	//				m_vPosition.push_back(dPosition[0]);
+	//				m_vPosition.push_back(dPosition[1]);
+	//				m_vPosition.push_back(dPosition[2]);
+	//			}
+	//		}
+	//	}
+	//}
 
-	if (m_vPosition.empty()) {
-		qDebug() << "没有找到有效的曲面点";
-		return;
-	}
+	//if (m_vPosition.empty()) {
+	//	qDebug() << "没有找到有效的曲面点";
+	//	return;
+	//}
 
-	// 计算包围盒
-	box.minPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
-	box.maxPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
+	//// 计算包围盒
+	//box.minPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
+	//box.maxPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
 
-	for (size_t i = 0; i < m_vPosition.size(); i += 3) {
-		box.minPoint.x = std::min(box.minPoint.x, m_vPosition[i]);
-		box.minPoint.y = std::min(box.minPoint.y, m_vPosition[i + 1]);
-		box.minPoint.z = std::min(box.minPoint.z, m_vPosition[i + 2]);
+	//for (size_t i = 0; i < m_vPosition.size(); i += 3) {
+	//	box.minPoint.x = std::min(box.minPoint.x, m_vPosition[i]);
+	//	box.minPoint.y = std::min(box.minPoint.y, m_vPosition[i + 1]);
+	//	box.minPoint.z = std::min(box.minPoint.z, m_vPosition[i + 2]);
 
-		box.maxPoint.x = std::max(box.maxPoint.x, m_vPosition[i]);
-		box.maxPoint.y = std::max(box.maxPoint.y, m_vPosition[i + 1]);
-		box.maxPoint.z = std::max(box.maxPoint.z, m_vPosition[i + 2]);
-	}
+	//	box.maxPoint.x = std::max(box.maxPoint.x, m_vPosition[i]);
+	//	box.maxPoint.y = std::max(box.maxPoint.y, m_vPosition[i + 1]);
+	//	box.maxPoint.z = std::max(box.maxPoint.z, m_vPosition[i + 2]);
+	//}
 
-	std::vector<Point3D> box_8 = box.getCorners();
-	ABBPosition.clear();
-	for (int i = 0; i < 8; i++) {
-		ABBPosition.push_back(box_8[i].x);
-		ABBPosition.push_back(box_8[i].y);
-		ABBPosition.push_back(box_8[i].z);
-	}
+	//std::vector<Point3D> box_8 = box.getCorners();
+	//ABBPosition.clear();
+	//for (int i = 0; i < 8; i++) {
+	//	ABBPosition.push_back(box_8[i].x);
+	//	ABBPosition.push_back(box_8[i].y);
+	//	ABBPosition.push_back(box_8[i].z);
+	//}
+
+	ABBPosition = calculateAABBCornersFromPickupMap(pickupMap);//计算出包围盒子
 
 	QString text = ui->textEdit->toPlainText().trimmed();
 	bool ok;
