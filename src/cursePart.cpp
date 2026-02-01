@@ -1,7 +1,175 @@
-#include "cursePart.h"
+ï»¿#include "cursePart.h"
 #include <Eigen/Dense>
 #include <algorithm>
-#include "parseJSON.h"
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+#include <cmath>
+
+// RobotWorkspaceHandler ç±»å®ç°
+void RobotWorkspaceHandler::writeRobotWorkspaceBoundary(const RobotWorkspaceBoundary& boundary) {
+	json jsonData;
+
+	// å°è¯•è¯»å–ç°æœ‰æ•°æ®
+	std::ifstream file(jsonFileName);
+	if (file.is_open()) {
+		try {
+			file >> jsonData;
+			file.close();
+		}
+		catch (...) {
+			jsonData = json::array(); // å¦‚æœè¯»å–å¤±è´¥ï¼Œåˆå§‹åŒ–ä¸ºç©ºæ•°ç»„
+		}
+	}
+	else {
+		jsonData = json::array(); // å¦‚æœæ–‡ä»¶ä¸å­˜åœ¨ï¼Œåˆå§‹åŒ–ä¸ºç©ºæ•°ç»„
+	}
+
+	// åˆ›å»ºæ–°çš„è¾¹ç•Œå¯¹è±¡
+	json newBoundary;
+	newBoundary["robotID"] = boundary.robotID;
+	newBoundary["thickness"] = boundary.thickness;
+	newBoundary["theta"] = boundary.theta;
+	newBoundary["isLink"] = boundary.isLink;
+	newBoundary["CoordinateName"] = boundary.CoordinateName.toStdString();
+	newBoundary["DirectionName"] = boundary.DirectionName.toStdString();
+
+	// è½¬æ¢railNameå‘é‡
+	json railNamesArray = json::array();
+	for (const auto& name : boundary.railName) {
+		railNamesArray.push_back(name.toStdString());
+	}
+	newBoundary["railName"] = railNamesArray;
+
+	// è½¬æ¢pointså‘é‡
+	json pointsArray = json::array();
+	for (double point : boundary.points) {
+		pointsArray.push_back(point);
+	}
+	newBoundary["points"] = pointsArray;
+
+	// æ·»åŠ åˆ°JSONæ•°ç»„ä¸­
+	if (jsonData.is_array()) {
+		jsonData.push_back(newBoundary);
+	}
+	else {
+		jsonData = json::array({ newBoundary });
+	}
+
+	// å†™å›æ–‡ä»¶
+	std::ofstream outFile(jsonFileName);
+	if (outFile.is_open()) {
+		outFile << jsonData.dump(4); // æ ¼å¼åŒ–è¾“å‡ºï¼Œç¼©è¿›4ä¸ªç©ºæ ¼
+		outFile.close();
+	}
+	else {
+		throw std::runtime_error("Cannot write to JSON file: " + jsonFileName);
+	}
+}
+
+std::vector<double> RobotWorkspaceHandler::findMatchingPoints(
+	ULONG robotID,
+	bool isLink,
+	const QString& coordinateName,
+	const QString& directionName,
+	const QString& railName,
+	double targetTheta,
+	double targetThickness) {
+
+	parseJSON queryHelper(jsonFileName);
+	std::map<std::string, json> conditions;
+	conditions["robotID"] = robotID;
+	conditions["isLink"] = isLink;
+	conditions["CoordinateName"] = coordinateName.toStdString();
+	conditions["DirectionName"] = directionName.toStdString();
+	conditions["railName"] = railName.toStdString();
+
+	auto results = queryHelper.findObjectsByMultipleKeys(conditions);
+
+	if (results.empty()) {
+		return std::vector<double>(); // è¿”å›ç©ºå‘é‡è¡¨ç¤ºæ²¡æœ‰æ‰¾åˆ°åŒ¹é…é¡¹
+	}
+
+	// åœ¨æ‰€æœ‰åŒ¹é…çš„ç»“æœä¸­å¯»æ‰¾æœ€æ¥è¿‘ç›®æ ‡thetaå’Œthicknessçš„points
+	std::vector<double> bestPoints;
+	double minDistance = std::numeric_limits<double>::max();
+
+	for (const auto& result : results) {
+		// æå–thetaå’Œthicknessè¿›è¡Œæ¯”è¾ƒ
+		double currentTheta = result.value("theta", 0.0);
+		double currentThickness = result.value("thickness", 0.0);
+
+		// è®¡ç®—ä¸ç›®æ ‡å€¼çš„è·ç¦»ï¼ˆæ¬§å‡ é‡Œå¾—è·ç¦»ï¼‰
+		double distance = std::sqrt(
+			std::pow(currentTheta - targetTheta, 2) +
+			std::pow(currentThickness - targetThickness, 2)
+		);
+
+		if (distance < minDistance) {
+			minDistance = distance;
+
+			// è·å–å¯¹åº”çš„pointsæ•°ç»„
+			if (result.contains("points") && result["points"].is_array()) {
+				bestPoints.clear();
+				for (const auto& point : result["points"]) {
+					if (point.is_number()) {
+						bestPoints.push_back(point.get<double>());
+					}
+				}
+			}
+		}
+	}
+
+	return bestPoints;
+}
+
+double RobotWorkspaceHandler::findClosestPointUp(const std::vector<double>& points, double targetValue) {
+	if (points.empty()) {
+		return targetValue; // å¦‚æœæ²¡æœ‰pointsï¼Œè¿”å›ç›®æ ‡å€¼
+	}
+
+	// æŸ¥æ‰¾å¤§äºç­‰äºç›®æ ‡å€¼çš„æœ€å°ç‚¹
+	auto upperIt = std::upper_bound(points.begin(), points.end(), targetValue);
+
+	if (upperIt != points.end()) {
+		return *upperIt; // è¿”å›ç¬¬ä¸€ä¸ªå¤§äºtargetValueçš„ç‚¹
+	}
+	else if (!points.empty()) {
+		// å¦‚æœæ²¡æœ‰æ›´å¤§çš„ç‚¹ï¼Œåˆ™è¿”å›æœ€å¤§çš„ç‚¹
+		return points.back();
+	}
+
+	return targetValue; // é»˜è®¤è¿”å›ç›®æ ‡å€¼
+}
+
+std::vector<double> RobotWorkspaceHandler::processRobotWorkspaceQuery(
+	const QString& robotName,
+	ULONG robotID,
+	const QString& coordinateName,
+	const QString& directionName,
+	bool isLink,
+	double theta,
+	double thickness,
+	const QString& railName) {
+
+	// é¦–å…ˆæŸ¥æ‰¾åŒ¹é…çš„è®°å½•
+	auto matchingPoints = findMatchingPoints(
+		robotID, isLink, coordinateName, directionName, railName, theta, thickness
+	);
+
+	if (matchingPoints.empty()) {
+		return matchingPoints; // è¿”å›ç©ºå‘é‡
+	}
+
+	// å¯¹thetaå’Œthicknessåˆ†åˆ«è¿›è¡Œå‘ä¸Šå–æ•´
+	std::vector<double> adjustedPoints;
+	for (double point : matchingPoints) {
+		double roundedPoint = std::ceil(point); // å‘ä¸Šå–æ•´
+		adjustedPoints.push_back(roundedPoint);
+	}
+
+	return adjustedPoints;
+}
 
 cursePart::cursePart(QWidget *parent,
 	CComPtr<IPQPlatformComponent> ptrKit,
@@ -13,55 +181,55 @@ cursePart::cursePart(QWidget *parent,
 {
 	ui->setupUi(this);
 
-	// stackedWidgetÄ¬ÈÏÏÔÊ¾pageÎª0Ò³
+	// stackedWidgeté»˜è®¤æ˜¾ç¤ºpageä¸º0é¡µ
 	ui->stackedWidget->setCurrentIndex(0);
 
-	// ÉèÖÃÍ¼ĞÎ³¡¾°
+	// è®¾ç½®å›¾å½¢åœºæ™¯
 	setupGraphicsScenes();
 
-	// ÉèÖÃ²½Öè½âÊÍ
+	// è®¾ç½®æ­¥éª¤è§£é‡Š
 	setStepsExplanation();
 
-	//³õÊ¼»¯Êı¾İ
+	//åˆå§‹åŒ–æ•°æ®
 	init();
-	//ÉÏÒ»Ò³°´Å¥
+	//ä¸Šä¸€é¡µæŒ‰é’®
 	QPushButton* prevButton = ui->pushButton_1;
 	connect(prevButton, &QPushButton::clicked, this, &cursePart::on_prev_page_clicked);
 
-	//ÏÂÒ»Ò³°´Å¥
+	//ä¸‹ä¸€é¡µæŒ‰é’®
 	QPushButton* nextButton = ui->pushButton_2;
 	connect(nextButton, &QPushButton::clicked, this, &cursePart::on_next_page_clicked);
 
-	//Ô¤ÀÀ°´Å¥
+	//é¢„è§ˆæŒ‰é’®
 	QPushButton* previewButton = ui->pushButton_3;
 	connect(previewButton, &QPushButton::clicked, this, &cursePart::on_confirm_clicked);
 
-	//È·ÈÏ°´Å¥
+	//ç¡®è®¤æŒ‰é’®
 	QPushButton* confirmButton = ui->pushButton_4;
 	connect(confirmButton, &QPushButton::clicked, this, &cursePart::on_cancel_clicked);
 	ui->pushButton_4->setEnabled(false);
 
-	//È¡Ïû°´Å¥
+	//å–æ¶ˆæŒ‰é’®
 	QPushButton* cancelButton = ui->pushButton_5;
 	connect(cancelButton, &QPushButton::clicked, this, &cursePart::on_cancel_clicked);
 
-	// ¹¦ÄÜ°´Å¥
+	// åŠŸèƒ½æŒ‰é’®
 
-	connect(ui->pushButton_6, &QPushButton::clicked, this, &cursePart::on_pickUpButton_clicked);//Ê°È¡
-	connect(ui->pushButton_7, &QPushButton::clicked, this, &cursePart::on_deleteButton_clicked);//É¾³ıÇúÃæ
-	connect(ui->pushButton_8, &QPushButton::clicked, this, &cursePart::on_finishButton_clicked);//½áÊøÊ°È¡Ä£Ê½
+	connect(ui->pushButton_6, &QPushButton::clicked, this, &cursePart::on_pickUpButton_clicked);//æ‹¾å–
+	connect(ui->pushButton_7, &QPushButton::clicked, this, &cursePart::on_deleteButton_clicked);//åˆ é™¤æ›²é¢
+	connect(ui->pushButton_8, &QPushButton::clicked, this, &cursePart::on_finishButton_clicked);//ç»“æŸæ‹¾å–æ¨¡å¼
 
 	connect(ui->pushButton_3, &QPushButton::clicked, this, &cursePart::on_previewButton_clicked);
 	connect(ui->pushButton_9, &QPushButton::clicked, this, &cursePart::on_spaceSettingButton_clicked);
 
-	connect(ui->pushButton_10, &QPushButton::clicked, this, &cursePart::on_calculate_workspace);//¼ÆËã³öworkspace
+	connect(ui->pushButton_10, &QPushButton::clicked, this, &cursePart::on_calculate_workspace);//è®¡ç®—å‡ºworkspace
 
-	// ×éºÏ¿òºÍÎÄ±¾±à¼­¿ò
+	// ç»„åˆæ¡†å’Œæ–‡æœ¬ç¼–è¾‘æ¡†
 	connect(ui->comboBox_1, &QComboBox::currentTextChanged, this, &cursePart::on_comboBox_currentTextChanged);
 	connect(ui->comboBox_4, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &cursePart::on_coordanateTextChanged);
 	connect(ui->textEdit, &QTextEdit::textChanged, this, &cursePart::on_textEdit_4_textChanged);
 
-	//ÉèÖÃÊÇ·ñÁª¶¯
+	//è®¾ç½®æ˜¯å¦è”åŠ¨
 	connect(ui->checkBox, &QCheckBox::toggled, this, [this](bool checked) {
 		ui->comboBox_2->setEnabled(checked);
 	});
@@ -76,53 +244,57 @@ cursePart::cursePart(QWidget *parent,
 cursePart::~cursePart()
 {
 	delete ui;
+	if (m_workspaceHandler) {
+		delete m_workspaceHandler;
+		m_workspaceHandler = nullptr;
+	}
 }
 
 
-//ÉèÖÃ½çÃæ²ÎÊı
+//è®¾ç½®ç•Œé¢å‚æ•°
 void cursePart::init() {
 
-	isPickupActive = false; // ÖØÖÃÊ°È¡×´Ì¬
-	isPreview = false;//ÊÇ·ñ½øĞĞÔ¤ÀÀ
+	isPickupActive = false; // é‡ç½®æ‹¾å–çŠ¶æ€
+	isPreview = false;//æ˜¯å¦è¿›è¡Œé¢„è§ˆ
 
-	// Ê¹ÓÃ·â×°ºÃµÄº¯Êı»ñÈ¡»úÆ÷ÈËÁĞ±í
+	// ä½¿ç”¨å°è£…å¥½çš„å‡½æ•°è·å–æœºå™¨äººåˆ—è¡¨
 	PQDataType robotType = PQ_ROBOT;
 	m_robotMap = getObjectsByType(robotType);
 
-	// Ê¹ÓÃ·â×°º¯Êı»ñÈ¡ÅçÍ¿»úÆ÷ÈËÃû³ÆÁĞ±í
+	// ä½¿ç”¨å°è£…å‡½æ•°è·å–å–·æ¶‚æœºå™¨äººåç§°åˆ—è¡¨
 	QStringList robotNames = getSprayRobotNames(PQ_MECHANISM_ROBOT, m_robotMap);
 
 	if (robotNames.isEmpty()) {
-		QMessageBox::information(this, "ÌáÊ¾", "µ±Ç°Ã»ÓĞ¿ÉÓÃµÄÅçÍ¿»úÆ÷ÈË£¡");
+		QMessageBox::information(this, "æç¤º", "å½“å‰æ²¡æœ‰å¯ç”¨çš„å–·æ¶‚æœºå™¨äººï¼");
 		delete ui;
 		return;
 	}
 
-	// ½«»úÆ÷ÈËÃû³ÆÉèÖÃµ½¶Ô»°¿òÖĞ
+	// å°†æœºå™¨äººåç§°è®¾ç½®åˆ°å¯¹è¯æ¡†ä¸­
 	ui->comboBox_1->addItems(robotNames);
 	if (!robotNames.isEmpty()) {
 		ui->comboBox_1->setCurrentIndex(0);
 	}
 
-	// ³õÊ¼ÉèÖÃ¹ìµÀĞÅÏ¢
+	// åˆå§‹è®¾ç½®è½¨é“ä¿¡æ¯
 	QString currentRobot = robotNames.isEmpty() ? "" : robotNames.first();
 	updateRailOptions(currentRobot, m_robotMap);
 
 
-	// ÉèÖÃ×ø±êÏµ
+	// è®¾ç½®åæ ‡ç³»
 	PQDataType CoodernateType = PQ_COORD;
 	CoodernateMap = getObjectsByType(CoodernateType);
 
-	// ´´½¨Ò»¸öĞÂµÄQMap£¬ÏÈ²åÈë"ÊÀ½ç×ø±êÏµ"£¬ÔÙ²åÈëÔ­ÓĞµÄÊı¾İ
+	// åˆ›å»ºä¸€ä¸ªæ–°çš„QMapï¼Œå…ˆæ’å…¥"ä¸–ç•Œåæ ‡ç³»"ï¼Œå†æ’å…¥åŸæœ‰çš„æ•°æ®
 	QMap<ULONG, QString> newCoodernateMap;
-	newCoodernateMap.insert(0, "ÊÀ½ç×ø±êÏµ");  // ÏÈ²åÈëÊ×Î»
+	newCoodernateMap.insert(0, "ä¸–ç•Œåæ ‡ç³»");  // å…ˆæ’å…¥é¦–ä½
 
-	// ½«Ô­ÓĞÊı¾İ²åÈëµ½ºóÃæ£¨¼üÖµ´Ó1¿ªÊ¼£©
+	// å°†åŸæœ‰æ•°æ®æ’å…¥åˆ°åé¢ï¼ˆé”®å€¼ä»1å¼€å§‹ï¼‰
 	for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
 		newCoodernateMap.insert(it.key(), it.value());
 	}
 
-	CoodernateMap = newCoodernateMap;  // Ìæ»»Ô­À´µÄmap
+	CoodernateMap = newCoodernateMap;  // æ›¿æ¢åŸæ¥çš„map
 	QStringList CoodernateNames = CoodernateMap.values();
 
 	ui->comboBox_3->addItems(CoodernateNames);
@@ -130,90 +302,89 @@ void cursePart::init() {
 		ui->comboBox_3->setCurrentIndex(0);
 	}
 
-	ui->textEdit->setPlainText("500");//³õÊ¼»¯¼ä¾à
+	ui->textEdit->setPlainText("500");//åˆå§‹åŒ–é—´è·
 
 	ui->pushButton_1->setEnabled(false);
 	ui->pushButton_3->setEnabled(false);
-	ui->comboBox_2->setEnabled(false);//ÉèÖÃÁª¶¯Öá¸´Ñ¡¿ò²»ÄÜÊ¹ÓÃ
+	ui->comboBox_2->setEnabled(false);//è®¾ç½®è”åŠ¨è½´å¤é€‰æ¡†ä¸èƒ½ä½¿ç”¨
 
 	ui->horizontalSlider->setMinimum(-50);
 	ui->horizontalSlider->setMaximum(50);
-	ui->horizontalSlider->setValue(0);  // ÉèÖÃÎªÖĞ¼äµã
+	ui->horizontalSlider->setValue(0);  // è®¾ç½®ä¸ºä¸­é—´ç‚¹
 
 	ui->verticalSlider->setMinimum(-50);
 	ui->verticalSlider->setMaximum(50);
-	ui->verticalSlider->setValue(0);  // ÉèÖÃÎªÖĞ¼äµã
+	ui->verticalSlider->setValue(0);  // è®¾ç½®ä¸ºä¸­é—´ç‚¹
 
-	ui->comboBox_5->addItem("YÖá·½Ïò");
-	ui->comboBox_5->addItem("ZÖá·½Ïò");
+	ui->comboBox_5->addItem("Yè½´æ–¹å‘");
+	ui->comboBox_5->addItem("Zè½´æ–¹å‘");
 
-	// ³õÊ¼»¯±äÁ¿
+	// åˆå§‹åŒ–å˜é‡
 	x_value = 0.0;
 	y_value = 0.0;
 	z_value = 0.0;
 
-	// ³õÊ¼»¯°üÎ§ºĞÏà¹ØÊı¾İ
+	// åˆå§‹åŒ–åŒ…å›´ç›’ç›¸å…³æ•°æ®
 	m_vPosition.clear();
 	ABBPosition.clear();
 	points.clear();
 	pickupMap.clear();
-
 }
 
 
 void cursePart::setupGraphicsScenes()
 {
-	// ´´½¨Í¼ĞÎ³¡¾°
+	// åˆ›å»ºå›¾å½¢åœºæ™¯
 	QGraphicsScene *scene = new QGraphicsScene(this);
 	QGraphicsScene *scene1 = new QGraphicsScene(this);
 	QGraphicsScene *scene2 = new QGraphicsScene(this);
 	QGraphicsScene *scene3 = new QGraphicsScene(this);
 
-	// ¼ÓÔØÍ¼Æ¬
+	// åŠ è½½å›¾ç‰‡
 	QPixmap pixmap(":/image/resource/pickup.png");
 	QPixmap pixmap1(":/image/resource/coordinate.png");
 	QPixmap pixmap2(":/image/resource/maxTheta.png");
 	QPixmap pixmap3(":/image/resource/divide.png");
 
 
-	// Ìí¼ÓÍ¼Æ¬µ½³¡¾°
+	// æ·»åŠ å›¾ç‰‡åˆ°åœºæ™¯
 	QGraphicsPixmapItem* pixmapItem = scene->addPixmap(pixmap);
 	QGraphicsPixmapItem* pixmapItem1 = scene1->addPixmap(pixmap1);
 	QGraphicsPixmapItem* pixmapItem2 = scene2->addPixmap(pixmap2);
 	QGraphicsPixmapItem* pixmapItem3 = scene3->addPixmap(pixmap3);
 
-	// ÉèÖÃ³¡¾°¾ØĞÎÎªÍ¼Æ¬´óĞ¡
+	// è®¾ç½®åœºæ™¯çŸ©å½¢ä¸ºå›¾ç‰‡å¤§å°
 	scene->setSceneRect(pixmap.rect());
 	scene1->setSceneRect(pixmap1.rect());
 	scene2->setSceneRect(pixmap2.rect());
 	scene3->setSceneRect(pixmap3.rect());
 
-	// ÉèÖÃQGraphicsView
+	// è®¾ç½®QGraphicsView
 	ui->graphicsView_1->setScene(scene);
 	ui->graphicsView_2->setScene(scene1);
 	ui->graphicsView_3->setScene(scene2);
 	ui->graphicsView_4->setScene(scene3);
 
-	// Í¼Æ¬×ÔÊÊÓ¦´óĞ¡
-	ui->graphicsView_1->setAlignment(Qt::AlignTop | Qt::AlignHCenter); // ¶¥²¿Ë®Æ½¾ÓÖĞ
+	// å›¾ç‰‡è‡ªé€‚åº”å¤§å°
+	ui->graphicsView_1->setAlignment(Qt::AlignTop | Qt::AlignHCenter); // é¡¶éƒ¨æ°´å¹³å±…ä¸­
 	ui->graphicsView_2->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 	ui->graphicsView_3->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 	ui->graphicsView_4->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 
-	// È¥³ı±ß¿ò
+	// å»é™¤è¾¹æ¡†
 	ui->graphicsView_1->setFrameShape(QFrame::NoFrame);
 	ui->graphicsView_2->setFrameShape(QFrame::NoFrame);
 	ui->graphicsView_3->setFrameShape(QFrame::NoFrame);
 	ui->graphicsView_4->setFrameShape(QFrame::NoFrame);
 
-	// ÉèÖÃ±³¾°ÑÕÉ«
+	// è®¾ç½®èƒŒæ™¯é¢œè‰²
 	ui->graphicsView_1->setStyleSheet("background-color: #f0f0f0;");
 	ui->graphicsView_2->setStyleSheet("background-color: #f0f0f0;");
 	ui->graphicsView_3->setStyleSheet("background-color: #f0f0f0;");
 	ui->graphicsView_4->setStyleSheet("background-color: #f0f0f0;");
 
 
-	// ÉèÖÃÊÓÍ¼ÊôĞÔ
+	// è®¾ç½®è§†å›¾å±æ€§
 	ui->graphicsView_1->setRenderHint(QPainter::SmoothPixmapTransform);
 	ui->graphicsView_2->setRenderHint(QPainter::SmoothPixmapTransform);
 	ui->graphicsView_3->setRenderHint(QPainter::SmoothPixmapTransform);
@@ -223,21 +394,21 @@ void cursePart::setupGraphicsScenes()
 void cursePart::setStepsExplanation()
 {
 	ui->label_16->setWordWrap(true);
-	ui->label_16->setText(tr("1¡¢Ñ¡ÔñÅçÍ¿×÷Òµ»úÆ÷ÈË£¨Èç¹ûĞèÒªÅçÍ¿»úÆ÷ÈËÁª¶¯×÷ÒµÔò¹´Ñ¡Áª¶¯£¬²¢Ñ¡Ôñ»úÆ÷ÈËÁª¶¯·½Ïò£©\n"
-		"2¡¢Ñ¡È¡ÅçÍ¿ÇúÃæ£¬²¢µã»÷½áÊøÑ¡È¡"));
+	ui->label_16->setText(tr("1ã€é€‰æ‹©å–·æ¶‚ä½œä¸šæœºå™¨äººï¼ˆå¦‚æœéœ€è¦å–·æ¶‚æœºå™¨äººè”åŠ¨ä½œä¸šåˆ™å‹¾é€‰è”åŠ¨ï¼Œå¹¶é€‰æ‹©æœºå™¨äººè”åŠ¨æ–¹å‘ï¼‰\n"
+		"2ã€é€‰å–å–·æ¶‚æ›²é¢ï¼Œå¹¶ç‚¹å‡»ç»“æŸé€‰å–"));
 
 	ui->label_17->setWordWrap(true);
-	ui->label_17->setText(tr("1¡¢Ñ¡ÔñÅçÍ¿ÇúÃæÖ÷·¨Ê¸£¨Í¨¹ıÑ¡È¡×ø±êÏµ£¬ÒÔ¼°×ø±êÏµÉÏµÄÖáÀ´ÊµÏÖ£©\n"
-		"2¡¢Ñ¡Ôñ»®·Ö·½Ïò"));
+	ui->label_17->setText(tr("1ã€é€‰æ‹©å–·æ¶‚æ›²é¢ä¸»æ³•çŸ¢ï¼ˆé€šè¿‡é€‰å–åæ ‡ç³»ï¼Œä»¥åŠåæ ‡ç³»ä¸Šçš„è½´æ¥å®ç°ï¼‰\n"
+		"2ã€é€‰æ‹©åˆ’åˆ†æ–¹å‘"));
 
 	ui->label_18->setWordWrap(true);
-	ui->label_18->setText(tr("1¡¢Ñ¡ÔñÔÚ°üÎ§ºĞÉÏÑ¡È¡Ò»¶¨¼ä¾àµÄµãÕó£¬Í¨¹ıÍ¶Ó°µÄ·½Ê½ÔÚÅçÍ¿±íÃæÈ¥½»µã£¬¼ÆËã½»µã´¦ÇúÃæ·¨ÏòÁ¿\n"
-		"2¡¢Í¨¹ı±éÀú¸÷µã·¨ÏòÁ¿ÓëÅçÍ¿Ö÷·¨Ê¸µÄ¼Ğ½Ç£¬¼ÆËã³ö·¨Ê¸×î´óÆ«²î½Ç\n"
-		"3¡¢Í¨¹ıÒÔÉÏĞÅÏ¢À´¼ÆËã³ö»®·Ö¹¤×÷¿Õ¼äµÄ³¤¡¢¿í"));
+	ui->label_18->setText(tr("1ã€é€‰æ‹©åœ¨åŒ…å›´ç›’ä¸Šé€‰å–ä¸€å®šé—´è·çš„ç‚¹é˜µï¼Œé€šè¿‡æŠ•å½±çš„æ–¹å¼åœ¨å–·æ¶‚è¡¨é¢å»äº¤ç‚¹ï¼Œè®¡ç®—äº¤ç‚¹å¤„æ›²é¢æ³•å‘é‡\n"
+		"2ã€é€šè¿‡éå†å„ç‚¹æ³•å‘é‡ä¸å–·æ¶‚ä¸»æ³•çŸ¢çš„å¤¹è§’ï¼Œè®¡ç®—å‡ºæ³•çŸ¢æœ€å¤§åå·®è§’\n"
+		"3ã€é€šè¿‡ä»¥ä¸Šä¿¡æ¯æ¥è®¡ç®—å‡ºåˆ’åˆ†å·¥ä½œç©ºé—´çš„é•¿ã€å®½"));
 
 	ui->label_19->setWordWrap(true);
-	ui->label_19->setText(tr("1¡¢»®·ÖÍø¸ñÓÉ×óÏÂ½ÇµãÎ»ÖÃ¾ö¶¨£¬Í¨¹ı¸Ä±ä×óÏÂ½ÇµãÎ»ÖÃÀ´ÊµÏÖ¸Ä±äÍø¸ñÎ»ÖÃ\n"
-		"2¡¢Ò²¿ÉÒÔÉÔÎ¢Ôö¼Ó¹¤×÷¿Õ¼äµÄ³¤ºÍ¿íÀ´ÊµÏÖ¼õÉÙÅçÍ¿´ÎÊı"));
+	ui->label_19->setText(tr("1ã€åˆ’åˆ†ç½‘æ ¼ç”±å·¦ä¸‹è§’ç‚¹ä½ç½®å†³å®šï¼Œé€šè¿‡æ”¹å˜å·¦ä¸‹è§’ç‚¹ä½ç½®æ¥å®ç°æ”¹å˜ç½‘æ ¼ä½ç½®\n"
+		"2ã€ä¹Ÿå¯ä»¥ç¨å¾®å¢åŠ å·¥ä½œç©ºé—´çš„é•¿å’Œå®½æ¥å®ç°å‡å°‘å–·æ¶‚æ¬¡æ•°"));
 
 }
 
@@ -260,21 +431,21 @@ void cursePart::addItemToListView(const QString& item)
 void cursePart::on_textEdit_4_textChanged()
 {
 	QString text = ui->textEdit->toPlainText().trimmed();
-	// ÎÄ±¾¸Ä±ä´¦ÀíÂß¼­
+	// æ–‡æœ¬æ”¹å˜å¤„ç†é€»è¾‘
 }
 
 void cursePart::on_horizontalSlider_valueChanged(int value)
 {
-	// ¼ÆËã°Ù·Ö±È±ä»¯£ºvalue·¶Î§ÊÇ-50µ½50£¬¶ÔÓ¦-50%µ½+50%
-	double percentage = value / 100.0; // ×ª»»ÎªĞ¡ÊıĞÎÊ½
+	// è®¡ç®—ç™¾åˆ†æ¯”å˜åŒ–ï¼švalueèŒƒå›´æ˜¯-50åˆ°50ï¼Œå¯¹åº”-50%åˆ°+50%
+	double percentage = value / 100.0; // è½¬æ¢ä¸ºå°æ•°å½¢å¼
 
-	// ¼ÆËãĞÂÖµ£º500 + 500 * °Ù·Ö±È
+	// è®¡ç®—æ–°å€¼ï¼š500 + 500 * ç™¾åˆ†æ¯”
 	double newValue = x_value + 500 * percentage;
 
-	// ¸üĞÂtextEdit_3µÄÏÔÊ¾
+	// æ›´æ–°textEdit_3çš„æ˜¾ç¤º
 	ui->textEdit_3->setPlainText(QString::number(newValue, 'f', 2));
 
-	// ÊµÏÖonAreaPosition()¹¦ÄÜ
+	// å®ç°onAreaPosition()åŠŸèƒ½
 	std::vector<double> areaPosition;
 	areaPosition = [this]() {
 		std::vector<double> result;
@@ -302,16 +473,16 @@ void cursePart::on_horizontalSlider_valueChanged(int value)
 
 void cursePart::on_verticalSlider_valueChanged(int value)
 {
-	// ¼ÆËã°Ù·Ö±È±ä»¯£ºvalue·¶Î§ÊÇ-50µ½50£¬¶ÔÓ¦-50%µ½+50%
-	double percentage = value / 100.0; // ×ª»»ÎªĞ¡ÊıĞÎÊ½
+	// è®¡ç®—ç™¾åˆ†æ¯”å˜åŒ–ï¼švalueèŒƒå›´æ˜¯-50åˆ°50ï¼Œå¯¹åº”-50%åˆ°+50%
+	double percentage = value / 100.0; // è½¬æ¢ä¸ºå°æ•°å½¢å¼
 
-	// ¼ÆËãĞÂÖµ£º500 + 500 * °Ù·Ö±È
+	// è®¡ç®—æ–°å€¼ï¼š500 + 500 * ç™¾åˆ†æ¯”
 	double newValue = z_value + 500 * percentage;
 
-	// ¸üĞÂtextEdit_3µÄÏÔÊ¾
+	// æ›´æ–°textEdit_3çš„æ˜¾ç¤º
 	ui->textEdit_5->setPlainText(QString::number(newValue, 'f', 2));
 
-	// ÊµÏÖonAreaPosition()¹¦ÄÜ
+	// å®ç°onAreaPosition()åŠŸèƒ½
 	std::vector<double> areaPosition;
 	areaPosition = [this]() {
 		std::vector<double> result;
@@ -339,33 +510,33 @@ void cursePart::on_verticalSlider_valueChanged(int value)
 
 void cursePart::on_coordanateTextChanged()
 {
-	// ×èÈû comboBox_5 µÄĞÅºÅ£¬·ÀÖ¹ÔÚÇå¿ÕºÍÌí¼ÓÏîÊ±´¥·¢²»±ØÒªµÄĞÅºÅ£¨Èç currentIndexChanged£©
+	// é˜»å¡ comboBox_5 çš„ä¿¡å·ï¼Œé˜²æ­¢åœ¨æ¸…ç©ºå’Œæ·»åŠ é¡¹æ—¶è§¦å‘ä¸å¿…è¦çš„ä¿¡å·ï¼ˆå¦‚ currentIndexChangedï¼‰
 	ui->comboBox_5->blockSignals(true);
 
-	// Çå¿Õ comboBox_5
+	// æ¸…ç©º comboBox_5
 	ui->comboBox_5->clear();
 
-	// »ñÈ¡µ±Ç°×´Ì¬ - Ê¹ÓÃcomboBox_4µÄµ±Ç°Ë÷Òı
+	// è·å–å½“å‰çŠ¶æ€ - ä½¿ç”¨comboBox_4çš„å½“å‰ç´¢å¼•
 	int state = ui->comboBox_4->currentIndex();
 
-	// ¸ù¾İ×´Ì¬Ìí¼Ó²»Í¬µÄÏî
+	// æ ¹æ®çŠ¶æ€æ·»åŠ ä¸åŒçš„é¡¹
 	if (state < 2) {
-		ui->comboBox_5->addItem("YÖá·½Ïò");
-		ui->comboBox_5->addItem("ZÖá·½Ïò");
+		ui->comboBox_5->addItem("Yè½´æ–¹å‘");
+		ui->comboBox_5->addItem("Zè½´æ–¹å‘");
 	}
 	else if (1 < state && state < 4) {
-		ui->comboBox_5->addItem("XÖá·½Ïò");
-		ui->comboBox_5->addItem("ZÖá·½Ïò");
+		ui->comboBox_5->addItem("Xè½´æ–¹å‘");
+		ui->comboBox_5->addItem("Zè½´æ–¹å‘");
 	}
 	else {
-		ui->comboBox_5->addItem("XÖá·½Ïò");
-		ui->comboBox_5->addItem("YÖá·½Ïò");
+		ui->comboBox_5->addItem("Xè½´æ–¹å‘");
+		ui->comboBox_5->addItem("Yè½´æ–¹å‘");
 	}
 
-	// ÖØĞÂÆôÓÃ comboBox_5 µÄĞÅºÅ
+	// é‡æ–°å¯ç”¨ comboBox_5 çš„ä¿¡å·
 	ui->comboBox_5->blockSignals(false);
 
-	// ¿ÉÒÔÔÚÕâÀïÉèÖÃÒ»¸öÄ¬ÈÏÑ¡ÖĞÏî£¬ÀıÈçµÚÒ»Ïî
+	// å¯ä»¥åœ¨è¿™é‡Œè®¾ç½®ä¸€ä¸ªé»˜è®¤é€‰ä¸­é¡¹ï¼Œä¾‹å¦‚ç¬¬ä¸€é¡¹
 	if (ui->comboBox_5->count() > 0) {
 		ui->comboBox_5->setCurrentIndex(0);
 	}
@@ -373,7 +544,7 @@ void cursePart::on_coordanateTextChanged()
 
 void cursePart::on_confirm_clicked()
 {
-	// È·ÈÏ°´Å¥Âß¼­
+	// ç¡®è®¤æŒ‰é’®é€»è¾‘
 	done(QDialog::Rejected);
 	this->close();
 
@@ -389,69 +560,137 @@ void cursePart::on_calculate_workspace()
 
 	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
 	bool isLink = ui->checkBox->isChecked();
-	double theta = ui->textBrowser_1->toPlainText().toDouble();
+	QString thetaStr = ui->textBrowser_1->toPlainText();
+	thetaStr.remove(QRegExp(R"([Â°ÂºËšÂ°â°])"));  // ç§»é™¤å¸¸è§çš„è§’åº¦ç¬¦å·
+	thetaStr = thetaStr.simplified();  // å»é™¤å¤šä½™çš„ç©ºç™½å­—ç¬¦
+	double theta = thetaStr.toDouble();
 
 	QString railName = ui->comboBox_2->currentText();
 
-	QString thickness = ui->textBrowser_2->toPlainText();
+	QString thicknessStr = ui->textBrowser_2->toPlainText();
+	double thickness = thicknessStr.toDouble();
 
 	QString jsonName = m_tempDir + "workspace_" + robotName + ".json";
 
-	parseJSON queryHelper(jsonName.toStdString());
-	std::map<std::string, json> conditions;
-	conditions["robotID"] = robotID;
-	conditions["isLink"] = isLink;
-	conditions["CoordinateName"] = coordinateName.toStdString();
-	conditions["DirectionName"] = directionName.toStdString();
-	conditions["railName"] = railName.toStdString();
-
-	auto andResults = queryHelper.findObjectsByMultipleKeys(conditions);
-
-
-	// ÊµÏÖonCalculateSpace()¹¦ÄÜ - ¼ÆËãµãÕó
-	Point3D direction(0, 1, 0);
-	ui->textEdit_1->setPlainText("500");
-	ui->textEdit_2->setPlainText("500");
-	int length = ui->textEdit_1->toPlainText().toDouble();
-	int width = ui->textEdit_2->toPlainText().toDouble();
-
-	// Ê¹ÓÃÖ®Ç°¼ÆËãµÄ°üÎ§ºĞĞÅÏ¢Éú³ÉµãÕó
-	auto grid = createGridOnClosestSurface(box, length, width, direction);
-
-	points.clear(); // Çå¿ÕÖ®Ç°µÄµãÊı¾İ
-	for (auto p : grid) {
-		points.push_back(p.x);
-		points.push_back(p.y);
-		points.push_back(p.z);
+	// åˆ›å»ºæˆ–æ›´æ–°å·¥ä½œç©ºé—´å¤„ç†å™¨
+	if (m_workspaceHandler) {
+		delete m_workspaceHandler;
 	}
+	m_workspaceHandler = new RobotWorkspaceHandler(jsonName.toStdString());
 
-	if (!points.empty()) {
-		QString value1 = QString("%1").arg(points[0]);
-		QString value2 = QString("%1").arg(points[1]);
-		QString value3 = QString("%1").arg(points[2]);
+	// ä½¿ç”¨RobotWorkspaceHandlerè¿›è¡ŒæŸ¥è¯¢
+	auto foundPoints = m_workspaceHandler->processRobotWorkspaceQuery(
+		robotName, robotID, coordinateName, directionName, isLink, theta, thickness, railName
+	);
 
-		ui->textEdit_3->setPlainText(value1);
-		ui->textEdit_4->setPlainText(value2);
-		ui->textEdit_5->setPlainText(value3);
+	if (!foundPoints.empty()) {
+		// ä½¿ç”¨æŸ¥è¯¢åˆ°çš„pointsæ›´æ–°UI
+		if (foundPoints.size() >= 1) {
+			ui->textEdit_3->setPlainText(QString::number(foundPoints[0]));
+		}
+		if (foundPoints.size() >= 2) {
+			ui->textEdit_4->setPlainText(QString::number(foundPoints[1]));
+		}
+		if (foundPoints.size() >= 3) {
+			ui->textEdit_5->setPlainText(QString::number(foundPoints[2]));
+		}
 
-		// ¸üĞÂx_valueºÍz_value
-		x_value = points[0];
-		z_value = points[2];
+		// æ›´æ–°x_valueå’Œz_value
+		if (foundPoints.size() >= 1) x_value = foundPoints[0];
+		if (foundPoints.size() >= 3) z_value = foundPoints[2];
+
+		// æ›´æ–°pointsæ•°ç»„
+		points = foundPoints;
+
+		// ä»æŸ¥è¯¢åˆ°çš„ç‚¹ä¸­è®¡ç®—å·¥ä½œç©ºé—´çš„é•¿å’Œå®½
+		if (foundPoints.size() >= 6) { // ç¡®ä¿æœ‰è¶³å¤Ÿçš„ç‚¹æ¥è®¡ç®—åŒ…å›´ç›’
+			double minX = foundPoints[0], maxX = foundPoints[0];
+			double minY = foundPoints[1], maxY = foundPoints[1];
+			double minZ = foundPoints[2], maxZ = foundPoints[2];
+
+			// éå†æ‰€æœ‰ç‚¹æ‰¾å‡ºæœ€å¤§æœ€å°å€¼
+			for (size_t i = 0; i < foundPoints.size(); i += 3) {
+				if (i + 2 < foundPoints.size()) {
+					minX = std::min(minX, foundPoints[i]);
+					maxX = std::max(maxX, foundPoints[i]);
+					minY = std::min(minY, foundPoints[i + 1]);
+					maxY = std::max(maxY, foundPoints[i + 1]);
+					minZ = std::min(minZ, foundPoints[i + 2]);
+					maxZ = std::max(maxZ, foundPoints[i + 2]);
+				}
+			}
+
+			// è®¡ç®—é•¿å’Œå®½ï¼ˆé™¤äº†åšåº¦æ–¹å‘ï¼‰
+			double length, width;
+
+			// æ ¹æ®directionNameåˆ¤æ–­å“ªä¸ªæ˜¯åšåº¦æ–¹å‘ï¼Œå…¶ä»–ä¸¤ä¸ªæ˜¯é•¿å®½
+			if (directionName.contains("X", Qt::CaseInsensitive) ||
+				directionName.contains("x", Qt::CaseInsensitive)) {
+				// Xæ–¹å‘æ˜¯åšåº¦æ–¹å‘
+				length = maxY - minY; // Yæ–¹å‘é•¿åº¦
+				width = maxZ - minZ;  // Zæ–¹å‘å®½åº¦
+			}
+			else if (directionName.contains("Y", Qt::CaseInsensitive) ||
+				directionName.contains("y", Qt::CaseInsensitive)) {
+				// Yæ–¹å‘æ˜¯åšåº¦æ–¹å‘
+				length = maxX - minX; // Xæ–¹å‘é•¿åº¦
+				width = maxZ - minZ;  // Zæ–¹å‘å®½åº¦
+			}
+			else {
+				// Zæ–¹å‘æ˜¯åšåº¦æ–¹å‘
+				length = maxX - minX; // Xæ–¹å‘é•¿åº¦
+				width = maxY - minY;  // Yæ–¹å‘å®½åº¦
+			}
+
+			// å°†è®¡ç®—å‡ºçš„é•¿å’Œå®½è®¾ç½®åˆ°textEdit_1å’ŒtextEdit_2
+			ui->textEdit_1->setPlainText(QString::number(length, 'f', 2));
+			ui->textEdit_2->setPlainText(QString::number(width, 'f', 2));
+		}
 	}
+	else {
+		// å¦‚æœæ²¡æœ‰æ‰¾åˆ°åŒ¹é…é¡¹ï¼Œç»§ç»­æ‰§è¡ŒåŸå§‹é€»è¾‘
+		Point3D direction(0, 1, 0);
+		ui->textEdit_1->setPlainText("500");
+		ui->textEdit_2->setPlainText("500");
 
-	// Êä³öÊ¹ÓÃºñ¶ÈµÄµ÷ÊÔĞÅÏ¢
-	qDebug() << "µ±Ç°Ê¹ÓÃµÄºñ¶ÈÖµ£º" << m_thickness << "mm";
+		int length = ui->textEdit_1->toPlainText().toDouble();
+		int width = ui->textEdit_2->toPlainText().toDouble();
+
+		// ä½¿ç”¨ä¹‹å‰è®¡ç®—çš„åŒ…å›´ç›’ä¿¡æ¯ç”Ÿæˆç‚¹é˜µ
+		auto grid = createGridOnClosestSurface(box, length, width, direction);
+
+		points.clear(); // æ¸…ç©ºä¹‹å‰çš„ç‚¹æ•°æ®
+		for (auto p : grid) {
+			points.push_back(p.x);
+			points.push_back(p.y);
+			points.push_back(p.z);
+		}
+
+		if (!points.empty()) {
+			QString value1 = QString("%1").arg(points[0]);
+			QString value2 = QString("%1").arg(points[1]);
+			QString value3 = QString("%1").arg(points[2]);
+
+			ui->textEdit_3->setPlainText(value1);
+			ui->textEdit_4->setPlainText(value2);
+			ui->textEdit_5->setPlainText(value3);
+
+			// æ›´æ–°x_valueå’Œz_value
+			x_value = points[0];
+			z_value = points[2];
+		}
+	}
 }
 
-// Ò³Ãæµ¼º½²Ûº¯Êı
+// é¡µé¢å¯¼èˆªæ§½å‡½æ•°
 void cursePart::on_next_page_clicked()
 {
-	// ¼ì²éÊÇ·ñÔÚµÚÒ»Ò³ÇÒgraphicsView_1Îª¿Õ
+	// æ£€æŸ¥æ˜¯å¦åœ¨ç¬¬ä¸€é¡µä¸”graphicsView_1ä¸ºç©º
 	if (indx == 0) {
 		QAbstractItemModel* model = ui->listView->model();
 		if (model == nullptr || model->rowCount() == 0) {
-			QMessageBox::warning(this, "¾¯¸æ", "ÇëÏÈÑ¡È¡ÇúÃæ£¬²»ÄÜÎª¿Õ£¡");
-			return; // ²»Ö´ĞĞ·­Ò³²Ù×÷
+			QMessageBox::warning(this, "è­¦å‘Š", "è¯·å…ˆé€‰å–æ›²é¢ï¼Œä¸èƒ½ä¸ºç©ºï¼");
+			return; // ä¸æ‰§è¡Œç¿»é¡µæ“ä½œ
 		}
 	}
 
@@ -469,7 +708,7 @@ void cursePart::on_next_page_clicked()
 		ui->pushButton_4->setEnabled(true);
 	}
 
-	// ÊµÏÖonCloseSignal()¹¦ÄÜ
+	// å®ç°onCloseSignal()åŠŸèƒ½
 	if (isPickupActive || isPreview) {
 		isPickupActive = false;
 		isPreview = false;
@@ -477,7 +716,7 @@ void cursePart::on_next_page_clicked()
 		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 		HRESULT hr = m_ptrKit->Doc_end_module(cmd);
 		this->setWindowModality(Qt::ApplicationModal);
-		qDebug() << "Ê°È¡Ä£¿éÒÑÍ£Ö¹";
+		qDebug() << "æ‹¾å–æ¨¡å—å·²åœæ­¢";
 	}
 }
 
@@ -502,32 +741,32 @@ void cursePart::on_cancel_clicked()
 
 void cursePart::on_pickUpButton_clicked()
 {
-	// ÊµÏÖonPickUpSignal()¹¦ÄÜ
+	// å®ç°onPickUpSignal()åŠŸèƒ½
 	if (!isPickupActive && !isPreview) {
-		// Æô¶¯Ê°È¡Ä£¿é
+		// å¯åŠ¨æ‹¾å–æ¨¡å—
 		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 		HRESULT hr = m_ptrKit->Doc_start_module(cmd);
 		if (SUCCEEDED(hr)) {
 			isPickupActive = true;
-			isPreview = false; // È·±£Ô¤ÀÀÄ£Ê½¹Ø±Õ
+			isPreview = false; // ç¡®ä¿é¢„è§ˆæ¨¡å¼å…³é—­
 			this->setModal(false);
 			this->setWindowModality(Qt::NonModal);
-			qDebug() << "ÇúÃæÊ°È¡Ä£¿éÒÑÆô¶¯£¬ÇëÔÚ3D´°¿ÚÖĞµã»÷ÔªËØ";
+			qDebug() << "æ›²é¢æ‹¾å–æ¨¡å—å·²å¯åŠ¨ï¼Œè¯·åœ¨3Dçª—å£ä¸­ç‚¹å‡»å…ƒç´ ";
 		}
 		else {
-			QMessageBox::warning(this, "´íÎó", "Æô¶¯ÇúÃæÊ°È¡Ä£¿éÊ§°Ü£¡");
+			QMessageBox::warning(this, "é”™è¯¯", "å¯åŠ¨æ›²é¢æ‹¾å–æ¨¡å—å¤±è´¥ï¼");
 		}
 	}
 	else {
-		QString mode = isPreview ? "Ô¤ÀÀÄ£Ê½" : "ÇúÃæÊ°È¡Ä£Ê½";
-		qDebug() << mode << "ÒÑÔÚÔËĞĞÖĞ";
+		QString mode = isPreview ? "é¢„è§ˆæ¨¡å¼" : "æ›²é¢æ‹¾å–æ¨¡å¼";
+		qDebug() << mode << "å·²åœ¨è¿è¡Œä¸­";
 	}
 }
 
 void cursePart::on_finishButton_clicked()
 {
-	
-	// ÊµÏÖonCloseSignal()¹¦ÄÜ
+
+	// å®ç°onCloseSignal()åŠŸèƒ½
 	if (isPickupActive || isPreview) {
 		isPickupActive = false;
 		isPreview = false;
@@ -535,94 +774,94 @@ void cursePart::on_finishButton_clicked()
 		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 		HRESULT hr = m_ptrKit->Doc_end_module(cmd);
 		this->setWindowModality(Qt::ApplicationModal);
-		qDebug() << "Ê°È¡Ä£¿éÒÑÍ£Ö¹";
+		qDebug() << "æ‹¾å–æ¨¡å—å·²åœæ­¢";
 	}
 }
 
 void cursePart::on_previewButton_clicked()
 {
-	// ÊµÏÖonPreviewSignal()¹¦ÄÜ
-	// Æô¶¯Ê°È¡Ä£¿é
+	// å®ç°onPreviewSignal()åŠŸèƒ½
+	// å¯åŠ¨æ‹¾å–æ¨¡å—
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
 	if (SUCCEEDED(hr)) {
 		isPoint = true;
-		isPickupActive = false; // ¹Ø±ÕÊ°È¡Ä£Ê½
+		isPickupActive = false; // å…³é—­æ‹¾å–æ¨¡å¼
 	}
 }
 
 void cursePart::on_spaceSettingButton_clicked()
 {
-	// ÊµÏÖonCalculateBoundingBox()¹¦ÄÜ
-	m_vPosition.clear(); // Çå¿ÕÖ®Ç°µÄÊı¾İ
+	// å®ç°onCalculateBoundingBox()åŠŸèƒ½
+	m_vPosition.clear(); // æ¸…ç©ºä¹‹å‰çš„æ•°æ®
 
-	//// ´ÓÊ°È¡µÄÇúÃæÖĞÌáÈ¡µã(»ñÈ¡ÇúÃæÉÏµÄ¶¥µã)
+	//// ä»æ‹¾å–çš„æ›²é¢ä¸­æå–ç‚¹(è·å–æ›²é¢ä¸Šçš„é¡¶ç‚¹)
 	//for (const auto& pair : pickupMap) {
-	//	unsigned long key = pair.first;
-	//	const std::vector<std::wstring>& values = pair.second;
-	//	long lCount = 0;
-	//	m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);
-	//	std::vector<double> dSrc(3 * lCount, 0);
-	//	double* dSrcPosition = dSrc.data();
-	//	m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
-	//	for (const auto& value : values) {
-	//		for (long i = 0; i < lCount; i++) {
-	//			double dPosition[3] = { dSrcPosition[3 * i],dSrcPosition[3 * i + 1],dSrcPosition[3 * i + 2] };
-	//			double dTol = 10;
-	//			LONG bPointOnSurface = 0;
-	//			std::vector<wchar_t> buffer(value.begin(), value.end());
-	//			buffer.push_back(L'\0');
-	//			LPWSTR name = buffer.data();
-	//			m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
-	//			if (bPointOnSurface) {
-	//				m_vPosition.push_back(dPosition[0]);
-	//				m_vPosition.push_back(dPosition[1]);
-	//				m_vPosition.push_back(dPosition[2]);
-	//			}
-	//		}
-	//	}
+	//    unsigned long key = pair.first;
+	//    const std::vector<std::wstring>& values = pair.second;
+	//    long lCount = 0;
+	//    m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);
+	//    std::vector<double> dSrc(3 * lCount, 0);
+	//    double* dSrcPosition = dSrc.data();
+	//    m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
+	//    for (const auto& value : values) {
+	//        for (long i = 0; i < lCount; i++) {
+	//            double dPosition[3] = { dSrcPosition[3 * i],dSrcPosition[3 * i + 1],dSrcPosition[3 * i + 2] };
+	//            double dTol = 10;
+	//            LONG bPointOnSurface = 0;
+	//            std::vector<wchar_t> buffer(value.begin(), value.end());
+	//            buffer.push_back(L'\0');
+	//            LPWSTR name = buffer.data();
+	//            m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
+	//            if (bPointOnSurface) {
+	//                m_vPosition.push_back(dPosition[0]);
+	//                m_vPosition.push_back(dPosition[1]);
+	//                m_vPosition.push_back(dPosition[2]);
+	//            }
+	//        }
+	//    }
 	//}
 
 	//if (m_vPosition.empty()) {
-	//	qDebug() << "Ã»ÓĞÕÒµ½ÓĞĞ§µÄÇúÃæµã";
-	//	return;
+	//    qDebug() << "æ²¡æœ‰æ‰¾åˆ°æœ‰æ•ˆçš„æ›²é¢ç‚¹";
+	//    return;
 	//}
 
-	//// ¼ÆËã°üÎ§ºĞ
+	//// è®¡ç®—åŒ…å›´ç›’
 	//box.minPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
 	//box.maxPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
 
 	//for (size_t i = 0; i < m_vPosition.size(); i += 3) {
-	//	box.minPoint.x = std::min(box.minPoint.x, m_vPosition[i]);
-	//	box.minPoint.y = std::min(box.minPoint.y, m_vPosition[i + 1]);
-	//	box.minPoint.z = std::min(box.minPoint.z, m_vPosition[i + 2]);
+	//    box.minPoint.x = std::min(box.minPoint.x, m_vPosition[i]);
+	//    box.minPoint.y = std::min(box.minPoint.y, m_vPosition[i + 1]);
+	//    box.minPoint.z = std::min(box.minPoint.z, m_vPosition[i + 2]);
 
-	//	box.maxPoint.x = std::max(box.maxPoint.x, m_vPosition[i]);
-	//	box.maxPoint.y = std::max(box.maxPoint.y, m_vPosition[i + 1]);
-	//	box.maxPoint.z = std::max(box.maxPoint.z, m_vPosition[i + 2]);
+	//    box.maxPoint.x = std::max(box.maxPoint.x, m_vPosition[i]);
+	//    box.maxPoint.y = std::max(box.maxPoint.y, m_vPosition[i + 1]);
+	//    box.maxPoint.z = std::max(box.maxPoint.z, m_vPosition[i + 2]);
 	//}
 
 	//std::vector<Point3D> box_8 = box.getCorners();
 	//ABBPosition.clear();
 	//for (int i = 0; i < 8; i++) {
-	//	ABBPosition.push_back(box_8[i].x);
-	//	ABBPosition.push_back(box_8[i].y);
-	//	ABBPosition.push_back(box_8[i].z);
+	//    ABBPosition.push_back(box_8[i].x);
+	//    ABBPosition.push_back(box_8[i].y);
+	//    ABBPosition.push_back(box_8[i].z);
 	//}
 
-	ABBPosition = calculateAABBCornersFromPickupMap(pickupMap);//¼ÆËã³ö°üÎ§ºĞ×Ó
+	ABBPosition = calculateAABBCornersFromPickupMap(pickupMap);//è®¡ç®—å‡ºåŒ…å›´ç›’å­
 
 	QString text = ui->textEdit->toPlainText().trimmed();
 	bool ok;
 	double spacing = text.toDouble(&ok);
 
 	if (ok && spacing > 0) {
-		// »ñÈ¡×ø±êÏµºÍ·½Ïò
+		// è·å–åæ ‡ç³»å’Œæ–¹å‘
 		QString coordanateName = ui->comboBox_3->currentText();
 		QString mainVectorText = ui->comboBox_4->currentText();
 		QString mainDivisionDirectionText = ui->comboBox_5->currentText();
 
-		// »ñÈ¡×ø±êÏµ×ËÌ¬
+		// è·å–åæ ‡ç³»å§¿æ€
 		ULONG selectCoorID = 0;
 		PQDataType CoodernateType = PQ_COORD;
 		selectCoorID = CoodernateMap.key(coordanateName);
@@ -638,12 +877,12 @@ void cursePart::on_spaceSettingButton_clicked()
 			}
 		}
 
-		// »ñÈ¡ÖáÏòÁ¿
+		// è·å–è½´å‘é‡
 		std::vector<std::vector<double>> axisVector = getCoordinateAxesFromEuler(coordanate);
 		std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
 		std::vector<double> mainDivisionDirection = getAxisVector(axisVector, mainDivisionDirectionText);
 
-		// ¼ÆËã×î´ó½Ç¶È
+		// è®¡ç®—æœ€å¤§è§’åº¦
 		Point3D viewDirection(mainVector[0], mainVector[1], mainVector[2]);
 		std::vector<Point3D> corners = box.getCorners();
 		std::vector<Point3D> result = createGridOnClosestSurface(corners, spacing, spacing, viewDirection);
@@ -674,13 +913,13 @@ void cursePart::on_spaceSettingButton_clicked()
 			}
 		}
 		maxtheta = maxtheta * 180 / M_PI;
-		ui->textBrowser_1->setPlainText(QString("%1").arg(maxtheta) + "¡ã");
+		ui->textBrowser_1->setPlainText(QString("%1").arg(maxtheta) + "Â°");
 
-		// ¼ÆËãºñ¶È
+		// è®¡ç®—åšåº¦
 		if (ABBPosition.size() == 24) {
 			std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
 			if (mainVector.size() == 3) {
-				// ±ê×¼»¯·½ÏòÏòÁ¿
+				// æ ‡å‡†åŒ–æ–¹å‘å‘é‡
 				double norm = sqrt(mainVector[0] * mainVector[0] + mainVector[1] * mainVector[1] + mainVector[2] * mainVector[2]);
 				if (norm > 0) {
 					mainVector[0] /= norm;
@@ -688,7 +927,7 @@ void cursePart::on_spaceSettingButton_clicked()
 					mainVector[2] /= norm;
 				}
 
-				// ¼ÆËã8¸ö½ÇµãÔÚ·½ÏòÉÏµÄÍ¶Ó°
+				// è®¡ç®—8ä¸ªè§’ç‚¹åœ¨æ–¹å‘ä¸Šçš„æŠ•å½±
 				std::vector<double> projections;
 				for (int i = 0; i < 8; i++) {
 					double x = ABBPosition[i * 3];
@@ -703,13 +942,13 @@ void cursePart::on_spaceSettingButton_clicked()
 					double maxProj = *std::max_element(projections.begin(), projections.end());
 					m_thickness = maxProj - minProj;
 					ui->textBrowser_2->setPlainText(QString::number(m_thickness, 'f', 2));
-					qDebug() << "ºñ¶È¼ÆËãÍê³É£º" << m_thickness << "mm";
+					qDebug() << "åšåº¦è®¡ç®—å®Œæˆï¼š" << m_thickness << "mm";
 				}
 			}
 		}
 	}
 	else {
-		QMessageBox::warning(this, "Warning", "ÇëÊäÈëÓĞĞ§µÄ¼ä¾àÖµ");
+		QMessageBox::warning(this, "Warning", "è¯·è¾“å…¥æœ‰æ•ˆçš„é—´è·å€¼");
 	}
 }
 
@@ -743,7 +982,7 @@ void cursePart::on_deleteButton_clicked()
 		}
 	}
 
-	// È¥ÖØ²¢ÅÅĞò£¨´Ó´óµ½Ğ¡£©
+	// å»é‡å¹¶æ’åºï¼ˆä»å¤§åˆ°å°ï¼‰
 	rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
 	std::sort(rows.begin(), rows.end(), std::greater<int>());
 
@@ -757,32 +996,32 @@ void cursePart::on_deleteButton_clicked()
 	selectionModel->clearSelection();
 
 	if (!deletedSurfaceNames.isEmpty()) {
-		// ÊµÏÖonDeleteSelectedSurfaces(deletedSurfaceNames)¹¦ÄÜ
+		// å®ç°onDeleteSelectedSurfaces(deletedSurfaceNames)åŠŸèƒ½
 		if (deletedSurfaceNames.isEmpty()) {
-			qDebug() << "Ã»ÓĞĞèÒªÉ¾³ıµÄÇúÃæ";
+			qDebug() << "æ²¡æœ‰éœ€è¦åˆ é™¤çš„æ›²é¢";
 			return;
 		}
 
-		// ´Ó pickupMap ÖĞÉ¾³ıÖ¸¶¨µÄÇúÃæ
+		// ä» pickupMap ä¸­åˆ é™¤æŒ‡å®šçš„æ›²é¢
 		int deletedCount = 0;
 
 		for (const QString& surfaceName : deletedSurfaceNames) {
-			// ½« QString ×ª»»Îª std::wstring
+			// å°† QString è½¬æ¢ä¸º std::wstring
 			std::wstring wSurfaceName = surfaceName.toStdWString();
 
-			// ±éÀú pickupMap ²éÕÒ²¢É¾³ı¶ÔÓ¦µÄÇúÃæ
+			// éå† pickupMap æŸ¥æ‰¾å¹¶åˆ é™¤å¯¹åº”çš„æ›²é¢
 			auto it = pickupMap.begin();
 			while (it != pickupMap.end()) {
 				auto& surfaces = it->second;
 				auto surfaceIt = std::find(surfaces.begin(), surfaces.end(), wSurfaceName);
 
 				if (surfaceIt != surfaces.end()) {
-					// ÕÒµ½ÇúÃæ£¬´ÓÏòÁ¿ÖĞÉ¾³ı
+					// æ‰¾åˆ°æ›²é¢ï¼Œä»å‘é‡ä¸­åˆ é™¤
 					surfaces.erase(surfaceIt);
 					deletedCount++;
-					qDebug() << "ÒÑ´Ó pickupMap ÖĞÉ¾³ıÇúÃæ:" << surfaceName;
+					qDebug() << "å·²ä» pickupMap ä¸­åˆ é™¤æ›²é¢:" << surfaceName;
 
-					// Èç¹û¸Ã¼ü¶ÔÓ¦µÄÏòÁ¿Îª¿Õ£¬¿ÉÒÔÑ¡ÔñÉ¾³ıÕû¸ö¼üÖµ¶Ô
+					// å¦‚æœè¯¥é”®å¯¹åº”çš„å‘é‡ä¸ºç©ºï¼Œå¯ä»¥é€‰æ‹©åˆ é™¤æ•´ä¸ªé”®å€¼å¯¹
 					if (surfaces.empty()) {
 						it = pickupMap.erase(it);
 					}
@@ -790,7 +1029,7 @@ void cursePart::on_deleteButton_clicked()
 						++it;
 					}
 
-					// ¼ÙÉèÇúÃæÃû³ÆÔÚ pickupMap ÖĞÎ¨Ò»£¬ÕÒµ½ºóÌø³öÄÚ²ãÑ­»·
+					// å‡è®¾æ›²é¢åç§°åœ¨ pickupMap ä¸­å”¯ä¸€ï¼Œæ‰¾åˆ°åè·³å‡ºå†…å±‚å¾ªç¯
 					break;
 				}
 				else {
@@ -799,7 +1038,7 @@ void cursePart::on_deleteButton_clicked()
 			}
 		}
 
-		qDebug() << "×Ü¹²É¾³ıÁË" << deletedCount << "¸öÇúÃæ";
+		qDebug() << "æ€»å…±åˆ é™¤äº†" << deletedCount << "ä¸ªæ›²é¢";
 	}
 }
 
@@ -811,7 +1050,7 @@ void cursePart::on_comboBox_currentTextChanged(const QString& text)
 void cursePart::onDialogFinished(int result)
 {
 	Q_UNUSED(result)
-		// Í£Ö¹ÈÎºÎÕıÔÚÔËĞĞµÄÄ£¿é
+		// åœæ­¢ä»»ä½•æ­£åœ¨è¿è¡Œçš„æ¨¡å—
 		if (isPickupActive || isPreview) {
 			CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 			m_ptrKit->Doc_end_module(cmd);
@@ -834,18 +1073,18 @@ QMap<ULONG, QString> cursePart::getObjectsByType(PQDataType objType)
 
 	HRESULT hr = m_ptrKit->Doc_get_obj_bytype(objType, &namesVariant, &idsVariant);
 	if (FAILED(hr)) {
-		qDebug() << "»ñÈ¡¶ÔÏóÁĞ±íÊ§°Ü£¬ÀàĞÍ:" << objType << "´íÎóÂë:" << hr;
+		qDebug() << "è·å–å¯¹è±¡åˆ—è¡¨å¤±è´¥ï¼Œç±»å‹:" << objType << "é”™è¯¯ç :" << hr;
 		VariantClear(&namesVariant);
 		VariantClear(&idsVariant);
 		return objectMap;
 	}
 
-	// ÌáÈ¡Ãû³ÆÊı×é
+	// æå–åç§°æ•°ç»„
 	QStringList names = extractStringArrayFromVariant(namesVariant);
-	// ÌáÈ¡IDÊı×é
+	// æå–IDæ•°ç»„
 	QList<long> ids = extractLongArrayFromVariant(idsVariant);
 
-	// ¹¹½¨Ó³Éä¹ØÏµ
+	// æ„å»ºæ˜ å°„å…³ç³»
 	int minSize = qMin(names.size(), ids.size());
 	for (int i = 0; i < minSize; i++) {
 		objectMap[ids[i]] = names[i];
@@ -854,7 +1093,7 @@ QMap<ULONG, QString> cursePart::getObjectsByType(PQDataType objType)
 	VariantClear(&namesVariant);
 	VariantClear(&idsVariant);
 
-	qDebug() << "³É¹¦»ñÈ¡¶ÔÏóÁĞ±í£¬ÀàĞÍ:" << objType << "ÊıÁ¿:" << objectMap.size();
+	qDebug() << "æˆåŠŸè·å–å¯¹è±¡åˆ—è¡¨ï¼Œç±»å‹:" << objType << "æ•°é‡:" << objectMap.size();
 	return objectMap;
 }
 
@@ -863,56 +1102,56 @@ QStringList cursePart::extractStringArrayFromVariant(const VARIANT& variant)
 	QStringList result;
 
 	if ((variant.vt & VT_ARRAY) == 0 || variant.vt != (VT_ARRAY | VT_BSTR)) {
-		qDebug() << "VARIANT ÀàĞÍ´íÎó£¬ÆÚÍûVT_ARRAY|VT_BSTR£¬Êµ¼ÊÀàĞÍ:" << variant.vt;
+		qDebug() << "VARIANT ç±»å‹é”™è¯¯ï¼ŒæœŸæœ›VT_ARRAY|VT_BSTRï¼Œå®é™…ç±»å‹:" << variant.vt;
 		return result;
 	}
 
 	SAFEARRAY* array = variant.parray;
 	if (!array || array->cDims != 1) {
-		qDebug() << "SAFEARRAY ÎŞĞ§»òÎ¬¶È²»ÕıÈ·";
+		qDebug() << "SAFEARRAY æ— æ•ˆæˆ–ç»´åº¦ä¸æ­£ç¡®";
 		return result;
 	}
 
-	// »ñÈ¡Êı×é±ß½ç
+	// è·å–æ•°ç»„è¾¹ç•Œ
 	long lowerBound, upperBound;
 	HRESULT hr = SafeArrayGetLBound(array, 1, &lowerBound);
 	if (FAILED(hr)) {
-		qDebug() << "»ñÈ¡Êı×éÏÂ±ß½çÊ§°Ü£¬´íÎóÂë:" << hr;
+		qDebug() << "è·å–æ•°ç»„ä¸‹è¾¹ç•Œå¤±è´¥ï¼Œé”™è¯¯ç :" << hr;
 		return result;
 	}
 
 	hr = SafeArrayGetUBound(array, 1, &upperBound);
 	if (FAILED(hr)) {
-		qDebug() << "»ñÈ¡Êı×éÉÏ±ß½çÊ§°Ü£¬´íÎóÂë:" << hr;
+		qDebug() << "è·å–æ•°ç»„ä¸Šè¾¹ç•Œå¤±è´¥ï¼Œé”™è¯¯ç :" << hr;
 		return result;
 	}
 
 	long elementCount = upperBound - lowerBound + 1;
 	if (elementCount <= 0) {
-		qDebug() << "Êı×éÔªËØÊıÁ¿Îª0»ò¸ºÊı:" << elementCount;
+		qDebug() << "æ•°ç»„å…ƒç´ æ•°é‡ä¸º0æˆ–è´Ÿæ•°:" << elementCount;
 		return result;
 	}
 
-	// ·ÃÎÊÊı×éÊı¾İ
+	// è®¿é—®æ•°ç»„æ•°æ®
 	BSTR* data = nullptr;
 	hr = SafeArrayAccessData(array, (void**)&data);
 	if (FAILED(hr)) {
-		qDebug() << "SafeArrayAccessData Ê§°Ü£¬´íÎóÂë:" << hr;
+		qDebug() << "SafeArrayAccessData å¤±è´¥ï¼Œé”™è¯¯ç :" << hr;
 		return result;
 	}
 
-	// ÌáÈ¡ËùÓĞ×Ö·û´®ÔªËØ
+	// æå–æ‰€æœ‰å­—ç¬¦ä¸²å…ƒç´ 
 	for (long i = 0; i < elementCount; i++) {
 		if (data[i] != nullptr) {
 			QString str = QString::fromWCharArray(data[i]);
 			result.append(str);
 		}
 		else {
-			result.append(QString()); // ¿Õ×Ö·û´®´¦Àí
+			result.append(QString()); // ç©ºå­—ç¬¦ä¸²å¤„ç†
 		}
 	}
 
-	// È¡ÏûÊı¾İ·ÃÎÊ
+	// å–æ¶ˆæ•°æ®è®¿é—®
 	SafeArrayUnaccessData(array);
 
 	return result;
@@ -923,13 +1162,13 @@ QList<long> cursePart::extractLongArrayFromVariant(const VARIANT& variant)
 	QList<long> result;
 
 	if ((variant.vt & VT_ARRAY) == 0) {
-		qDebug() << "VARIANT ÀàĞÍ´íÎó£¬Êµ¼ÊÀàĞÍ:" << variant.vt;
+		qDebug() << "VARIANT ç±»å‹é”™è¯¯ï¼Œå®é™…ç±»å‹:" << variant.vt;
 		return result;
 	}
 
 	SAFEARRAY* array = variant.parray;
 	if (!array || array->cDims != 1) {
-		qDebug() << "SAFEARRAY ÎŞĞ§»òÎ¬¶È²»ÕıÈ·";
+		qDebug() << "SAFEARRAY æ— æ•ˆæˆ–ç»´åº¦ä¸æ­£ç¡®";
 		return result;
 	}
 
@@ -949,7 +1188,7 @@ QList<long> cursePart::extractLongArrayFromVariant(const VARIANT& variant)
 
 	HRESULT hr = SafeArrayLock(array);
 	if (FAILED(hr)) {
-		qDebug() << "Ëø¶¨Êı×éÊ§°Ü£¬´íÎóÂë:" << hr;
+		qDebug() << "é”å®šæ•°ç»„å¤±è´¥ï¼Œé”™è¯¯ç :" << hr;
 		return result;
 	}
 
@@ -967,7 +1206,7 @@ QList<long> cursePart::extractLongArrayFromVariant(const VARIANT& variant)
 			value = static_cast<ULONG*>(data)[i];
 			break;
 		default:
-			qDebug() << "²»Ö§³ÖµÄÊı×éÔªËØÀàĞÍ:" << vt;
+			qDebug() << "ä¸æ”¯æŒçš„æ•°ç»„å…ƒç´ ç±»å‹:" << vt;
 			break;
 		}
 		result.append(value);
@@ -983,13 +1222,13 @@ QStringList cursePart::getSprayRobotNames(PQRobotType mechanismType, const QMap<
 	QStringList robotNames;
 
 	if (robotMap.isEmpty()) {
-		return robotNames; // ·µ»Ø¿ÕÁĞ±í
+		return robotNames; // è¿”å›ç©ºåˆ—è¡¨
 	}
 
-	// ±éÀú»úÆ÷ÈËÓ³Éä±í£¬É¸Ñ¡Ö¸¶¨ÀàĞÍµÄ»úÆ÷ÈË
+	// éå†æœºå™¨äººæ˜ å°„è¡¨ï¼Œç­›é€‰æŒ‡å®šç±»å‹çš„æœºå™¨äºº
 	for (auto it = robotMap.constBegin(); it != robotMap.constEnd(); ++it) {
-		long id = it.key();    // »ñÈ¡»úÆ÷ÈËID
-		QString name = it.value(); // »ñÈ¡»úÆ÷ÈËÃû³Æ
+		long id = it.key();    // è·å–æœºå™¨äººID
+		QString name = it.value(); // è·å–æœºå™¨äººåç§°
 
 		PQRobotType robotType = PQ_MECHANISM_ROBOT;
 		HRESULT hr = m_ptrKit->Robot_get_type(id, &robotType);
@@ -1013,7 +1252,7 @@ void cursePart::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG 
 	{
 		return;
 	}
-	//»º´æÖ¸¶¨¶ÔÏóÃû³Æ
+	//ç¼“å­˜æŒ‡å®šå¯¹è±¡åç§°
 	BSTR* bufName;
 	long lenName = vNamePara.parray->rgsabound[0].cElements;
 	SafeArrayAccessData(vNamePara.parray, (void**)&bufName);
@@ -1031,7 +1270,7 @@ void cursePart::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG 
 	SafeArrayUnaccessData(vNamePara.parray);
 
 
-	//»º´æÖ¸¶¨¶ÔÏóID
+	//ç¼“å­˜æŒ‡å®šå¯¹è±¡ID
 	ULONG* bufID;
 	long lenID = vIDPara.parray->rgsabound[0].cElements;
 	SafeArrayAccessData(vIDPara.parray, (void**)&bufID);
@@ -1043,16 +1282,16 @@ void cursePart::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG 
 std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<unsigned long,
 	std::vector<std::wstring>>&pickupMap)
 {
-	// ½« ABBPosition Ìæ»»Îª surfacePoints
+	// å°† ABBPosition æ›¿æ¢ä¸º surfacePoints
 	std::vector<double> surfacePoints;
 	std::vector<double> resultPositions;
 
-	// ±éÀúpickupMapÖĞµÄÃ¿¸ö²¿¼ş
+	// éå†pickupMapä¸­çš„æ¯ä¸ªéƒ¨ä»¶
 	for (const auto& pair : pickupMap) {
 		unsigned long key = pair.first;
 		const std::vector<std::wstring>& values = pair.second;
 
-		// »ñÈ¡²¿¼ş¶¥µãÊıÁ¿
+		// è·å–éƒ¨ä»¶é¡¶ç‚¹æ•°é‡
 		long lCount = 0;
 		m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);
 
@@ -1060,12 +1299,12 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 			continue;
 		}
 
-		// »ñÈ¡²¿¼ş¶¥µã×ø±ê
+		// è·å–éƒ¨ä»¶é¡¶ç‚¹åæ ‡
 		std::vector<double> dSrc(3 * lCount, 0);
 		double* dSrcPosition = dSrc.data();
 		m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
 
-		// ¼ì²éÃ¿¸ö±íÃæÉÏµÄµã
+		// æ£€æŸ¥æ¯ä¸ªè¡¨é¢ä¸Šçš„ç‚¹
 		for (const auto& value : values) {
 			for (long i = 0; i < lCount; i++) {
 				double dPosition[3] = {
@@ -1077,12 +1316,12 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 				double dTol = 10;
 				LONG bPointOnSurface = 0;
 
-				// ×ª»»±íÃæÃû³Æ¸ñÊ½
+				// è½¬æ¢è¡¨é¢åç§°æ ¼å¼
 				std::vector<wchar_t> buffer(value.begin(), value.end());
 				buffer.push_back(L'\0');
 				LPWSTR name = buffer.data();
 
-				// ¼ì²éµãÊÇ·ñÔÚ±íÃæÉÏ
+				// æ£€æŸ¥ç‚¹æ˜¯å¦åœ¨è¡¨é¢ä¸Š
 				m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
 
 				if (bPointOnSurface) {
@@ -1094,11 +1333,11 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 		}
 	}
 
-	// ¼ÆËãAABB°üÎ§ºĞ
+	// è®¡ç®—AABBåŒ…å›´ç›’
 	AABB box;
 
 	if (surfacePoints.empty()) {
-		return resultPositions; // ·µ»Ø¿Õ½á¹û
+		return resultPositions; // è¿”å›ç©ºç»“æœ
 	}
 
 	box.minPoint = { surfacePoints[0], surfacePoints[1], surfacePoints[2] };
@@ -1116,10 +1355,10 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 		}
 	}
 
-	// ¼ÆËãAABB²¢»ñÈ¡8¸ö½Çµã
+	// è®¡ç®—AABBå¹¶è·å–8ä¸ªè§’ç‚¹
 	std::vector<Point3D> boxCorners = box.getCorners();
 
-	// ½«½Çµã×ø±êÕ¹Æ½ÎªÁ¬ĞøÊı×é
+	// å°†è§’ç‚¹åæ ‡å±•å¹³ä¸ºè¿ç»­æ•°ç»„
 	for (const auto& corner : boxCorners) {
 		resultPositions.push_back(corner.x);
 		resultPositions.push_back(corner.y);
@@ -1134,13 +1373,13 @@ std::vector<std::vector<double>> cursePart::getCoordinateAxesFromEuler(double * 
 	double beta = eulerAngles[4];
 	double gamma = eulerAngles[5];
 
-	// ¼ÆËãÈı½Çº¯ÊıÖµ
+	// è®¡ç®—ä¸‰è§’å‡½æ•°å€¼
 	double cosA = cos(alpha), sinA = sin(alpha);
 	double cosB = cos(beta), sinB = sin(beta);
 	double cosG = cos(gamma), sinG = sin(gamma);
 
-	// ¼ÆËãĞı×ª¾ØÕóµÄÔªËØ£¨XYZË³Ğò£©
-	// Ğı×ª¾ØÕó R = Rx * Ry * Rz
+	// è®¡ç®—æ—‹è½¬çŸ©é˜µçš„å…ƒç´ ï¼ˆXYZé¡ºåºï¼‰
+	// æ—‹è½¬çŸ©é˜µ R = Rx * Ry * Rz
 	double r11 = cosB * cosG;
 	double r12 = cosG * sinA * sinB - cosA * sinG;
 	double r13 = cosA * cosG * sinB + sinA * sinG;
@@ -1153,24 +1392,24 @@ std::vector<std::vector<double>> cursePart::getCoordinateAxesFromEuler(double * 
 	double r32 = cosB * sinA;
 	double r33 = cosA * cosB;
 
-	// ´´½¨½á¹û¶şÎ¬Êı×é
+	// åˆ›å»ºç»“æœäºŒç»´æ•°ç»„
 	std::vector<std::vector<double>> result(3, std::vector<double>(3));
 
-	// Ğı×ª¾ØÕóµÄÁĞÏòÁ¿¾ÍÊÇ×ø±êÖá·½ÏòÏòÁ¿
-	// µÚÒ»ÁĞÊÇXÖá·½Ïò
-	result[0][0] = r11; // XÖáµÄX·ÖÁ¿
-	result[0][1] = r21; // XÖáµÄY·ÖÁ¿
-	result[0][2] = r31; // XÖáµÄZ·ÖÁ¿
+	// æ—‹è½¬çŸ©é˜µçš„åˆ—å‘é‡å°±æ˜¯åæ ‡è½´æ–¹å‘å‘é‡
+	// ç¬¬ä¸€åˆ—æ˜¯Xè½´æ–¹å‘
+	result[0][0] = r11; // Xè½´çš„Xåˆ†é‡
+	result[0][1] = r21; // Xè½´çš„Yåˆ†é‡
+	result[0][2] = r31; // Xè½´çš„Zåˆ†é‡
 
-	// µÚ¶şÁĞÊÇYÖá·½Ïò
-	result[1][0] = r12; // YÖáµÄX·ÖÁ¿
-	result[1][1] = r22; // YÖáµÄY·ÖÁ¿
-	result[1][2] = r32; // YÖáµÄZ·ÖÁ¿
+	// ç¬¬äºŒåˆ—æ˜¯Yè½´æ–¹å‘
+	result[1][0] = r12; // Yè½´çš„Xåˆ†é‡
+	result[1][1] = r22; // Yè½´çš„Yåˆ†é‡
+	result[1][2] = r32; // Yè½´çš„Zåˆ†é‡
 
-	// µÚÈıÁĞÊÇZÖá·½Ïò
-	result[2][0] = r13; // ZÖáµÄX·ÖÁ¿
-	result[2][1] = r23; // ZÖáµÄY·ÖÁ¿
-	result[2][2] = r33; // ZÖáµÄZ·ÖÁ¿
+	// ç¬¬ä¸‰åˆ—æ˜¯Zè½´æ–¹å‘
+	result[2][0] = r13; // Zè½´çš„Xåˆ†é‡
+	result[2][1] = r23; // Zè½´çš„Yåˆ†é‡
+	result[2][2] = r33; // Zè½´çš„Zåˆ†é‡
 
 	return result;
 }
@@ -1182,35 +1421,35 @@ std::vector<double> cursePart::getAxisVector(const std::vector<std::vector<doubl
 		return {};
 	}
 
-	// ¼ì²éÊÇ·ñ°üº¬"¸º"×Ö
-	bool isNegative = name.contains("¸º", Qt::CaseInsensitive);
+	// æ£€æŸ¥æ˜¯å¦åŒ…å«"è´Ÿ"å­—
+	bool isNegative = name.contains("è´Ÿ", Qt::CaseInsensitive);
 
-	// »ñÈ¡Ô­Ê¼ÏòÁ¿
+	// è·å–åŸå§‹å‘é‡
 	std::vector<double> result;
 
 	if (name.contains("X", Qt::CaseInsensitive)) {
-		result = axis[0]; // »ñÈ¡µÚÒ»ĞĞ·½ÏòÏòÁ¿
+		result = axis[0]; // è·å–ç¬¬ä¸€è¡Œæ–¹å‘å‘é‡
 	}
 	else if (name.contains("Y", Qt::CaseInsensitive)) {
-		result = axis[1]; // »ñÈ¡µÚ¶şĞĞ·½ÏòÏòÁ¿
+		result = axis[1]; // è·å–ç¬¬äºŒè¡Œæ–¹å‘å‘é‡
 	}
 	else if (name.contains("Z", Qt::CaseInsensitive)) {
-		result = axis[2]; // »ñÈ¡µÚÈıĞĞ·½ÏòÏòÁ¿
+		result = axis[2]; // è·å–ç¬¬ä¸‰è¡Œæ–¹å‘å‘é‡
 	}
 	else {
-		// Èç¹ûÃ»ÓĞÆ¥ÅäµÄ×ø±êÖá£¬·µ»Ø¿ÕÏòÁ¿
+		// å¦‚æœæ²¡æœ‰åŒ¹é…çš„åæ ‡è½´ï¼Œè¿”å›ç©ºå‘é‡
 		return {};
 	}
 
-	// Èç¹û½á¹ûÎª¿Õ£¬Ö±½Ó·µ»Ø
+	// å¦‚æœç»“æœä¸ºç©ºï¼Œç›´æ¥è¿”å›
 	if (result.empty()) {
 		return {};
 	}
 
-	// Èç¹û°üº¬"¸º"×Ö£¬½«ÏòÁ¿·´Ïò
+	// å¦‚æœåŒ…å«"è´Ÿ"å­—ï¼Œå°†å‘é‡åå‘
 	if (isNegative) {
 		for (auto& component : result) {
-			component = -component; // Ã¿¸ö·ÖÁ¿È¡¸º
+			component = -component; // æ¯ä¸ªåˆ†é‡å–è´Ÿ
 		}
 	}
 
@@ -1222,7 +1461,7 @@ void cursePart::updateRailOptions(const QString & robotName, const QMap<ULONG, Q
 	if (!this || robotName.isEmpty()) {
 		return;
 	}
-	// »ñÈ¡¹ìµÀĞÅÏ¢
+	// è·å–è½¨é“ä¿¡æ¯
 	ULONG uExternalID = 0;
 	QString railname = robotName + "_rail";
 	GetObjIDByName(PQ_ROBOT, railname.toStdWString(), uExternalID);
@@ -1238,11 +1477,11 @@ void cursePart::updateRailOptions(const QString & robotName, const QMap<ULONG, Q
 		}
 	}
 	else {
-		// Èç¹û¹ìµÀÊıÁ¿Îª0»òµ÷ÓÃÊ§°Ü£¬È·±£railÎª¿ÕÁĞ±í
+		// å¦‚æœè½¨é“æ•°é‡ä¸º0æˆ–è°ƒç”¨å¤±è´¥ï¼Œç¡®ä¿railä¸ºç©ºåˆ—è¡¨
 		rail.clear();
 	}
 
-	// ¸üĞÂ¶Ô»°¿òÖĞµÄ¹ìµÀÑ¡Ïî
+	// æ›´æ–°å¯¹è¯æ¡†ä¸­çš„è½¨é“é€‰é¡¹
 	ui->comboBox_2->clear();
 	ui->comboBox_2->addItems(rail);
 	if (!rail.isEmpty()) {
@@ -1288,37 +1527,37 @@ void cursePart::OnDraw()
 
 			if ((i % 3) == 2 && i >= 2)
 			{
-				int pointIndex = i / 3; // ¶¥µãË÷ÒıÊÇÁ¬ĞøµÄ
+				int pointIndex = i / 3; // é¡¶ç‚¹ç´¢å¼•æ˜¯è¿ç»­çš„
 				pointMap.emplace(pointIndex, tempPoint);
 			}
 		}
 
-		// ¼ÙÉèÃ¿¸ö³¤·½ĞÎÓÉ4¸ö¶¥µã¹¹³É£¬°´Ë³ĞòÅÅÁĞ
-		int rectanglesCount = pointMap.size() / 4; // ¼ÆËãÄÜ×é³ÉµÄ³¤·½ĞÎÊıÁ¿
+		// å‡è®¾æ¯ä¸ªé•¿æ–¹å½¢ç”±4ä¸ªé¡¶ç‚¹æ„æˆï¼ŒæŒ‰é¡ºåºæ’åˆ—
+		int rectanglesCount = pointMap.size() / 4; // è®¡ç®—èƒ½ç»„æˆçš„é•¿æ–¹å½¢æ•°é‡
 
-		// ¶¨Òåµ¥¸ö³¤·½ÌåµÄ±ßÁ¬½Ó¹ØÏµ£¨±¾µØÆ«ÒÆ£©
+		// å®šä¹‰å•ä¸ªé•¿æ–¹ä½“çš„è¾¹è¿æ¥å…³ç³»ï¼ˆæœ¬åœ°åç§»ï¼‰
 		std::vector<std::pair<int, int>> singleRectangleEdges = {
-			{0, 1}, {1, 2}, {2, 3}, {3, 0} // µ¥¸ö³¤·½ĞÎµÄËÄÌõ±ß
+			{0, 1}, {1, 2}, {2, 3}, {3, 0} // å•ä¸ªé•¿æ–¹å½¢çš„å››æ¡è¾¹
 		};
 
-		// ÎªËùÓĞ³¤·½ÌåÉú³É±ß¶¨Òå
+		// ä¸ºæ‰€æœ‰é•¿æ–¹ä½“ç”Ÿæˆè¾¹å®šä¹‰
 		std::vector<std::pair<int, int>> edgeDefinitions;
 		for (int rectIndex = 0; rectIndex < rectanglesCount; ++rectIndex) {
-			int vertexOffset = rectIndex * 4; // Ã¿¸ö³¤·½ĞÎÕ¼ÓÃ4¸ö¶¥µã
+			int vertexOffset = rectIndex * 4; // æ¯ä¸ªé•¿æ–¹å½¢å ç”¨4ä¸ªé¡¶ç‚¹
 			for (const auto& edge : singleRectangleEdges) {
-				// ½«±¾µØ¶¥µãË÷Òı×ª»»ÎªÈ«¾Ö¶¥µãË÷Òı
+				// å°†æœ¬åœ°é¡¶ç‚¹ç´¢å¼•è½¬æ¢ä¸ºå…¨å±€é¡¶ç‚¹ç´¢å¼•
 				int globalStart = vertexOffset + edge.first;
 				int globalEnd = vertexOffset + edge.second;
 				edgeDefinitions.push_back({ globalStart, globalEnd });
 			}
 		}
 
-		// ¼ÆËãĞèÒªµÄÊı×é´óĞ¡£º±ßµÄÊıÁ¿ * Ã¿¸öµã3¸ö×ø±ê·ÖÁ¿ * 2£¨ÆğµãºÍÖÕµã£©
+		// è®¡ç®—éœ€è¦çš„æ•°ç»„å¤§å°ï¼šè¾¹çš„æ•°é‡ * æ¯ä¸ªç‚¹3ä¸ªåæ ‡åˆ†é‡ * 2ï¼ˆèµ·ç‚¹å’Œç»ˆç‚¹ï¼‰
 		int totalEdges = edgeDefinitions.size();
-		double* start = new double[totalEdges * 3]; // Æğµã×ø±êÊı×é
-		double* dEnd = new double[totalEdges * 3];  // ÖÕµã×ø±êÊı×é
+		double* start = new double[totalEdges * 3]; // èµ·ç‚¹åæ ‡æ•°ç»„
+		double* dEnd = new double[totalEdges * 3];  // ç»ˆç‚¹åæ ‡æ•°ç»„
 
-		// Ìî³äÊı×é
+		// å¡«å……æ•°ç»„
 		int arrayIndex = 0;
 		for (const auto& edge : edgeDefinitions) {
 			int startIndex = edge.first;
@@ -1341,7 +1580,7 @@ void cursePart::OnDraw()
 		ULONG i_uCoordinateID = 0;
 		ULONG o_uCylinderID = 0;
 
-		// »æÖÆËùÓĞ±ß
+		// ç»˜åˆ¶æ‰€æœ‰è¾¹
 		for (int i = 0; i < totalEdges * 3; i += 3) {
 			double start_new[3] = { start[i], start[i + 1], start[i + 2] };
 			double end_new[3] = { dEnd[i], dEnd[i + 1], dEnd[i + 2] };
@@ -1357,15 +1596,45 @@ void cursePart::OnDraw()
 void cursePart::OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
 	double i_dPointX, double i_dPointY, double i_dPointZ)
 {
-	// È»ºó´¦ÀíÊ°È¡½á¹û£¨Èç¹û´¦ÓÚÊ°È¡Ä£Ê½ÇÒÓĞ»î¶¯µÄ¶Ô»°¿ò£©
+	// ç„¶åå¤„ç†æ‹¾å–ç»“æœï¼ˆå¦‚æœå¤„äºæ‹¾å–æ¨¡å¼ä¸”æœ‰æ´»åŠ¨çš„å¯¹è¯æ¡†ï¼‰
 	if (isPickupActive && this && this->isVisible()) {
-		// ¿ÉÒÔÌí¼Ó¸ü¶àÌõ¼ş¼ì²é£¬±ÈÈçÖ»´¦ÀíÌØ¶¨ÀàĞÍµÄÔªËØ
-		if (i_nEntityType == 2) { // ÀıÈç£¬Ö»´¦ÀíÀàĞÍ1µÄÔªËØ
+		// å¯ä»¥æ·»åŠ æ›´å¤šæ¡ä»¶æ£€æŸ¥ï¼Œæ¯”å¦‚åªå¤„ç†ç‰¹å®šç±»å‹çš„å…ƒç´ 
+		if (i_nEntityType == 2) { // ä¾‹å¦‚ï¼Œåªå¤„ç†ç±»å‹1çš„å…ƒç´ 
 			QString entityName = QString::fromWCharArray(i_lEntityID);
 			this->addItemToListView(entityName);
-			qDebug() << "Ê°È¡µ½ÔªËØ:" << entityName;
-			//¼ÇÂ¼
+			qDebug() << "æ‹¾å–åˆ°å…ƒç´ :" << entityName;
+			//è®°å½•
 			pickupMap[i_ulObjID].push_back(i_lEntityID ? i_lEntityID : L"");
 		}
 	}
+}
+
+// ä¿å­˜å·¥ä½œç©ºé—´æ•°æ®çš„æ–¹æ³•å®ç°
+void cursePart::saveWorkspaceData() {
+	QString robotName = ui->comboBox_1->currentText();
+	ULONG robotID = 0;
+	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
+
+	RobotWorkspaceBoundary boundary;
+	boundary.robotID = robotID;
+	boundary.thickness = m_thickness;
+	boundary.theta = ui->textBrowser_1->toPlainText().toDouble();
+	boundary.isLink = ui->checkBox->isChecked();
+	boundary.CoordinateName = ui->comboBox_3->currentText();
+	boundary.DirectionName = ui->comboBox_4->currentText();
+
+	// æ·»åŠ è½¨é“åç§°åˆ°railNameå‘é‡
+	if (!ui->comboBox_2->currentText().isEmpty()) {
+		boundary.railName.push_back(ui->comboBox_2->currentText());
+	}
+
+	// æ·»åŠ å½“å‰pointsåˆ°boundary
+	boundary.points = points;
+
+	QString jsonName = m_tempDir + "workspace_" + robotName + ".json";
+	if (m_workspaceHandler) {
+		delete m_workspaceHandler;
+	}
+	m_workspaceHandler = new RobotWorkspaceHandler(jsonName.toStdString());
+	m_workspaceHandler->writeRobotWorkspaceBoundary(boundary);
 }

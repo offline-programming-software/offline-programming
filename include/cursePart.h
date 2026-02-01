@@ -11,12 +11,54 @@
 #include "boundBox.h"
 #include "ui_cursePart.h"
 #include "PQKitCallback.h"
+#include "parseJSON.h"
+#include "spaceCalculate.h"
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 #import "RPC.tlb" no_namespace, named_guids, raw_interfaces_only, raw_native_types
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class cursePartClass; };
 QT_END_NAMESPACE
+
+// 机器人工作空间处理器类
+class RobotWorkspaceHandler {
+private:
+	std::string jsonFileName;
+
+public:
+	RobotWorkspaceHandler(const std::string& fileName) : jsonFileName(fileName) {}
+
+	// 写入机器人工作空间边界数据到JSON文件
+	void writeRobotWorkspaceBoundary(const RobotWorkspaceBoundary& boundary);
+
+	// 根据条件查找并获取最匹配的points值
+	std::vector<double> findMatchingPoints(
+		ULONG robotID,
+		bool isLink,
+		const QString& coordinateName,
+		const QString& directionName,
+		const QString& railName,
+		double targetTheta,
+		double targetThickness);
+
+	// 从points中找到最接近给定值的点（向上取整）
+	double findClosestPointUp(const std::vector<double>& points, double targetValue);
+
+	// 综合查找方法：根据UI参数查找并计算最接近的points
+	std::vector<double> processRobotWorkspaceQuery(
+		const QString& robotName,
+		ULONG robotID,
+		const QString& coordinateName,
+		const QString& directionName,
+		bool isLink,
+		double theta,
+		double thickness,
+		const QString& railName);
+};
+
 
 class cursePart : public QDialog
 {
@@ -81,9 +123,11 @@ private:
 	double m_thickness = 0.0;
 	QString m_tempDir = "./temp/jsons/";
 
+	// 新增：机器人工作空间处理器
+	RobotWorkspaceHandler* m_workspaceHandler = nullptr;
+
 
 private:
-
 	void setupGraphicsScenes(); // 初始化图形场景
 	void setStepsExplanation();// 设置每个界面的功能介绍
 	void init(); //初始化界面
@@ -102,6 +146,11 @@ private:
 
 	// 保存机器人映射以便在槽函数中使用
 	QMap<ULONG, QString> m_robotMap;
+
+	// 新增：保存工作空间数据的方法
+	void saveWorkspaceData();
 };
+
+
 
 
