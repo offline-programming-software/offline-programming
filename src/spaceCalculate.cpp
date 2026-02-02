@@ -19,7 +19,7 @@ Workspace Workspace::expand(const std::string& direction, double step) const {
 	spacePoint newSize = m_size;
 
 	// 获取世界坐标系下的拓展方向
-	spacePoint worldDir = m_localCoordSystem->getWorldDirection(direction);
+	spacePoint worldDir = m_localCoordSystem->getRobotDirection(direction);
 
 	// 计算新的中心点和尺寸
 	if (direction == "x+" || direction == "x-") {
@@ -54,7 +54,7 @@ Workspace Workspace::expandInLocalCoord(const std::string& direction, double ste
 	spacePoint newSize = m_size;
 
 	// 获取世界坐标系下的拓展方向
-	spacePoint worldDir = tempCoordSystem.getWorldDirection(direction);
+	spacePoint worldDir = tempCoordSystem.getRobotDirection(direction);
 
 	// 计算新的中心点和尺寸
 	if (direction == "x+" || direction == "x-") {
@@ -89,13 +89,13 @@ std::vector<spacePoint> Workspace::getFacePoints(const std::string& direction, i
 	double dz = m_size.z / 2;
 
 	// 获取世界坐标系下的方向
-	spacePoint worldDir = m_localCoordSystem->getWorldDirection(direction);
+	spacePoint worldDir = m_localCoordSystem->getRobotDirection(direction);
 
 	// 计算面的法向量和生成点
 	if (direction == "x+" || direction == "x-") {
 		// 使用局部坐标系的Y和Z轴来生成面
-		spacePoint yAxis = m_localCoordSystem->getWorldDirection("y+");
-		spacePoint zAxis = m_localCoordSystem->getWorldDirection("z+");
+		spacePoint yAxis = m_localCoordSystem->getRobotDirection("y+");
+		spacePoint zAxis = m_localCoordSystem->getRobotDirection("z+");
 
 		for (int i = 0; i < n; ++i) {
 			for (int j = 0; j < n; ++j) {
@@ -113,8 +113,8 @@ std::vector<spacePoint> Workspace::getFacePoints(const std::string& direction, i
 	}
 	else if (direction == "y+" || direction == "y-") {
 		// 使用局部坐标系的X和Z轴来生成面
-		spacePoint xAxis = m_localCoordSystem->getWorldDirection("x+");
-		spacePoint zAxis = m_localCoordSystem->getWorldDirection("z+");
+		spacePoint xAxis = m_localCoordSystem->getRobotDirection("x+");
+		spacePoint zAxis = m_localCoordSystem->getRobotDirection("z+");
 
 		for (int i = 0; i < n; ++i) {
 			for (int j = 0; j < n; ++j) {
@@ -132,8 +132,8 @@ std::vector<spacePoint> Workspace::getFacePoints(const std::string& direction, i
 	}
 	else if (direction == "z+" || direction == "z-") {
 		// 使用局部坐标系的X和Y轴来生成面
-		spacePoint xAxis = m_localCoordSystem->getWorldDirection("x+");
-		spacePoint yAxis = m_localCoordSystem->getWorldDirection("y+");
+		spacePoint xAxis = m_localCoordSystem->getRobotDirection("x+");
+		spacePoint yAxis = m_localCoordSystem->getRobotDirection("y+");
 
 		for (int i = 0; i < n; ++i) {
 			for (int j = 0; j < n; ++j) {
@@ -156,8 +156,8 @@ std::vector<spacePoint> Workspace::getFacePoints(const std::string& direction, i
 // 其他方法保持不变（但可以基于新的坐标系进行优化）
 bool Workspace::contains(const spacePoint& point) const {
 	// 将点转换到局部坐标系
-	spacePoint localPoint = m_localCoordSystem->worldToLocal(point);
-	spacePoint localCenter = m_localCoordSystem->worldToLocal(m_center);
+	spacePoint localPoint = m_localCoordSystem->robotToLocal(point);
+	spacePoint localCenter = m_localCoordSystem->robotToLocal(m_center);
 
 	double dx = m_size.x / 2;
 	double dy = m_size.y / 2;
@@ -503,7 +503,7 @@ bool Workspace::checkFacePointsReachability(ULONG robotID, const spacePoint & ce
 	const LocalCoordinateSystem & coordSystem)
 {
 	// 获取方向在世界坐标系中的向量
-	spacePoint worldDir = coordSystem.getWorldDirection(direction);
+	spacePoint worldDir = coordSystem.getRobotDirection(direction);
 
 	// 计算面的中心点
 	spacePoint faceCenter = center;
@@ -558,9 +558,9 @@ std::vector<spacePoint> Workspace::generateSamplePointsOnFace(const spacePoint &
 	if (samplePoints < 1) samplePoints = 1;
 
 	// 获取局部坐标系的三个轴向量
-	spacePoint xAxis = coordSystem.getWorldDirection("x+");
-	spacePoint yAxis = coordSystem.getWorldDirection("y+");
-	spacePoint zAxis = coordSystem.getWorldDirection("z+");
+	spacePoint xAxis = coordSystem.getRobotDirection("x+");
+	spacePoint yAxis = coordSystem.getRobotDirection("y+");
+	spacePoint zAxis = coordSystem.getRobotDirection("z+");
 
 	// 根据面的方向确定采样平面的两个轴
 	spacePoint uAxis, vAxis;
@@ -616,8 +616,8 @@ void Workspace::updateWorkspaceSizeAndCenter(spacePoint & center, spacePoint & s
 	// z轴尺寸保持不变，由调用者在函数外设置
 
 	// 计算新的中心点偏移（仅考虑x和y方向）
-	spacePoint xpDir = coordSystem.getWorldDirection("x+");
-	spacePoint ypDir = coordSystem.getWorldDirection("y+");
+	spacePoint xpDir = coordSystem.getRobotDirection("x+");
+	spacePoint ypDir = coordSystem.getRobotDirection("y+");
 
 	spacePoint offset;
 	if (expandDistances.count("x+")) {
@@ -640,9 +640,9 @@ std::vector<spacePoint> Workspace::calculateCornerPoints(const spacePoint & cent
 	std::vector<spacePoint> corners;
 
 	// 获取局部坐标系的轴方向
-	spacePoint xAxis = coordSystem.getWorldDirection("x+");
-	spacePoint yAxis = coordSystem.getWorldDirection("y+");
-	spacePoint zAxis = coordSystem.getWorldDirection("z+");
+	spacePoint xAxis = coordSystem.getRobotDirection("x+");
+	spacePoint yAxis = coordSystem.getRobotDirection("y+");
+	spacePoint zAxis = coordSystem.getRobotDirection("z+");
 
 	double dx = size.x / 2;
 	double dy = size.y / 2;

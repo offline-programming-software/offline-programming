@@ -32,7 +32,7 @@ struct spacePoint {
 	}
 
 	spacePoint operator/(double scalar) const {
-		return spacePoint(x / scalar, y / scalar, z / scalar);
+		return spacePoint(x / scalar, y * scalar, z * scalar);
 	}
 
 	bool operator==(const spacePoint& other) const {
@@ -80,8 +80,8 @@ struct workSpaceInformation {
 // 局部坐标系类
 class LocalCoordinateSystem {
 private:
-	Eigen::Matrix3d m_rotationMatrix; // 从局部坐标系到世界坐标系的旋转矩阵
-	spacePoint m_origin; // 坐标系原点（世界坐标系下）
+	Eigen::Matrix3d m_rotationMatrix; // 从局部坐标系到机器人坐标系的旋转矩阵
+	spacePoint m_origin; // 坐标系原点（机器人坐标系下）
 
 public:
 	LocalCoordinateSystem(const spacePoint& origin, const std::vector<double>& direction) {
@@ -112,27 +112,27 @@ public:
 			m_rotationMatrix.col(2) = zAxis;
 		}
 		else {
-			// 默认使用世界坐标系
+			// 默认使用机器人坐标系
 			m_rotationMatrix = Eigen::Matrix3d::Identity();
 		}
 	}
 
-	// 世界坐标转局部坐标
-	spacePoint worldToLocal(const spacePoint& worldPoint) const {
-		Eigen::Vector3d worldVec(worldPoint.x - m_origin.x,
-			worldPoint.y - m_origin.y,
-			worldPoint.z - m_origin.z);
-		Eigen::Vector3d localVec = m_rotationMatrix.transpose() * worldVec;
+	// 机器人坐标转局部坐标
+	spacePoint robotToLocal(const spacePoint& robotPoint) const {
+		Eigen::Vector3d robotVec(robotPoint.x - m_origin.x,
+			robotPoint.y - m_origin.y,
+			robotPoint.z - m_origin.z);
+		Eigen::Vector3d localVec = m_rotationMatrix.transpose() * robotVec;
 		return spacePoint(localVec.x(), localVec.y(), localVec.z());
 	}
 
-	// 局部坐标转世界坐标
-	spacePoint localToWorld(const spacePoint& localPoint) const {
+	// 局部坐标转机器人坐标
+	spacePoint localToRobot(const spacePoint& localPoint) const {
 		Eigen::Vector3d localVec(localPoint.x, localPoint.y, localPoint.z);
-		Eigen::Vector3d worldVec = m_rotationMatrix * localVec;
-		return spacePoint(worldVec.x() + m_origin.x,
-			worldVec.y() + m_origin.y,
-			worldVec.z() + m_origin.z);
+		Eigen::Vector3d robotVec = m_rotationMatrix * localVec;
+		return spacePoint(robotVec.x() + m_origin.x,
+			robotVec.y() + m_origin.y,
+			robotVec.z() + m_origin.z);
 	}
 
 	// 获取局部坐标系下的方向矢量
@@ -146,12 +146,12 @@ public:
 		else return spacePoint(0, 0, 0);
 	}
 
-	// 获取世界坐标系下的方向矢量
-	spacePoint getWorldDirection(const std::string& direction) const {
+	// 获取机器人坐标系下的方向矢量
+	spacePoint getRobotDirection(const std::string& direction) const {
 		spacePoint localDir = getLocalDirection(direction);
 		Eigen::Vector3d localVec(localDir.x, localDir.y, localDir.z);
-		Eigen::Vector3d worldVec = m_rotationMatrix * localVec;
-		return spacePoint(worldVec.x(), worldVec.y(), worldVec.z());
+		Eigen::Vector3d robotVec = m_rotationMatrix * localVec;
+		return spacePoint(robotVec.x(), robotVec.y(), robotVec.z());
 	}
 };
 
@@ -269,6 +269,7 @@ public:
 		const std::map<std::pair<double, double>, std::vector<spacePoint>>& aabbMap,
 		double targetThick, double targetTheta);
 
+	//5、计算导轨式机器人工作空间（单个导轨）
 	Workspace calculateRailRobotWorkspace(
 		ULONG robotID,
 		const std::vector<double>& railDirection,
@@ -282,6 +283,7 @@ public:
 		int samplePointsPerFace,
 		double minStepSize);
 
+	//5、计算导轨式机器人工作空间（多个导轨）
 	Workspace calculateMultiRailRobotWorkspace(
 		ULONG robotID,
 		const std::vector<std::vector<double>>& railDirections,

@@ -229,6 +229,56 @@ void robotSpaceDefine::onAddAxis()
 
 		std::vector<double> direction = getDir(CoodernateMap.key(axisName), mainNormalVector);
 
+		//需要将direction转化到机器人基座标系下
+		ULONG robotCoordinateID = 0;
+		m_ptrKit->Robot_get_base_coordinate(robotID, &robotCoordinateID);
+
+		int nCount = 0;
+		double* dPosture = nullptr;
+		m_ptrKit->Doc_get_coordinate_posture(robotCoordinateID, EULERANGLEXYZ, &nCount, &dPosture, 0);
+
+		// 创建转换矩阵
+		Eigen::Matrix4d transformMatrix = Eigen::Matrix4d::Identity();
+
+		if (nCount >= 6 && dPosture != nullptr) {
+			// 提取位置和欧拉角
+			double x = dPosture[0];
+			double y = dPosture[1];
+			double z = dPosture[2];
+			double rx = dPosture[3] * M_PI / 180.0;  // 角度转弧度
+			double ry = dPosture[4] * M_PI / 180.0;
+			double rz = dPosture[5] * M_PI / 180.0;
+
+			// 构建旋转矩阵（欧拉角转旋转矩阵）
+			Eigen::Matrix3d rotationMatrix;
+			rotationMatrix = Eigen::AngleAxisd(rz, Eigen::Vector3d::UnitZ()) *
+				Eigen::AngleAxisd(ry, Eigen::Vector3d::UnitY()) *
+				Eigen::AngleAxisd(rx, Eigen::Vector3d::UnitX());
+
+			// 构建齐次变换矩阵（世界坐标系到机器人基坐标系）
+			transformMatrix.block<3, 3>(0, 0) = rotationMatrix.transpose(); // 旋转部分
+			transformMatrix.block<3, 1>(0, 3) = -rotationMatrix.transpose() * Eigen::Vector3d(x, y, z); // 平移部分
+
+			// 将方向向量转换为齐次坐标（第四维为0）
+			Eigen::Vector4d worldDirection(direction[0], direction[1], direction[2], 0);
+
+			// 转换到机器人基坐标系
+			Eigen::Vector4d robotDirection = transformMatrix * worldDirection;
+
+			// 更新direction向量（只取前三个元素）
+			direction = { robotDirection[0], robotDirection[1], robotDirection[2] };
+
+			// 可选：归一化方向向量
+			double length = sqrt(direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2]);
+			if (length > 1e-9) {
+				direction[0] /= length;
+				direction[1] /= length;
+				direction[2] /= length;
+			}
+		}
+
+		m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
+
 		bool hasGuideRail = dlg->isLink();
 		QString guideName = dlg->getRail();
 

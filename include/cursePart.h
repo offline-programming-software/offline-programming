@@ -83,7 +83,6 @@ private slots:
 	void on_comboBox_currentTextChanged(const QString& text);  // 机器人组合框变化
 	void on_previewButton_clicked();  // 预览按钮
 	void on_spaceSettingButton_clicked();  // 文本确认按钮
-	void on_textEdit_4_textChanged();  // 修改为无参数
 	void on_horizontalSlider_valueChanged(int value);//修改划分起点的长度方向位置
 	void on_verticalSlider_valueChanged(int value);//修改划分起点的宽度方向位置
 	void on_coordanateTextChanged(); //选择主划分方向 - 移除参数
@@ -109,6 +108,11 @@ private:
 	std::vector<double> m_vPosition;
 	std::vector<double> ABBPosition;//包围盒八个角点
 	std::vector<double> points;
+
+	//方向读取
+	std::vector<double> mainDirction;//主方向
+	std::vector<double> divisionDirection;//划分方向
+	std::vector<double> otherDirection;//次要划分方向
 
 	//实现曲面的选取
 	std::map<ULONG, std::vector<std::wstring>> pickupMap;//用于记录选取的曲面

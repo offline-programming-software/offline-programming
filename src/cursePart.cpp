@@ -219,15 +219,14 @@ cursePart::cursePart(QWidget *parent,
 	connect(ui->pushButton_7, &QPushButton::clicked, this, &cursePart::on_deleteButton_clicked);//删除曲面
 	connect(ui->pushButton_8, &QPushButton::clicked, this, &cursePart::on_finishButton_clicked);//结束拾取模式
 
-	connect(ui->pushButton_3, &QPushButton::clicked, this, &cursePart::on_previewButton_clicked);
-	connect(ui->pushButton_9, &QPushButton::clicked, this, &cursePart::on_spaceSettingButton_clicked);
+	connect(ui->pushButton_3, &QPushButton::clicked, this, &cursePart::on_previewButton_clicked);//预览
+	connect(ui->pushButton_9, &QPushButton::clicked, this, &cursePart::on_spaceSettingButton_clicked);//计算最大偏差角和厚度
 
-	connect(ui->pushButton_10, &QPushButton::clicked, this, &cursePart::on_calculate_workspace);//计算出workspace
+	connect(ui->pushButton_10, &QPushButton::clicked, this, &cursePart::on_calculate_workspace);//计算出划分区域长和宽
 
 	// 组合框和文本编辑框
 	connect(ui->comboBox_1, &QComboBox::currentTextChanged, this, &cursePart::on_comboBox_currentTextChanged);
 	connect(ui->comboBox_4, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &cursePart::on_coordanateTextChanged);
-	connect(ui->textEdit, &QTextEdit::textChanged, this, &cursePart::on_textEdit_4_textChanged);
 
 	//设置是否联动
 	connect(ui->checkBox, &QCheckBox::toggled, this, [this](bool checked) {
@@ -237,8 +236,8 @@ cursePart::cursePart(QWidget *parent,
 	connect(ui->horizontalSlider, &QSlider::valueChanged, this, &cursePart::on_horizontalSlider_valueChanged);
 	connect(ui->verticalSlider, &QSlider::valueChanged, this, &cursePart::on_verticalSlider_valueChanged);
 
-	connect(m_ptrKitCallback, &CPQKitCallback::signalDraw, this, &cursePart::OnDraw);
-	connect(m_ptrKitCallback, &CPQKitCallback::signalElementPickup, this, &cursePart::OnElementPickup);
+	connect(m_ptrKitCallback, &CPQKitCallback::signalDraw, this, &cursePart::OnDraw);//绘制划分区域分界线
+	connect(m_ptrKitCallback, &CPQKitCallback::signalElementPickup, this, &cursePart::OnElementPickup);//拾取
 }
 
 cursePart::~cursePart()
@@ -426,12 +425,6 @@ void cursePart::addItemToListView(const QString& item)
 		items.append(item);
 		listModel->setStringList(items);
 	}
-}
-
-void cursePart::on_textEdit_4_textChanged()
-{
-	QString text = ui->textEdit->toPlainText().trimmed();
-	// 文本改变处理逻辑
 }
 
 void cursePart::on_horizontalSlider_valueChanged(int value)
@@ -649,36 +642,37 @@ void cursePart::on_calculate_workspace()
 	}
 	else {
 		// 如果没有找到匹配项，继续执行原始逻辑
-		Point3D direction(0, 1, 0);
+		
 		ui->textEdit_1->setPlainText("500");
 		ui->textEdit_2->setPlainText("500");
+	}
 
-		int length = ui->textEdit_1->toPlainText().toDouble();
-		int width = ui->textEdit_2->toPlainText().toDouble();
+	int length = ui->textEdit_1->toPlainText().toDouble();
+	int width = ui->textEdit_2->toPlainText().toDouble();
 
-		// 使用之前计算的包围盒信息生成点阵
-		auto grid = createGridOnClosestSurface(box, length, width, direction);
+	Point3D direction(mainDirction[0], mainDirction[1], mainDirction[2]);
+	// 使用之前计算的包围盒信息生成点阵
+	auto grid = createGridOnClosestSurface(box, length, width, direction);
 
-		points.clear(); // 清空之前的点数据
-		for (auto p : grid) {
-			points.push_back(p.x);
-			points.push_back(p.y);
-			points.push_back(p.z);
-		}
+	points.clear(); // 清空之前的点数据
+	for (auto p : grid) {
+		points.push_back(p.x);
+		points.push_back(p.y);
+		points.push_back(p.z);
+	}
 
-		if (!points.empty()) {
-			QString value1 = QString("%1").arg(points[0]);
-			QString value2 = QString("%1").arg(points[1]);
-			QString value3 = QString("%1").arg(points[2]);
+	if (!points.empty()) {
+		QString value1 = QString("%1").arg(points[0]);
+		QString value2 = QString("%1").arg(points[1]);
+		QString value3 = QString("%1").arg(points[2]);
 
-			ui->textEdit_3->setPlainText(value1);
-			ui->textEdit_4->setPlainText(value2);
-			ui->textEdit_5->setPlainText(value3);
+		ui->textEdit_3->setPlainText(value1);
+		ui->textEdit_4->setPlainText(value2);
+		ui->textEdit_5->setPlainText(value3);
 
-			// 更新x_value和z_value
-			x_value = points[0];
-			z_value = points[2];
-		}
+		// 更新x_value和z_value
+		x_value = points[0];
+		z_value = points[2];
 	}
 }
 
@@ -792,62 +786,7 @@ void cursePart::on_previewButton_clicked()
 
 void cursePart::on_spaceSettingButton_clicked()
 {
-	// 实现onCalculateBoundingBox()功能
 	m_vPosition.clear(); // 清空之前的数据
-
-	//// 从拾取的曲面中提取点(获取曲面上的顶点)
-	//for (const auto& pair : pickupMap) {
-	//    unsigned long key = pair.first;
-	//    const std::vector<std::wstring>& values = pair.second;
-	//    long lCount = 0;
-	//    m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);
-	//    std::vector<double> dSrc(3 * lCount, 0);
-	//    double* dSrcPosition = dSrc.data();
-	//    m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
-	//    for (const auto& value : values) {
-	//        for (long i = 0; i < lCount; i++) {
-	//            double dPosition[3] = { dSrcPosition[3 * i],dSrcPosition[3 * i + 1],dSrcPosition[3 * i + 2] };
-	//            double dTol = 10;
-	//            LONG bPointOnSurface = 0;
-	//            std::vector<wchar_t> buffer(value.begin(), value.end());
-	//            buffer.push_back(L'\0');
-	//            LPWSTR name = buffer.data();
-	//            m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
-	//            if (bPointOnSurface) {
-	//                m_vPosition.push_back(dPosition[0]);
-	//                m_vPosition.push_back(dPosition[1]);
-	//                m_vPosition.push_back(dPosition[2]);
-	//            }
-	//        }
-	//    }
-	//}
-
-	//if (m_vPosition.empty()) {
-	//    qDebug() << "没有找到有效的曲面点";
-	//    return;
-	//}
-
-	//// 计算包围盒
-	//box.minPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
-	//box.maxPoint = { m_vPosition[0], m_vPosition[1], m_vPosition[2] };
-
-	//for (size_t i = 0; i < m_vPosition.size(); i += 3) {
-	//    box.minPoint.x = std::min(box.minPoint.x, m_vPosition[i]);
-	//    box.minPoint.y = std::min(box.minPoint.y, m_vPosition[i + 1]);
-	//    box.minPoint.z = std::min(box.minPoint.z, m_vPosition[i + 2]);
-
-	//    box.maxPoint.x = std::max(box.maxPoint.x, m_vPosition[i]);
-	//    box.maxPoint.y = std::max(box.maxPoint.y, m_vPosition[i + 1]);
-	//    box.maxPoint.z = std::max(box.maxPoint.z, m_vPosition[i + 2]);
-	//}
-
-	//std::vector<Point3D> box_8 = box.getCorners();
-	//ABBPosition.clear();
-	//for (int i = 0; i < 8; i++) {
-	//    ABBPosition.push_back(box_8[i].x);
-	//    ABBPosition.push_back(box_8[i].y);
-	//    ABBPosition.push_back(box_8[i].z);
-	//}
 
 	ABBPosition = calculateAABBCornersFromPickupMap(pickupMap);//计算出包围盒子
 
@@ -946,6 +885,26 @@ void cursePart::on_spaceSettingButton_clicked()
 				}
 			}
 		}
+
+		// 赋值三个方向向量变量
+		mainDirction = mainVector;              // 主方向向量
+		divisionDirection = mainDivisionDirection; // 划分方向向量
+
+		// 通过叉积计算次要划分方向
+		if (mainVector.size() >= 3 && mainDivisionDirection.size() >= 3) {
+			// 计算叉积：mainVector × mainDivisionDirection
+			double cross_x = mainVector[1] * mainDivisionDirection[2] - mainVector[2] * mainDivisionDirection[1];
+			double cross_y = mainVector[2] * mainDivisionDirection[0] - mainVector[0] * mainDivisionDirection[2];
+			double cross_z = mainVector[0] * mainDivisionDirection[1] - mainVector[1] * mainDivisionDirection[0];
+
+			// 将叉积结果赋值给次要划分方向
+			otherDirection = { cross_x, cross_y, cross_z };
+		}
+
+		// 输出调试信息
+		qDebug() << "主方向向量:" << mainDirction[0] << "," << mainDirction[1] << "," << mainDirction[2];
+		qDebug() << "划分方向向量:" << divisionDirection[0] << "," << divisionDirection[1] << "," << divisionDirection[2];
+		qDebug() << "次要划分方向向量:" << otherDirection[0] << "," << otherDirection[1] << "," << otherDirection[2];
 	}
 	else {
 		QMessageBox::warning(this, "Warning", "请输入有效的间距值");
@@ -1503,20 +1462,6 @@ void cursePart::CreateBoundingBox()
 
 void cursePart::OnDraw()
 {
-	CComBSTR strText = "point";
-	double dPos[3] = { 0.0 };
-	int counter = 0;
-	for (size_t i = 0; i < m_vPosition.size(); i++)
-	{
-		dPos[counter++] = m_vPosition[i];
-		if ((counter % 3) == 0)
-		{
-			m_ptrKit->View_draw_point(dPos, 0, 3, RGB(10, 100, 200), strText, RGB(20, 200, 20));
-			counter = 0;
-		}
-
-	}
-
 	if (isPoint) {
 		std::map<int, std::array<double, 3>> pointMap;
 		std::array<double, 3> tempPoint;
