@@ -82,6 +82,8 @@ std::vector<double> RobotWorkspaceHandler::findMatchingPoints(
 	conditions["isLink"] = isLink;
 	conditions["CoordinateName"] = coordinateName.toStdString();
 	conditions["DirectionName"] = directionName.toStdString();
+
+	// 修复railName匹配问题 - 将字符串转换为数组元素匹配
 	conditions["railName"] = railName.toStdString();
 
 	auto results = queryHelper.findObjectsByMultipleKeys(conditions);
@@ -90,30 +92,66 @@ std::vector<double> RobotWorkspaceHandler::findMatchingPoints(
 		return std::vector<double>(); // 返回空向量表示没有找到匹配项
 	}
 
-	// 在所有匹配的结果中寻找最接近目标theta和thickness的points
+	// 寻找theta和thickness都大于等于目标值且最接近的记录
 	std::vector<double> bestPoints;
-	double minDistance = std::numeric_limits<double>::max();
+	double minSumDiff = std::numeric_limits<double>::max(); // 最小差值总和
+	bool foundMatch = false;
 
 	for (const auto& result : results) {
 		// 提取theta和thickness进行比较
 		double currentTheta = result.value("theta", 0.0);
 		double currentThickness = result.value("thickness", 0.0);
 
-		// 计算与目标值的距离（欧几里得距离）
-		double distance = std::sqrt(
-			std::pow(currentTheta - targetTheta, 2) +
-			std::pow(currentThickness - targetThickness, 2)
-		);
+		// 只考虑theta和thickness都大于等于目标值的记录（向上取整逻辑）
+		if (currentTheta >= targetTheta && currentThickness >= targetThickness) {
+			// 计算差值总和
+			double thetaDiff = currentTheta - targetTheta;
+			double thicknessDiff = currentThickness - targetThickness;
+			double sumDiff = thetaDiff + thicknessDiff;
 
-		if (distance < minDistance) {
-			minDistance = distance;
+			// 如果当前差值总和更小，则更新最佳匹配
+			if (sumDiff < minSumDiff) {
+				minSumDiff = sumDiff;
+				foundMatch = true;
 
-			// 获取对应的points数组
-			if (result.contains("points") && result["points"].is_array()) {
-				bestPoints.clear();
-				for (const auto& point : result["points"]) {
-					if (point.is_number()) {
-						bestPoints.push_back(point.get<double>());
+				// 获取对应的points数组
+				if (result.contains("points") && result["points"].is_array()) {
+					bestPoints.clear();
+					for (const auto& point : result["points"]) {
+						if (point.is_number()) {
+							bestPoints.push_back(point.get<double>());
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 如果没有找到满足条件的记录（theta和thickness都大于等于目标值），则返回最接近的记录
+	if (!foundMatch) {
+		double minEuclideanDistance = std::numeric_limits<double>::max();
+
+		for (const auto& result : results) {
+			// 提取theta和thickness进行比较
+			double currentTheta = result.value("theta", 0.0);
+			double currentThickness = result.value("thickness", 0.0);
+
+			// 计算与目标值的欧几里得距离
+			double euclideanDistance = std::sqrt(
+				std::pow(currentTheta - targetTheta, 2) +
+				std::pow(currentThickness - targetThickness, 2)
+			);
+
+			if (euclideanDistance < minEuclideanDistance) {
+				minEuclideanDistance = euclideanDistance;
+
+				// 获取对应的points数组
+				if (result.contains("points") && result["points"].is_array()) {
+					bestPoints.clear();
+					for (const auto& point : result["points"]) {
+						if (point.is_number()) {
+							bestPoints.push_back(point.get<double>());
+						}
 					}
 				}
 			}
@@ -161,14 +199,8 @@ std::vector<double> RobotWorkspaceHandler::processRobotWorkspaceQuery(
 		return matchingPoints; // 返回空向量
 	}
 
-	// 对theta和thickness分别进行向上取整
-	std::vector<double> adjustedPoints;
-	for (double point : matchingPoints) {
-		double roundedPoint = std::ceil(point); // 向上取整
-		adjustedPoints.push_back(roundedPoint);
-	}
-
-	return adjustedPoints;
+	// 直接返回匹配到的points，不再进行向上取整
+	return matchingPoints;
 }
 
 cursePart::cursePart(QWidget *parent,
@@ -551,6 +583,8 @@ void cursePart::on_calculate_workspace()
 	QString coordinateName = ui->comboBox_3->currentText();
 	QString directionName = ui->comboBox_4->currentText();
 
+	QString divisionDirName = ui->comboBox_5->currentText();
+
 	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
 	bool isLink = ui->checkBox->isChecked();
 	QString thetaStr = ui->textBrowser_1->toPlainText();
@@ -564,6 +598,9 @@ void cursePart::on_calculate_workspace()
 	double thickness = thicknessStr.toDouble();
 
 	QString jsonName = m_tempDir + "workspace_" + robotName + ".json";
+
+	theta = 8;
+	thickness = 300;
 
 	// 创建或更新工作空间处理器
 	if (m_workspaceHandler) {
@@ -596,7 +633,80 @@ void cursePart::on_calculate_workspace()
 		points = foundPoints;
 
 		// 从查询到的点中计算工作空间的长和宽
-		if (foundPoints.size() >= 6) { // 确保有足够的点来计算包围盒
+		if (foundPoints.size() == 24) { // 包围盒的8个角点，每个点3个坐标，共24个值
+			// 计算包围盒的最小和最大坐标
+			double minX = std::numeric_limits<double>::max();
+			double maxX = std::numeric_limits<double>::lowest();
+			double minY = std::numeric_limits<double>::max();
+			double maxY = std::numeric_limits<double>::lowest();
+			double minZ = std::numeric_limits<double>::max();
+			double maxZ = std::numeric_limits<double>::lowest();
+
+			// 遍历所有8个角点找出最大最小值
+			for (int i = 0; i < 24; i += 3) {
+				double x = foundPoints[i];
+				double y = foundPoints[i + 1];
+				double z = foundPoints[i + 2];
+
+				minX = std::min(minX, x);
+				maxX = std::max(maxX, x);
+				minY = std::min(minY, y);
+				maxY = std::max(maxY, y);
+				minZ = std::min(minZ, z);
+				maxZ = std::max(maxZ, z);
+			}
+
+			// 计算三个方向的长度
+			double xLength = maxX - minX;
+			double yLength = maxY - minY;
+			double zLength = maxZ - minZ;
+
+			// 根据directionName确定主要划分方向和次要划分方向
+			double length = 0.0;  // 主要划分方向的长度
+			double width = 0.0;   // 次要划分方向的宽度
+
+			if (divisionDirName.contains("X", Qt::CaseInsensitive)) {
+				// X方向是主要划分方向
+				length = xLength;
+
+				// 从Y和Z中选择较小者作为次要划分方向
+				if (directionName.contains("Y", Qt::CaseInsensitive)) {
+					width = zLength;
+				}
+				else {
+					width = yLength;
+				}
+			}
+			else if (divisionDirName.contains("Y", Qt::CaseInsensitive)) {
+				// Y方向是主要划分方向
+				length = yLength;
+
+				// 从Y和Z中选择较小者作为次要划分方向
+				if (directionName.contains("X", Qt::CaseInsensitive)) {
+					width = xLength;
+				}
+				else {
+					width = zLength;
+				}
+			}
+			else {
+				// Z方向是主要划分方向
+				length = zLength;
+
+				// 从Y和Z中选择较小者作为次要划分方向
+				if (directionName.contains("X", Qt::CaseInsensitive)) {
+					width = xLength;
+				}
+				else {
+					width = yLength;
+				}
+			}
+
+			// 将计算出的长和宽设置到textEdit_1和textEdit_2
+			ui->textEdit_1->setPlainText(QString::number(length, 'f', 2));
+			ui->textEdit_2->setPlainText(QString::number(width, 'f', 2));
+		}
+		else if (foundPoints.size() >= 6) { // 确保有足够的点来计算包围盒
 			double minX = foundPoints[0], maxX = foundPoints[0];
 			double minY = foundPoints[1], maxY = foundPoints[1];
 			double minZ = foundPoints[2], maxZ = foundPoints[2];
@@ -642,7 +752,7 @@ void cursePart::on_calculate_workspace()
 	}
 	else {
 		// 如果没有找到匹配项，继续执行原始逻辑
-		
+
 		ui->textEdit_1->setPlainText("500");
 		ui->textEdit_2->setPlainText("500");
 	}
@@ -1261,6 +1371,12 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 		// 获取部件顶点坐标
 		std::vector<double> dSrc(3 * lCount, 0);
 		double* dSrcPosition = dSrc.data();
+
+		CComBSTR bsName;
+		m_ptrKit->Doc_get_obj_name(key, &bsName);
+		std::wstring wstr(bsName, SysStringLen(bsName));
+		ULONG uCoordinate = 0;
+		GetObjIDByName(PQ_COORD, wstr, uCoordinate);
 		m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
 
 		// 检查每个表面上的点

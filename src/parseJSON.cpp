@@ -31,7 +31,32 @@ std::vector<json> parseJSON::findObjectsByMultipleKeys(
 					const std::string& key = pair.first;
 					const json& expectedValue = pair.second;
 
-					if (!item.contains(key) || item[key] != expectedValue) {
+					if (!item.contains(key)) {
+						matches = false;
+						break;
+					}
+
+					const json& actualValue = item[key];
+
+					// 特殊处理数组字段与字符串的匹配
+					if (key == "railName" && actualValue.is_array() && expectedValue.is_string()) {
+						std::string expectedStr = expectedValue.get<std::string>();
+						bool found = false;
+
+						for (const auto& arrItem : actualValue) {
+							if (arrItem.is_string() && arrItem.get<std::string>() == expectedStr) {
+								found = true;
+								break;
+							}
+						}
+
+						if (!found) {
+							matches = false;
+							break;
+						}
+					}
+					// 一般情况下的值比较
+					else if (actualValue != expectedValue) {
 						matches = false;
 						break;
 					}
@@ -50,7 +75,32 @@ std::vector<json> parseJSON::findObjectsByMultipleKeys(
 			const std::string& key = pair.first;
 			const json& expectedValue = pair.second;
 
-			if (!m_jsonData.contains(key) || m_jsonData[key] != expectedValue) {
+			if (!m_jsonData.contains(key)) {
+				matches = false;
+				break;
+			}
+
+			const json& actualValue = m_jsonData[key];
+
+			// 特殊处理数组字段与字符串的匹配
+			if (key == "railName" && actualValue.is_array() && expectedValue.is_string()) {
+				std::string expectedStr = expectedValue.get<std::string>();
+				bool found = false;
+
+				for (const auto& arrItem : actualValue) {
+					if (arrItem.is_string() && arrItem.get<std::string>() == expectedStr) {
+						found = true;
+						break;
+					}
+				}
+
+				if (!found) {
+					matches = false;
+					break;
+				}
+			}
+			// 一般情况下的值比较
+			else if (actualValue != expectedValue) {
 				matches = false;
 				break;
 			}
@@ -78,8 +128,28 @@ std::vector<json> parseJSON::findObjectsByMultipleKeysOr(
 					const std::string& key = pair.first;
 					const json& expectedValue = pair.second;
 
-					if (item.contains(key) && item[key] == expectedValue) {
-						matches = true;
+					if (item.contains(key)) {
+						const json& actualValue = item[key];
+
+						// 特殊处理数组字段与字符串的匹配
+						if (key == "railName" && actualValue.is_array() && expectedValue.is_string()) {
+							std::string expectedStr = expectedValue.get<std::string>();
+
+							for (const auto& arrItem : actualValue) {
+								if (arrItem.is_string() && arrItem.get<std::string>() == expectedStr) {
+									matches = true;
+									break;
+								}
+							}
+						}
+						// 一般情况下的值比较
+						else if (item[key] == expectedValue) {
+							matches = true;
+							break;
+						}
+					}
+
+					if (matches) {
 						break;
 					}
 				}
@@ -97,8 +167,28 @@ std::vector<json> parseJSON::findObjectsByMultipleKeysOr(
 			const std::string& key = pair.first;
 			const json& expectedValue = pair.second;
 
-			if (m_jsonData.contains(key) && m_jsonData[key] == expectedValue) {
-				matches = true;
+			if (m_jsonData.contains(key)) {
+				const json& actualValue = m_jsonData[key];
+
+				// 特殊处理数组字段与字符串的匹配
+				if (key == "railName" && actualValue.is_array() && expectedValue.is_string()) {
+					std::string expectedStr = expectedValue.get<std::string>();
+
+					for (const auto& arrItem : actualValue) {
+						if (arrItem.is_string() && arrItem.get<std::string>() == expectedStr) {
+							matches = true;
+							break;
+						}
+					}
+				}
+				// 一般情况下的值比较
+				else if (m_jsonData[key] == expectedValue) {
+					matches = true;
+					break;
+				}
+			}
+
+			if (matches) {
 				break;
 			}
 		}
