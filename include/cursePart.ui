@@ -84,7 +84,7 @@
    <item row="0" column="0" colspan="2">
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="page">
       <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,1">
@@ -455,7 +455,7 @@
         </layout>
        </item>
        <item row="0" column="1">
-        <layout class="QVBoxLayout" name="verticalLayout_14" stretch="4,1,3,1,5">
+        <layout class="QVBoxLayout" name="verticalLayout_14" stretch="5,2,1,5">
          <item>
           <widget class="QGroupBox" name="groupBox_4">
            <property name="title">
@@ -463,7 +463,7 @@
            </property>
            <layout class="QGridLayout" name="gridLayout_9">
             <item row="0" column="0">
-             <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,4,6">
+             <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,2,6">
               <item>
                <spacer name="horizontalSpacer_8">
                 <property name="orientation">
@@ -471,8 +471,8 @@
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
-                  <width>30</width>
-                  <height>18</height>
+                  <width>26</width>
+                  <height>122</height>
                  </size>
                 </property>
                </spacer>
@@ -499,7 +499,27 @@
                    <enum>Qt::LeftToRight</enum>
                   </property>
                   <property name="text">
-                   <string>厚度</string>
+                   <string>包围盒长度</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_21">
+                  <property name="layoutDirection">
+                   <enum>Qt::LeftToRight</enum>
+                  </property>
+                  <property name="text">
+                   <string>包围盒宽度</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_22">
+                  <property name="layoutDirection">
+                   <enum>Qt::LeftToRight</enum>
+                  </property>
+                  <property name="text">
+                   <string>包围盒厚度</string>
                   </property>
                  </widget>
                 </item>
@@ -508,20 +528,31 @@
               <item>
                <layout class="QVBoxLayout" name="verticalLayout_11">
                 <item>
-                 <widget class="QTextEdit" name="textEdit">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>30</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>16777215</width>
-                    <height>30</height>
-                   </size>
-                  </property>
-                 </widget>
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <item>
+                   <widget class="QTextEdit" name="textEdit">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>30</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>16777215</width>
+                      <height>30</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButton_9">
+                    <property name="text">
+                     <string>计算</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </item>
                 <item>
                  <widget class="QTextBrowser" name="textBrowser_1">
@@ -555,6 +586,38 @@
                   </property>
                  </widget>
                 </item>
+                <item>
+                 <widget class="QTextBrowser" name="textBrowser_3">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>16777215</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QTextBrowser" name="textBrowser_4">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>16777215</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
                </layout>
               </item>
              </layout>
@@ -563,37 +626,13 @@
           </widget>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <item>
-            <spacer name="horizontalSpacer_2">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushButton_9">
-             <property name="text">
-              <string>计算</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
           <widget class="QGroupBox" name="groupBox_5">
            <property name="title">
             <string>划分区域大小</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_10">
             <item row="0" column="0">
-             <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="1,4,6">
+             <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="1,2,6">
               <item>
                <spacer name="horizontalSpacer_9">
                 <property name="orientation">
@@ -612,14 +651,14 @@
                 <item>
                  <widget class="QLabel" name="label_8">
                   <property name="text">
-                   <string>划分块长</string>
+                   <string>划分块长度</string>
                   </property>
                  </widget>
                 </item>
                 <item>
                  <widget class="QLabel" name="label_9">
                   <property name="text">
-                   <string>划分块宽</string>
+                   <string>划分块宽度</string>
                   </property>
                  </widget>
                 </item>
@@ -684,7 +723,7 @@
            <item>
             <widget class="QPushButton" name="pushButton_10">
              <property name="text">
-              <string>计算</string>
+              <string>查询</string>
              </property>
             </widget>
            </item>
@@ -698,7 +737,7 @@
            <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
-             <height>157</height>
+             <height>98</height>
             </size>
            </property>
           </spacer>

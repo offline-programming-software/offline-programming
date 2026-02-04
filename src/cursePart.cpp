@@ -798,6 +798,16 @@ void cursePart::on_next_page_clicked()
 		}
 	}
 
+	if (indx == 2) {
+		QString text1 = ui->textEdit_1->toPlainText().trimmed();
+		QString text2 = ui->textEdit_2->toPlainText().trimmed();
+
+		if (text1.isEmpty() || text2.isEmpty()) {
+			QMessageBox::warning(this, "警告", "请先计算出划分区域长度和宽度，不能为空");
+			return; // 阻止翻页
+		}
+	}
+
 	int maxPage = ui->stackedWidget->count() - 1;
 	if (indx < maxPage) {
 		indx++;
@@ -812,16 +822,6 @@ void cursePart::on_next_page_clicked()
 		ui->pushButton_4->setEnabled(true);
 	}
 
-	// 实现onCloseSignal()功能
-	if (isPickupActive || isPreview) {
-		isPickupActive = false;
-		isPreview = false;
-		this->setModal(true);
-		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-		HRESULT hr = m_ptrKit->Doc_end_module(cmd);
-		this->setWindowModality(Qt::ApplicationModal);
-		qDebug() << "拾取模块已停止";
-	}
 }
 
 void cursePart::on_prev_page_clicked()
@@ -964,36 +964,91 @@ void cursePart::on_spaceSettingButton_clicked()
 		maxtheta = maxtheta * 180 / M_PI;
 		ui->textBrowser_1->setPlainText(QString("%1").arg(maxtheta) + "°");
 
-		// 计算厚度
+		// 计算包围盒的长度、宽度和厚度
 		if (ABBPosition.size() == 24) {
-			std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
-			if (mainVector.size() == 3) {
-				// 标准化方向向量
-				double norm = sqrt(mainVector[0] * mainVector[0] + mainVector[1] * mainVector[1] + mainVector[2] * mainVector[2]);
-				if (norm > 0) {
-					mainVector[0] /= norm;
-					mainVector[1] /= norm;
-					mainVector[2] /= norm;
-				}
+			// 计算包围盒的最小和最大坐标
+			double minX = std::numeric_limits<double>::max();
+			double maxX = std::numeric_limits<double>::lowest();
+			double minY = std::numeric_limits<double>::max();
+			double maxY = std::numeric_limits<double>::lowest();
+			double minZ = std::numeric_limits<double>::max();
+			double maxZ = std::numeric_limits<double>::lowest();
 
-				// 计算8个角点在方向上的投影
-				std::vector<double> projections;
-				for (int i = 0; i < 8; i++) {
-					double x = ABBPosition[i * 3];
-					double y = ABBPosition[i * 3 + 1];
-					double z = ABBPosition[i * 3 + 2];
-					double projection = x * mainVector[0] + y * mainVector[1] + z * mainVector[2];
-					projections.push_back(projection);
-				}
+			// 遍历所有8个角点找出最大最小值
+			for (int i = 0; i < 24; i += 3) {
+				double x = ABBPosition[i];
+				double y = ABBPosition[i + 1];
+				double z = ABBPosition[i + 2];
 
-				if (!projections.empty()) {
-					double minProj = *std::min_element(projections.begin(), projections.end());
-					double maxProj = *std::max_element(projections.begin(), projections.end());
-					m_thickness = maxProj - minProj;
-					ui->textBrowser_2->setPlainText(QString::number(m_thickness, 'f', 2));
-					qDebug() << "厚度计算完成：" << m_thickness << "mm";
+				minX = std::min(minX, x);
+				maxX = std::max(maxX, x);
+				minY = std::min(minY, y);
+				maxY = std::max(maxY, y);
+				minZ = std::min(minZ, z);
+				maxZ = std::max(maxZ, z);
+			}
+
+			// 计算三个方向的长度
+			double xLength = maxX - minX;
+			double yLength = maxY - minY;
+			double zLength = maxZ - minZ;
+
+			// 根据mainVectorText确定厚度方向和其他两个方向
+			double length = 0.0;  // 长度
+			double width = 0.0;   // 宽度
+			m_thickness = 0.0;    // 厚度
+
+			if (mainVectorText.contains("X", Qt::CaseInsensitive)) {
+				// X方向是厚度方向
+				m_thickness = xLength;
+
+				// Y和Z方向中较大的作为长度，较小的作为宽度
+				if (yLength >= zLength) {
+					length = yLength;
+					width = zLength;
+				}
+				else {
+					length = zLength;
+					width = yLength;
 				}
 			}
+			else if (mainVectorText.contains("Y", Qt::CaseInsensitive)) {
+				// Y方向是厚度方向
+				m_thickness = yLength;
+
+				// X和Z方向中较大的作为长度，较小的作为宽度
+				if (xLength >= zLength) {
+					length = xLength;
+					width = zLength;
+				}
+				else {
+					length = zLength;
+					width = xLength;
+				}
+			}
+			else {
+				// Z方向是厚度方向
+				m_thickness = zLength;
+
+				// X和Y方向中较大的作为长度，较小的作为宽度
+				if (xLength >= yLength) {
+					length = xLength;
+					width = yLength;
+				}
+				else {
+					length = yLength;
+					width = xLength;
+				}
+			}
+
+			// 显示长度、宽度和厚度
+			ui->textBrowser_2->setPlainText(QString::number(length, 'f', 2)); // 长度
+			ui->textBrowser_3->setPlainText(QString::number(width, 'f', 2));  // 宽度
+			ui->textBrowser_4->setPlainText(QString::number(m_thickness, 'f', 2)); // 厚度
+
+			qDebug() << "长度计算完成：" << length << "mm";
+			qDebug() << "宽度计算完成：" << width << "mm";
+			qDebug() << "厚度计算完成：" << m_thickness << "mm";
 		}
 
 		// 赋值三个方向向量变量
