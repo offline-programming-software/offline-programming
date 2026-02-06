@@ -1434,6 +1434,8 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 		GetObjIDByName(PQ_COORD, wstr, uCoordinate);
 		m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
 
+		partPositions = dSrc;
+
 		// 检查每个表面上的点
 		for (const auto& value : values) {
 			for (long i = 0; i < lCount; i++) {
@@ -1633,6 +1635,21 @@ void cursePart::CreateBoundingBox()
 
 void cursePart::OnDraw()
 {
+
+	CComBSTR strText = "point";
+	double dPos[3] = { 0.0 };
+	int counter = 0;
+	for (size_t i = 0; i < partPositions.size(); i++)
+	{
+		dPos[counter++] = partPositions[i];
+		if ((counter % 3) == 0)
+		{
+			m_ptrKit->View_draw_point(dPos, 0, 3, RGB(10, 100, 200), strText, RGB(20, 200, 20));
+			counter = 0;
+		}
+
+	}
+
 	if (isPoint) {
 		std::map<int, std::array<double, 3>> pointMap;
 		std::array<double, 3> tempPoint;

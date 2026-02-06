@@ -109,6 +109,8 @@ private:
 	std::vector<double> ABBPosition;//包围盒八个角点
 	std::vector<double> points;
 
+	std::vector<double> partPositions;
+
 	//方向读取
 	std::vector<double> mainDirction;//主方向
 	std::vector<double> divisionDirection;//划分方向

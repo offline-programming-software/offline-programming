@@ -214,7 +214,7 @@ void posCal::onCalculate()
 	ULONG robotID = 0;
 	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(),robotID);
 
-	std::vector<double> robotJoints = { 0,0,M_PI/2,0,0,0 };
+	std::vector<double> robotJoints = { 0,0,0,0,0,0 };
 
 	std::vector<double>relativePos = calculataRelativePos(robotID, robotJoints);
 
