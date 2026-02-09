@@ -1,4 +1,4 @@
-ï»¿
+
 #include<iostream>
 #include<qstringliteral.h>
 #include"TrajCorrectDock.h"
@@ -9,8 +9,8 @@
 #include<qscrollarea.h>
 #include<qfiledialog.h>
 #include<qmessagebox.h>
-#include <sstream>   // ç”¨äºæ•°å­—è½¬å­—ç¬¦ä¸²
-#include <comdef.h>  // åŒ…å« CComBSTR æ‰€éœ€å¤´æ–‡ä»¶
+#include <sstream>   // ÓÃÓÚÊı×Ö×ª×Ö·û´®
+#include <comdef.h>  // °üº¬ CComBSTR ËùĞèÍ·ÎÄ¼ş
 #include <algorithm>
 #include "robxFileIO.h"
 
@@ -23,7 +23,7 @@ TrajCorrectDock::TrajCorrectDock(
 	  m_ptrKit(ptrKit),
 	  m_ptrKitCallback2(ptrKitCallback), 
 	  ui(new Ui::DockContent())
-	//åœ¨æ„é€  TrajCorrectDock å¯¹è±¡æ—¶ï¼ŒåŒæ—¶ä¹Ÿ new äº†ä¸€ä¸ª Ui::DockContent ç±»çš„å®ä¾‹ï¼Œå¹¶æŠŠè¿™ä¸ªæŒ‡é’ˆèµ‹å€¼ç»™æˆå‘˜å˜é‡ uiã€‚
+	//ÔÚ¹¹Ôì TrajCorrectDock ¶ÔÏóÊ±£¬Í¬Ê±Ò² new ÁËÒ»¸ö Ui::DockContent ÀàµÄÊµÀı£¬²¢°ÑÕâ¸öÖ¸Õë¸³Öµ¸ø³ÉÔ±±äÁ¿ ui¡£
 {
 	QVBoxLayout *layoutForScroll = new QVBoxLayout();
 	layoutForScroll->setContentsMargins(0, 0, 0, 0);
@@ -35,18 +35,18 @@ TrajCorrectDock::TrajCorrectDock(
 	m_io = new RobxIO();
 	m_io->updateData(m_correctionList, "correctionList.json");
 	for (Correction* ptr : m_correction) {
-		delete ptr;  // é¿å…å†…å­˜æ³„æ¼
+		delete ptr;  // ±ÜÃâÄÚ´æĞ¹Â©
 	}
 	m_correction.clear();
 
-	// ä» QVector<Correction> åˆ›å»ºæ–°çš„æŒ‡é’ˆå¯¹è±¡
+	// ´Ó QVector<Correction> ´´½¨ĞÂµÄÖ¸Õë¶ÔÏó
 	for (const Correction& c : m_correctionList) {
-		m_correction.push_back(new Correction(c));  // æ‹·è´æ„é€ ç”Ÿæˆæ–°å¯¹è±¡
+		m_correction.push_back(new Correction(c));  // ¿½±´¹¹ÔìÉú³ÉĞÂ¶ÔÏó
 	}
 	QWidget *contentWidget = new QWidget();
 	ui->setupUi(contentWidget);
 	contentWidget->setFixedWidth(300);
-	pickBox = new pickWidget(contentWidget);  //pickboxçš„çˆ¶å¯¹è±¡è¢«è®¾ç½®ä¸ºcontentWidgetï¼Œåœ¨QTä¸­çš„çˆ¶å­å…³ç³»è´Ÿè´£å†…å­˜ç®¡ç†ï¼Œåˆ é™¤çˆ¶å¯¹è±¡æ—¶ï¼Œå®ƒä¼šè‡ªåŠ¨åˆ é™¤æ‰€æœ‰å­å¯¹è±¡ï¼ˆä¸éœ€è¦ä½ æ‰‹åŠ¨ deleteï¼‰
+	pickBox = new pickWidget(contentWidget);  //pickboxµÄ¸¸¶ÔÏó±»ÉèÖÃÎªcontentWidget£¬ÔÚQTÖĞµÄ¸¸×Ó¹ØÏµ¸ºÔğÄÚ´æ¹ÜÀí£¬É¾³ı¸¸¶ÔÏóÊ±£¬Ëü»á×Ô¶¯É¾³ıËùÓĞ×Ó¶ÔÏó£¨²»ĞèÒªÄãÊÖ¶¯ delete£©
 	xMinspin = new PickSpinBox(contentWidget);
 	xMaxspin = new PickSpinBox(contentWidget);
 	yMinspin = new PickSpinBox(contentWidget);
@@ -94,7 +94,7 @@ TrajCorrectDock::TrajCorrectDock(
 	connect(ui->chkApplyCor, SIGNAL(toggled(bool)), this, SLOT(on_chkApplyCor_toggled(bool)));
 	initDock();
 	connect(ui->btnSave, &QPushButton::clicked, this, &TrajCorrectDock::on_btnSave_clicked);
-	//---------------pqå›è°ƒä¿¡å·--------------------------
+	//---------------pq»Øµ÷ĞÅºÅ--------------------------
 	connect(m_ptrKitCallback2, &CPQKitCallback::signalElementPickup, this, &TrajCorrectDock::OnPickup);
 	//connect(m_ptrKitCallback2, &CPQKitCallback::signalElementSelection, this, &TrajCorrectDock::OnElementSelection);
 	connect(m_ptrKitCallback2, &CPQKitCallback::signalDraw, this, &TrajCorrectDock::OnDraw);
@@ -106,9 +106,8 @@ TrajCorrectDock::TrajCorrectDock(
 	connect(ui->btnTest_2, &QPushButton::clicked, this, &TrajCorrectDock::on_btnTest_2_clicked);
 
 	//---------init------------
-	GetAllPathID();   //è·å–æ‰€æœ‰è½¨è¿¹ID,åç§°,è½¨è¿¹ç‚¹ID
-	GetPointInfo();	  //è·å–æ‰€æœ‰è½¨è¿¹ç‚¹ä½å§¿
-	setWindowTitle(QString::fromLocal8Bit("å¼¯æ›²å˜å½¢é…ç½®"));
+
+	setWindowTitle(QString::fromLocal8Bit("ÍäÇú±äĞÎÅäÖÃ"));
 	
 	
 }
@@ -122,11 +121,11 @@ void TrajCorrectDock::importCsvPoints(const QString & filePath)
 {
 	QFile file(filePath);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-		qWarning() << "æ— æ³•æ‰“å¼€æ–‡ä»¶:" << filePath;
+		qWarning() << "ÎŞ·¨´ò¿ªÎÄ¼ş:" << filePath;
 		return;
 	}
 
-	m_vFlagPoints.clear();  // æ¸…ç©ºæ—§æ•°æ®
+	m_vFlagPoints.clear();  // Çå¿Õ¾ÉÊı¾İ
 
 	QTextStream in(&file);
 	while (!in.atEnd()) {
@@ -150,18 +149,18 @@ void TrajCorrectDock::importCsvPoints(const QString & filePath)
 
 	file.close();
 
-	qDebug() << "æˆåŠŸå¯¼å…¥ç‚¹æ•°é‡ï¼š" << m_vFlagPoints.size() / 3;
+	qDebug() << "³É¹¦µ¼ÈëµãÊıÁ¿£º" << m_vFlagPoints.size() / 3;
 }
 
 void TrajCorrectDock::importCsvPointsMeasure(const QString & filePath)
 {
 	QFile file(filePath);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-		qWarning() << "æ— æ³•æ‰“å¼€æ–‡ä»¶:" << filePath;
+		qWarning() << "ÎŞ·¨´ò¿ªÎÄ¼ş:" << filePath;
 		return;
 	}
 
-	m_vMeasurePoints.clear();  // æ¸…ç©ºæ—§æ•°æ®
+	m_vMeasurePoints.clear();  // Çå¿Õ¾ÉÊı¾İ
 	
 	QTextStream in(&file);
 	while (!in.atEnd()) {
@@ -185,14 +184,14 @@ void TrajCorrectDock::importCsvPointsMeasure(const QString & filePath)
 
 	file.close();
 
-	qDebug() << "æˆåŠŸå¯¼å…¥ç‚¹æ•°é‡ï¼š" << m_vMeasurePoints.size() / 3;
+	qDebug() << "³É¹¦µ¼ÈëµãÊıÁ¿£º" << m_vMeasurePoints.size() / 3;
 }
 
 void TrajCorrectDock::exportCsvFlagPoints(const QString & filePath)
 {
 	QFile file(filePath);
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-		qWarning() << "æ— æ³•å†™å…¥æ–‡ä»¶:" << filePath;
+		qWarning() << "ÎŞ·¨Ğ´ÈëÎÄ¼ş:" << filePath;
 		return;
 	}
 
@@ -207,14 +206,14 @@ void TrajCorrectDock::exportCsvFlagPoints(const QString & filePath)
 	}
 
 	file.close();
-	qDebug() << "å¯¼å‡ºæˆåŠŸ:" << filePath;
+	qDebug() << "µ¼³ö³É¹¦:" << filePath;
 }
 
 void TrajCorrectDock::exportCsvMeasurePoints(const QString & filePath)
 {
 	QFile file(filePath);
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-		qWarning() << "æ— æ³•å†™å…¥æ–‡ä»¶:" << filePath;
+		qWarning() << "ÎŞ·¨Ğ´ÈëÎÄ¼ş:" << filePath;
 		return;
 	}
 	
@@ -229,7 +228,7 @@ void TrajCorrectDock::exportCsvMeasurePoints(const QString & filePath)
 	}
 
 	file.close();
-	qDebug() << "å¯¼å‡ºæˆåŠŸ:" << filePath;
+	qDebug() << "µ¼³ö³É¹¦:" << filePath;
 }
 
 
@@ -249,24 +248,24 @@ void TrajCorrectDock::initDock()
 
 void TrajCorrectDock::InitLists()
 {
-	// 1ï¸âƒ£ å…ˆæ¸…ç©ºåˆ—è¡¨æ§ä»¶
+	// 1?? ÏÈÇå¿ÕÁĞ±í¿Ø¼ş
 	ui->listCorrections->clear();
 
-	// 2ï¸âƒ£ éå† QVector<Correction>
+	// 2?? ±éÀú QVector<Correction>
 	for (int i = 0; i < m_correctionList.size(); ++i)
 	{
-		const Correction& c = m_correctionList[i]; // å®‰å…¨è®¿é—®
+		const Correction& c = m_correctionList[i]; // °²È«·ÃÎÊ
 
-		// 3ï¸âƒ£ æ„å»ºæ˜¾ç¤ºæ–‡æœ¬ï¼Œä¾‹å¦‚æ˜¾ç¤ºåç§° + æ˜¯å¦åº”ç”¨
+		// 3?? ¹¹½¨ÏÔÊ¾ÎÄ±¾£¬ÀıÈçÏÔÊ¾Ãû³Æ + ÊÇ·ñÓ¦ÓÃ
 		QString displayText = c.m_name;
 		if (c.m_isApply)
-			displayText += " [å·²åº”ç”¨]";
+			displayText += " [ÒÑÓ¦ÓÃ]";
 
-		// 4ï¸âƒ£ æ·»åŠ åˆ° QListWidget
+		// 4?? Ìí¼Óµ½ QListWidget
 		ui->listCorrections->addItem(displayText);
 	}
 
-	// 5ï¸âƒ£ å¯é€‰ï¼šé»˜è®¤é€‰ä¸­ç¬¬ä¸€ä¸ª
+	// 5?? ¿ÉÑ¡£ºÄ¬ÈÏÑ¡ÖĞµÚÒ»¸ö
 	if (ui->listCorrections->count() > 0)
 		ui->listCorrections->setCurrentRow(0);
 }
@@ -283,14 +282,14 @@ void TrajCorrectDock::initPointLists()
 	{
 		for (size_t i = 0; i < my_vFlagPoints.size()/3; i++)
 		{
-			pickBox->addItem(QStringLiteral("ç‚¹%1").arg(i + 1));
+			pickBox->addItem(QStringLiteral("µã%1").arg(i + 1));
 		}
 	}
 	if (my_vMeasurePoints.size()>0)
 	{
 		for (size_t i = 0; i < my_vMeasurePoints.size()/3; i++)
 		{
-			ui->listMeasurePoints->addItem(QStringLiteral("ç‚¹%1").arg(i + 1));
+			ui->listMeasurePoints->addItem(QStringLiteral("µã%1").arg(i + 1));
 
 		}
 	}
@@ -374,11 +373,11 @@ void TrajCorrectDock::on_btnNewCorrection_clicked()
 {
 	QListWidgetItem* item = new QListWidgetItem(ui->listCorrections);
 	ui->btnNewCorrection->setEnabled(false);
-	QString itemName = QString::fromLocal8Bit("æ–°å»ºä¿®æ­£å¯¹è±¡");
+	QString itemName = QString::fromLocal8Bit("ĞÂ½¨ĞŞÕı¶ÔÏó");
 	for (QListWidgetItem* it : m_correctionItems) {
 		const int suffix = 1;
 		if (itemName == it->text()) {
-			itemName = QString::fromLocal8Bit("æ–°å»ºä¿®æ­£å¯¹è±¡%1").arg(suffix);
+			itemName = QString::fromLocal8Bit("ĞÂ½¨ĞŞÕı¶ÔÏó%1").arg(suffix);
 		}
 	}
 	item->setText(itemName);
@@ -393,9 +392,9 @@ void TrajCorrectDock::on_btnNewCorrection_clicked()
 	//for (size_t i = 0; i < m_correctCounter; i++)
 	//{
 	//	QListWidgetItem* item = new QListWidgetItem(m_correction[i]->name());
-	//	item->setForeground(Qt::black);   // è®¾ç½®å­—ä½“é¢œè‰²ä¸ºç°è‰²
-	//	item->setBackground(Qt::white);       // è®¾ç½®èƒŒæ™¯ä¸ºç™½è‰²
-	//	ui->listCorrections->addItem(item);   // æ·»åŠ åˆ°åˆ—è¡¨ä¸­
+	//	item->setForeground(Qt::black);   // ÉèÖÃ×ÖÌåÑÕÉ«Îª»ÒÉ«
+	//	item->setBackground(Qt::white);       // ÉèÖÃ±³¾°Îª°×É«
+	//	ui->listCorrections->addItem(item);   // Ìí¼Óµ½ÁĞ±íÖĞ
 	//	
 	//}
 }
@@ -406,7 +405,7 @@ void TrajCorrectDock::on_btnDeleteCorrection_clicked()
 	QListWidgetItem *item = ui->listCorrections->currentItem();
 	int row = ui->listCorrections->row(item);
 	if (item) {
-		// ä»åˆ—è¡¨ä¸­åˆ é™¤è¯¥é¡¹ï¼ˆä¼šè‡ªåŠ¨é‡Šæ”¾å†…å­˜ï¼‰
+		// ´ÓÁĞ±íÖĞÉ¾³ı¸ÃÏî£¨»á×Ô¶¯ÊÍ·ÅÄÚ´æ£©
 		delete ui->listCorrections->takeItem(ui->listCorrections->row(item));
 		delete m_correction[row];
 		m_correction.erase(m_correction.begin() + row);
@@ -418,8 +417,8 @@ void TrajCorrectDock::on_btnAttributeSetOK_clicked()
 
 	QMessageBox::StandardButton reply;
 	reply = QMessageBox::question(this,
-		QStringLiteral("æç¤º"),
-		QStringLiteral("ä¿å­˜å½“å‰å±æ€§è‡³ä¿®æ­£å¯¹è±¡ï¼š%1 ï¼Ÿ").arg(ui->editCorName->text()),
+		QStringLiteral("ÌáÊ¾"),
+		QStringLiteral("±£´æµ±Ç°ÊôĞÔÖÁĞŞÕı¶ÔÏó£º%1 £¿").arg(ui->editCorName->text()),
 		QMessageBox::Yes | QMessageBox::No,
 		QMessageBox::No);
 
@@ -464,7 +463,7 @@ void TrajCorrectDock::on_btnSave_clicked()
 	m_correctionList.clear();
 	for (Correction* cptr : m_correction) {
 		if (cptr) {
-			m_correctionList.push_back(*cptr); // å°†å¯¹è±¡å€¼æ‹·è´åˆ° QVector
+			m_correctionList.push_back(*cptr); // ½«¶ÔÏóÖµ¿½±´µ½ QVector
 		}
 	}
 	m_io->writeData(m_correctionList, "correctionList.json");
@@ -505,9 +504,9 @@ void TrajCorrectDock::onImportFlagPointsClicked()
 {
 	QString fileName = QFileDialog::getOpenFileName(
 		this,
-		tr("å¯¼å…¥æ ‡è®°ç‚¹"),
+		tr("µ¼Èë±ê¼Çµã"),
 		"",
-		tr("CSV æ–‡ä»¶ (*.csv);;Excel æ–‡ä»¶ (*.xlsx *.xls)")
+		tr("CSV ÎÄ¼ş (*.csv);;Excel ÎÄ¼ş (*.xlsx *.xls)")
 	);
 
 	if (fileName.isEmpty())
@@ -518,7 +517,7 @@ void TrajCorrectDock::onImportFlagPointsClicked()
 		int pointNum = m_vFlagPoints.size() / 3;
 		for (size_t i = 0; i < pointNum; i++)
 		{
-			pickBox->addItem(QStringLiteral("ç‚¹%1").arg(i + 1));
+			pickBox->addItem(QStringLiteral("µã%1").arg(i + 1));
 		}
 }
 
@@ -526,9 +525,9 @@ void TrajCorrectDock::on_btnMeasurePtsInport_clicked()
 {
 	QString fileName = QFileDialog::getOpenFileName(
 		this,
-		tr("å¯¼å…¥æ ‡è®°ç‚¹"),
+		tr("µ¼Èë±ê¼Çµã"),
 		"",
-		tr("CSV æ–‡ä»¶ (*.csv);;Excel æ–‡ä»¶ (*.xlsx *.xls)")
+		tr("CSV ÎÄ¼ş (*.csv);;Excel ÎÄ¼ş (*.xlsx *.xls)")
 	);
 
 	if (fileName.isEmpty())
@@ -540,7 +539,7 @@ void TrajCorrectDock::on_btnMeasurePtsInport_clicked()
 	int myPointNum = m_vMeasurePoints.size() / 3;
 	for (size_t i = 0; i < myPointNum; i++)
 	{
-		pickBox->addItem(QStringLiteral("ç‚¹%1").arg(i + 1));
+		pickBox->addItem(QStringLiteral("µã%1").arg(i + 1));
 	}
 }
 
@@ -548,16 +547,16 @@ void TrajCorrectDock::on_btnFlagPointsExport_clicked()
 {
 	QString fileName = QFileDialog::getSaveFileName(
 		this,
-		tr("å¯¼å‡ºæ ‡è®°ç‚¹"),
+		tr("µ¼³ö±ê¼Çµã"),
 		"",
-		tr("CSV æ–‡ä»¶ (*.csv)")
+		tr("CSV ÎÄ¼ş (*.csv)")
 	);
 
 	if (fileName.isEmpty())
 		return;
 
 	if (!fileName.endsWith(".csv"))
-		fileName += ".csv";  // è‡ªåŠ¨è¡¥å…¨åç¼€
+		fileName += ".csv";  // ×Ô¶¯²¹È«ºó×º
 
 	exportCsvFlagPoints(fileName);
 }
@@ -566,16 +565,16 @@ void TrajCorrectDock::onExportMeasurePointsClicked()
 {
 	QString fileName = QFileDialog::getSaveFileName(
 		this,
-		tr("å¯¼å‡ºæµ‹è¯•ç‚¹"),
+		tr("µ¼³ö²âÊÔµã"),
 		"",
-		tr("CSV æ–‡ä»¶ (*.csv)")
+		tr("CSV ÎÄ¼ş (*.csv)")
 	);
 
 	if (fileName.isEmpty())
 		return;
 
 	if (!fileName.endsWith(".csv"))
-		fileName += ".csv";  // è‡ªåŠ¨è¡¥å…¨åç¼€
+		fileName += ".csv";  // ×Ô¶¯²¹È«ºó×º
 
 	exportCsvMeasurePoints(fileName);
 }
@@ -639,7 +638,7 @@ void TrajCorrectDock::OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int 
 		pickBox->clear();
 		for (size_t i = 0; i < myPointCounter; i++)
 		{
-			pickBox->addItem(QStringLiteral("ç‚¹%1").arg(i+1));
+			pickBox->addItem(QStringLiteral("µã%1").arg(i+1));
 		}
 		
 		break;
@@ -727,7 +726,7 @@ void TrajCorrectDock::OnDraw()
 			{
 				wss.str(L"");
 				wss.clear();
-				wss << L"ç‚¹" << (i/3)+1;
+				wss << L"µã" << (i/3)+1;
 				strText = wss.str().c_str();
 				m_ptrKit->View_draw_point(dPos, 0, 15, RGB(10, 100, 200), strText, RGB(255, 140, 0));
 				counter = 0;
@@ -742,7 +741,7 @@ void TrajCorrectDock::OnDraw()
 	
 		break;
 	case TrajCorrectDock::DrawSource::FromRangePoints:
-#pragma region ç»˜åˆ¶ä½œç”¨åŸŸå‡½æ•°
+#pragma region »æÖÆ×÷ÓÃÓòº¯Êı
 		for (size_t i = 0; i < 6; i++)
 		{
 			if (spinBoxes[i]->value() == 0)
@@ -792,14 +791,14 @@ void TrajCorrectDock::OnDraw()
 					};
 
 					CComBSTR emptyText = L"";
-					m_ptrKit->View_draw_point(dPos, 0, 3, RGB(0, 255, 255), emptyText, RGB(0, 255, 255)); // é’è‰²ç»†ç‚¹
+					m_ptrKit->View_draw_point(dPos, 0, 3, RGB(0, 255, 255), emptyText, RGB(0, 255, 255)); // ÇàÉ«Ï¸µã
 				}
 			}
 
-			//ç”»çº¿å‡½æ•° è¾“å…¥2ä¸ªdPos 
+			//»­Ïßº¯Êı ÊäÈë2¸ödPos 
 
 		}
-#pragma endregion ç»˜åˆ¶ä½œç”¨åŸŸ
+#pragma endregion »æÖÆ×÷ÓÃÓò
 	}
 }
 
@@ -811,12 +810,12 @@ void TrajCorrectDock::mousePressEvent(QMouseEvent * event)
 {
 	QWidget *clickedChild = childAt(event->pos());
 
-	// å¦‚æœç‚¹å‡»çš„æ§ä»¶ï¼Œä¸æ˜¯ pickBoxï¼Œä¹Ÿä¸æ˜¯å®ƒçš„å­æ§ä»¶
+	// Èç¹ûµã»÷µÄ¿Ø¼ş£¬²»ÊÇ pickBox£¬Ò²²»ÊÇËüµÄ×Ó¿Ø¼ş
 	if (!clickedChild || (clickedChild != pickBox && !pickBox->isAncestorOf(clickedChild))) {
 		emit blankAreaClicked();
 	}
 	else {
-		// ç‚¹åˆ° pickBox æˆ–å…¶å­æ§ä»¶äº†ï¼Œæ­£å¸¸ä¼ é€’
+		// µãµ½ pickBox »òÆä×Ó¿Ø¼şÁË£¬Õı³£´«µİ
 		QWidget::mousePressEvent(event);
 	}
 }
@@ -839,19 +838,19 @@ void TrajCorrectDock::testSlot()
 	
 }
 
-#pragma region pqå‡½æ•°
+#pragma region pqº¯Êı
 
 void TrajCorrectDock::getTrajPoints(double range[6], std::vector<std::vector<double>>& trajPointsToCorrect)
 {
-	////è·å–æ‰€æœ‰è½¨è¿¹id
+	////»ñÈ¡ËùÓĞ¹ì¼£id
 	//BSTR sName;  
 	//BSTR sIDs;  
 	//m_ptrKit->pq_GetAllDataObjectsByType(80, &sName, &sIDs);
 	//ULONG ulPathID = 0;     
-	//INT nStartIndex = 0;      //è½¨è¿¹ç‚¹èµ·å§‹ç´¢å¼•
-	//INT nCount = 5;           //æ‰¹é‡è·å–è½¨è¿¹ç‚¹çš„æ•°ç›®
-	//INT nPostureType = 0;         //å§¿æ€è¡¨ç¤ºæ–¹å¼ å››å…ƒæ•°0   æ¬§æ‹‰è§’ï¼š1-4
-	//ULONG uCoordinateID = 0;       //åœ¨åæ ‡ç³»IDä¸‹è¡¨ç¤º
+	//INT nStartIndex = 0;      //¹ì¼£µãÆğÊ¼Ë÷Òı
+	//INT nCount = 5;           //ÅúÁ¿»ñÈ¡¹ì¼£µãµÄÊıÄ¿
+	//INT nPostureType = 0;         //×ËÌ¬±íÊ¾·½Ê½ ËÄÔªÊı0   Å·À­½Ç£º1-4
+	//ULONG uCoordinateID = 0;       //ÔÚ×ø±êÏµIDÏÂ±íÊ¾
 	//m_ptrKit->pq_GetAllDataObjectsByType(80, &sName, &sIDs);
 	ULONG uID = 0;
 	getObjIdByName(PQ_PATH, L"", uID);
@@ -877,7 +876,7 @@ void TrajCorrectDock::getObjIdByName(PQDataType i_datatype, std::wstring i_wsNam
 
 }
 
-void TrajCorrectDock::GetAllPathID()    //å¾—åˆ°æ‰€æœ‰è½¨è¿¹ç‚¹ID
+void TrajCorrectDock::GetAllPathID()    //µÃµ½ËùÓĞ¹ì¼£µãID
 {
 	BSTR trajNames;
 	BSTR trajIDs;
@@ -913,14 +912,14 @@ void TrajCorrectDock::GetAllPathID()    //å¾—åˆ°æ‰€æœ‰è½¨è¿¹ç‚¹ID
 	{
 		m_ptrKit->PQAPIGetPointsID(m_vAllPathIDs[j], &varTrajIDArray);
 
-		lenID = varTrajIDArray.parray->rgsabound[0].cElements; //å…ƒç´ ä¸ªæ•°
-		SafeArrayAccessData(varTrajIDArray.parray, (void**)&bufID);  //æŠŠåœ°å€èµ‹ç»™buffID
+		lenID = varTrajIDArray.parray->rgsabound[0].cElements; //ÔªËØ¸öÊı
+		SafeArrayAccessData(varTrajIDArray.parray, (void**)&bufID);  //°ÑµØÖ·¸³¸øbuffID
 		for (size_t i = 0; i < lenID; i++)
 		{
 			m_vAllPointIDs.push_back(bufID[i]);
 			m_mapAllPointIDs[m_vAllPathIDs[j]].push_back(bufID[i]);
 		}
-		SafeArrayUnaccessData(varTrajIDArray.parray);//é‡Šæ”¾
+		SafeArrayUnaccessData(varTrajIDArray.parray);//ÊÍ·Å
 	}
 	//GetPointInfo();
 }
@@ -1030,11 +1029,11 @@ void TrajCorrectDock::modifyPointsPoses(const std::vector<unsigned long>& Correc
 		m_ptrKit->PQAPIModifyPointPosture(m_vPointsToCorrectID[i], dPosition, posCount, QUATERNION);
 	}
 	QMessageBox::StandardButton reply;
-	reply = QMessageBox::question(this,                         // çˆ¶çª—å£
-		QStringLiteral("æç¤º"),                       // æ ‡é¢˜
-		QStringLiteral(" æ˜¯å¦åº”ç”¨æ­¤ä¿®æ­£ ï¼Ÿ").arg(ui->editCorName->text()),   // æ­£æ–‡å†…å®¹
-		QMessageBox::Yes | QMessageBox::No, // æŒ‰é’®
-		QMessageBox::No);             // é»˜è®¤é€‰ä¸­ No
+	reply = QMessageBox::question(this,                         // ¸¸´°¿Ú
+		QStringLiteral("ÌáÊ¾"),                       // ±êÌâ
+		QStringLiteral(" ÊÇ·ñÓ¦ÓÃ´ËĞŞÕı £¿").arg(ui->editCorName->text()),   // ÕıÎÄÄÚÈİ
+		QMessageBox::Yes | QMessageBox::No, // °´Å¥
+		QMessageBox::No);             // Ä¬ÈÏÑ¡ÖĞ No
 	if (reply == QMessageBox::Yes)
 	{
 		return;
@@ -1058,7 +1057,7 @@ void TrajCorrectDock::modifyPointsPoses(const std::vector<unsigned long>& Correc
 
 
 
-#pragma region æµ‹è¯•å‡½æ•°
+#pragma region ²âÊÔº¯Êı
 void TrajCorrectDock::on_btnTest_2_clicked()
 {
 	modifyPointsPoses(m_vPointsToCorrectID, m_v2dPointsToCorrect);
@@ -1090,8 +1089,8 @@ void TrajCorrectDock::on_chkApplyCor_toggled(bool checked)
 	}
 	else
 	{
-		item->setBackground(Qt::white);      // æ¢å¤é»˜è®¤èƒŒæ™¯
-		item->setForeground(Qt::black);  // æ˜¾ç¤ºç°è‰²å­—ä½“
+		item->setBackground(Qt::white);      // »Ö¸´Ä¬ÈÏ±³¾°
+		item->setForeground(Qt::black);  // ÏÔÊ¾»ÒÉ«×ÖÌå
 	}
 	
 }

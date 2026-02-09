@@ -8,6 +8,7 @@
 #include <QChart>
 #include <string>
 #include"robxFileIO.h"
+#include "test\RobxFileIOManagerWidget.h"
 
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
@@ -177,6 +178,7 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	QAction* action62 = pannel2->addAction("联动求解求解", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
 	QAction* action63 = pannel2->addAction("输出动画到本地", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
 	QAction* action64 = pannel2->addAction("输出视频", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+	QAction* openRobxFileIOManagerAction = pannel2->addAction("Robx文件管理器", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
 	resize(800, 600);
 
 	connect(action1, SIGNAL(triggered()), this, SLOT(OnOpenRobx()));//打开
@@ -260,11 +262,11 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	connect(action63, SIGNAL(triggered()), this, SLOT(on_animation()));//输出视频到本地
 	connect(action64, SIGNAL(triggered()), this, SLOT(on_video()));//输出动画
 	connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
-
+	connect(openRobxFileIOManagerAction, SIGNAL(triggered()), this,SLOT(on_robxFileIOManager_open()));//Robx文件管理器
 
 	InitPQKit();
-}
-
+	
+} 
 
 MainWindow::~MainWindow()
 {
@@ -310,14 +312,40 @@ BSTR QStringToBSTR(const QString& str)
 
 void MainWindow::OnOpenRobx()
 {
+	//提示保存当前文件
+	CComBSTR currentRobxName = " ";
+	m_ptrKit->Doc_get_name(&currentRobxName);
+	if (currentRobxName != L"设计")
+	{
+		//打开了robx文件，需要提示保存
+		QMessageBox::StandardButton reply;
+		reply = QMessageBox::question(this, "提示", "当前文件未保存，是否保存？",
+			QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+		if(reply == QMessageBox::Yes)
+		{
+			OnSaveRobx();
+			m_ptrKit->pq_CloseDocument(currentRobxName);
+			RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
+			RobxFileIO::clearFolder(L"temp");
+		}
+		else if (reply == QMessageBox::Cancel)
+		{
+			return;
+		}
+		else if(reply == QMessageBox::No)
+		{
+			m_ptrKit->pq_CloseDocument(currentRobxName);
+			RobxFileIO::clearFolder(L"temp");
+		}
+	}
+
+
 	QString fileName = QFileDialog::getOpenFileName(this, tr("open robx file"), "",
 		tr("Robx files(*.robx)"));
-
 	QString qstr = fileName;
 	qstr.replace("\\", "/");
 	std::wstring wpath = qstr.toStdWString();
 	RobxFileIO::setPath(wpath);
-
 	if (fileName.isEmpty())
 	{
 		return;
@@ -329,7 +357,6 @@ void MainWindow::OnOpenRobx()
 	CComBSTR bsPara = "";
 	CComBSTR bsCmd = "RO_CMD_FILE_OPEN";
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsPara, varPara, &lResult);
-
 	RobxFileIO::downloadJson(RobxFileIO::GlobalPath());
 }
 
@@ -339,6 +366,7 @@ void MainWindow::OnSaveRobx()
 	CComBSTR bsParam = "";
 	CComBSTR bsCmd = "RO_CMD_FILE_SAVE";
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsParam, CComVariant(), lResult);
+	RobxFileIO::updateRobxData(RobxFileIO::GlobalPath());
 }
 
 void MainWindow::OnSaveasRobx()
@@ -994,18 +1022,21 @@ void MainWindow::on_AGV_path()
 
 void MainWindow::on_trajCorrectdock_open()
 {
-
-	//BSTR sName = nullptr;
-	//HRESULT hr = m_ptrKit->Doc_get_name(&sName);
-	//if (SUCCEEDED(hr) && sName && wcscmp(sName, L"设计") == 0) {
-	//	QMessageBox::information(this, "提示", "当前没有打开robx工程文件，无法使用该功能！");
-	//	SysFreeString(sName);  // 记得释放（一般 COM 返回的 BSTR 需要你释放）
-	//	return;
-	//}
-	//SysFreeString(sName);
-	TrajCorrectDock* dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback);
+TrajCorrectDock* dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback);
 	addDockWidget(Qt::LeftDockWidgetArea, dock);
 
+}
+
+void MainWindow::on_robxFileIOManager_open()
+{
+	if (!m_robxIOMgr)
+	{
+		m_robxIOMgr = new RobxFileIOManagerWidget();
+
+	}
+	m_robxIOMgr->show();
+	m_robxIOMgr->raise();
+	m_robxIOMgr->activateWindow();
 }
 
 void MainWindow::on_effectiveness_analysis()
@@ -1465,6 +1496,7 @@ void MainWindow::closeEvent(QCloseEvent* event)   //清除原版，副本更名
 	CComBSTR robxName = " ";
 	if (m_ptrKit)
 	{
+
 		m_ptrKit->pq_CloseComponent();
 	}
 
