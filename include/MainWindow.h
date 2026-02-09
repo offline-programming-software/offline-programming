@@ -40,7 +40,7 @@
 #include "boundBox.h"
 #include "robxFileIO.h"
 #include "TrajCorrectDock.h"
-#include"BendingCorrectDock.h"
+#include "test\robxFileIOManagerWidget.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -70,6 +70,8 @@ private:
 	QWidget* m_pPQPlatformView;
 	QWidget* m_pPQModeTreeView;
 	QWidget* m_pPQDebugView;
+
+	RobxFileIOManagerWidget* m_robxIOMgr = nullptr;//robx文件读写管理界面指针
 
 private:
 	void closeEvent(QCloseEvent* event);
@@ -195,6 +197,7 @@ protected slots:
 	void on_pos_cal();
 	void on_AGV_path();
 	void on_trajCorrectdock_open();
+	void on_robxFileIOManager_open();
 
 };
 #endif  // MAINWINDOW_H

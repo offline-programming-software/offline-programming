@@ -174,63 +174,30 @@ void RobxIO::updateData(QVector<workSpaceInformation>& list,
 	}
 }
 
-
-//void RobxIO::flushTempToRobx()
-//{
-//	struct archive* a = archive_write_new();
-//	archive_write_set_format_zip(a);
-//	archive_write_open_filename(a, m_robxPath.c_str());
-//
-//	for (const auto& entry :
-//		std::filesystem::directory_iterator(m_tempDir))
-//	{
-//		struct archive_entry* e = archive_entry_new();
-//
-//		std::string filePath = entry.path().string();
-//		std::string fileName = entry.path().filename().string();
-//
-//		archive_entry_set_pathname(e, fileName.c_str());
-//		archive_entry_set_size(e, std::filesystem::file_size(entry));
-//		archive_entry_set_filetype(e, AE_IFREG);
-//		archive_entry_set_perm(e, 0644);
-//
-//		archive_write_header(a, e);
-//
-//		std::ifstream ifs(filePath, std::ios::binary);
-//		std::string buffer(
-//			(std::istreambuf_iterator<char>(ifs)),
-//			std::istreambuf_iterator<char>());
-//
-//		archive_write_data(a, buffer.data(), buffer.size());
-//
-//		archive_entry_free(e);
-//	}
-//
-//	archive_write_close(a);
-//	archive_write_free(a);
-//}
-
-
 namespace fs = std::filesystem;
 
 void RobxFileIO::uploadJson(std::wstring& robxPath)   
 {
-	std::vector<std::string> list = { "temp/" };
+	if (robxPath == L"")
+	{
+		return;
+	}
+	std::vector<std::string> list = { "./temp" };
 	std::string tempPath = "./temp";
+	auto perms = std::filesystem::status(robxPath).permissions();
+	std::filesystem::permissions(
+		robxPath,
+		std::filesystem::perms::owner_write,
+		std::filesystem::perm_options::add
+	);
+	std::cout << ((static_cast<bool>(perms & std::filesystem::perms::owner_write)) ? "writeable" : "read-only") << std::endl;
+	BOOL ok = DeleteFileW(robxPath.c_str());
 
-	try {
-		if (fs::exists(robxPath) && fs::is_regular_file(robxPath)) {
-			fs::remove(robxPath);  // 删除单个文件
-			std::cout << "文件删除成功\n";
-		}
-		else {
-			std::cout << "文件不存在或不是普通文件\n";
-		}
+	if (!ok) {
+		DWORD err = GetLastError();
+		std::wcout << L"DeleteFileW failed, err=" << err << std::endl;
 	}
-	catch (const fs::filesystem_error& e) {
-		std::cerr << "错误: " << e.what() << '\n';
-	}
-
+	
 	writeRobx(robxPath, list);
 
 	try {
@@ -246,9 +213,20 @@ void RobxFileIO::uploadJson(std::wstring& robxPath)
 
 void RobxFileIO::downloadJson(std::wstring& robxPath)
 {
+	clearFolder(L"temp");
 	std::string path = "temp";
 	std::filesystem::create_directory(path);
 	readRobx(robxPath, path);
+}
+
+void RobxFileIO::updateRobxData(std::wstring& robxPath)
+{
+	//保存一份新的data到temp
+	fs::create_directory("./temp/newData");
+	readRobx(robxPath, "./temp/newData");
+	fs::remove_all("./temp/data");
+	fs::copy("./temp/newData/data", "./temp/data", fs::copy_options::recursive);
+	fs::remove_all("./temp/newData");
 }
 
 void RobxFileIO::setPath(std::wstring path)
@@ -260,6 +238,36 @@ std::wstring & RobxFileIO::GlobalPath()   //引用作为返回值
 {
 	static std::wstring path;
 	return path;
+}
+
+void RobxFileIO::clearFolder(const std::wstring& path)
+{
+	if (path.empty())
+		return;
+
+	const fs::path dirPath(path);
+	std::error_code ec;
+
+	if (!fs::exists(dirPath, ec)) {
+		fs::create_directories(dirPath, ec);
+		return;
+	}
+
+	if (!fs::is_directory(dirPath, ec)) {
+		// 不是目录就删掉并创建目录，保证最终是“空目录”
+		fs::remove(dirPath, ec);
+		fs::create_directories(dirPath, ec);
+		return;
+	}
+
+	// 只删除目录里的内容，保留目录本身
+	for (const auto& entry : fs::directory_iterator(dirPath, ec)) {
+		if (ec)
+			break;
+
+		std::error_code removeEc;
+		fs::remove_all(entry.path(), removeEc);
+	}
 }
 
 // 将 wstring 转换为 UTF-8 编码的 std::string
@@ -299,6 +307,7 @@ void addFileToArchive(struct archive* a, const fs::path& filePath, const fs::pat
 	archive_entry_free(entry);
 }
 
+
 void addDirToArchive(struct archive* a, const fs::path& dirPath, const fs::path& baseDir) {
 	struct archive_entry* entry = archive_entry_new();
 	fs::path relativePath = fs::relative(dirPath, baseDir);
@@ -334,8 +343,6 @@ std::string to_utf8_string(const char* utf8_str)
 
 // 主函数：写 
 void writeRobx(const std::wstring& outname, const std::vector<std::string>& dirList) {
-	
-
 	struct archive* a = archive_write_new();
 	archive_write_set_format_zip(a);
 	// 文件使用 Deflate 最大压缩
@@ -349,16 +356,16 @@ void writeRobx(const std::wstring& outname, const std::vector<std::string>& dirL
 		if (!fs::exists(folder) || !fs::is_directory(folder))
 			continue;
 
-		// 外层目录使用 STORE
-		addDirToArchive(a, folder, folder.parent_path());
+		//将temp目录写进
+		addDirToArchive(a, folder, folder);
 
 		// 递归添加内容
 		for (auto& p : fs::recursive_directory_iterator(folder)) {
 			if (fs::is_directory(p.path())) {
-				addDirToArchive(a, p.path(), folder.parent_path());
+				addDirToArchive(a, p.path(), folder);
 			}
 			else if (fs::is_regular_file(p.path())) {
-				addFileToArchive(a, p.path(), folder.parent_path());
+				addFileToArchive(a, p.path(), folder);
 			}
 		}
 	}
