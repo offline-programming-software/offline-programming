@@ -262,7 +262,9 @@ cursePart::cursePart(QWidget *parent,
 
 	//设置是否联动
 	connect(ui->checkBox, &QCheckBox::toggled, this, [this](bool checked) {
-		ui->comboBox_2->setEnabled(checked);
+		ui->checkBox_3->setEnabled(checked);
+		ui->checkBox_4->setEnabled(checked);
+		ui->checkBox_5->setEnabled(checked);
 	});
 
 	connect(ui->horizontalSlider, &QSlider::valueChanged, this, &cursePart::on_horizontalSlider_valueChanged);
@@ -337,7 +339,6 @@ void cursePart::init() {
 
 	ui->pushButton_1->setEnabled(false);
 	ui->pushButton_3->setEnabled(false);
-	ui->comboBox_2->setEnabled(false);//设置联动轴复选框不能使用
 
 	ui->horizontalSlider->setMinimum(-50);
 	ui->horizontalSlider->setMaximum(50);
@@ -592,7 +593,11 @@ void cursePart::on_calculate_workspace()
 	thetaStr = thetaStr.simplified();  // 去除多余的空白字符
 	double theta = thetaStr.toDouble();
 
-	QString railName = ui->comboBox_2->currentText();
+	QList<QString> railNameList;
+	if (ui->checkBox->isChecked()) {
+		
+	}
+	QString railName = "J1";
 
 	QString thicknessStr = ui->textBrowser_2->toPlainText();
 	double thickness = thicknessStr.toDouble();
@@ -1614,11 +1619,11 @@ void cursePart::updateRailOptions(const QString & robotName, const QMap<ULONG, Q
 	}
 
 	// 更新对话框中的轨道选项
-	ui->comboBox_2->clear();
-	ui->comboBox_2->addItems(rail);
-	if (!rail.isEmpty()) {
-		ui->comboBox_2->setCurrentIndex(0);
-	}
+	//ui->comboBox_2->clear();
+	//ui->comboBox_2->addItems(rail);
+	//if (!rail.isEmpty()) {
+	//	ui->comboBox_2->setCurrentIndex(0);
+	//}
 }
 
 
@@ -1756,10 +1761,10 @@ void cursePart::saveWorkspaceData() {
 	boundary.CoordinateName = ui->comboBox_3->currentText();
 	boundary.DirectionName = ui->comboBox_4->currentText();
 
-	// 添加轨道名称到railName向量
-	if (!ui->comboBox_2->currentText().isEmpty()) {
-		boundary.railName.push_back(ui->comboBox_2->currentText());
-	}
+	//// 添加轨道名称到railName向量
+	//if (!ui->comboBox_2->currentText().isEmpty()) {
+	//	boundary.railName.push_back(ui->comboBox_2->currentText());
+	//}
 
 	// 添加当前points到boundary
 	boundary.points = points;
