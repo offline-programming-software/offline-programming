@@ -905,171 +905,156 @@ double projectToDirection(const spacePoint& point, const std::vector<double>& di
 	return point.x * normDir[0] + point.y * normDir[1] + point.z * normDir[2];
 }
 
-// 改进的计算导轨式机器人联动工作空间函数
+// 改进的计算导轨式机器人联动工作空间函数 - 直接使用输入的8个角点
 Workspace Workspace::calculateRailRobotWorkspace(
 	ULONG robotID,
+	const std::vector<spacePoint>& inputCornerPoints,  // 直接输入8个角点
 	const std::vector<double>& railDirection,
 	double spraySpeed,
 	double railSpeed,
 	const spacePoint& initialCenter,
-	double initialStepSize,
 	double thickness,
 	double theta,
 	const std::vector<double>& direction,
 	int samplePointsPerFace,
 	double minStepSize)
 {
-	// 首先计算基础工作空间
-	std::vector<spacePoint> baseCornerPoints = calculateExpandableWorkspace(
-		robotID,
-		initialCenter,
-		initialStepSize,
-		thickness,
-		theta,
-		direction,
-		samplePointsPerFace,
-		minStepSize
+	// 验证输入的角点数量
+	if (inputCornerPoints.size() != 8) {
+		throw std::invalid_argument("Input corner points must contain exactly 8 points");
+	}
+
+	// 计算扩展距离 - 根据导轨速度和喷射速度的比例
+	double extensionDistance = (spraySpeed / railSpeed) * thickness;
+
+	// 计算新的边界
+	spacePoint minCorner(std::numeric_limits<double>::max(),
+		std::numeric_limits<double>::max(),
+		std::numeric_limits<double>::max());
+	spacePoint maxCorner(std::numeric_limits<double>::lowest(),
+		std::numeric_limits<double>::lowest(),
+		std::numeric_limits<double>::lowest());
+
+	// 将原始角点沿导轨方向扩展
+	std::vector<spacePoint> extendedCorners;
+	for (const auto& corner : inputCornerPoints) {
+		// 沿导轨方向扩展
+		spacePoint extendedPoint = spacePoint(
+			corner.x + extensionDistance * railDirection[0],
+			corner.y + extensionDistance * railDirection[1],
+			corner.z + extensionDistance * railDirection[2]
+		);
+
+		extendedCorners.push_back(extendedPoint);
+
+		// 更新最小最大边界
+		minCorner.x = std::min(minCorner.x, extendedPoint.x);
+		minCorner.y = std::min(minCorner.y, extendedPoint.y);
+		minCorner.z = std::min(minCorner.z, extendedPoint.z);
+
+		maxCorner.x = std::max(maxCorner.x, extendedPoint.x);
+		maxCorner.y = std::max(maxCorner.y, extendedPoint.y);
+		maxCorner.z = std::max(maxCorner.z, extendedPoint.z);
+	}
+
+	// 计算新的中心点和尺寸
+	spacePoint newCenter(
+		(minCorner.x + maxCorner.x) / 2.0,
+		(minCorner.y + maxCorner.y) / 2.0,
+		(minCorner.z + maxCorner.z) / 2.0
 	);
 
-	if (baseCornerPoints.empty()) {
-		return Workspace(initialCenter, spacePoint(0, 0, 0), m_ptrKit, m_ptrKitCallback, direction);
-	}
-
-	// 计算基础工作空间的尺寸
-	spacePoint minPoint = baseCornerPoints[0];
-	spacePoint maxPoint = baseCornerPoints[0];
-
-	for (const auto& point : baseCornerPoints) {
-		minPoint.x = std::min(minPoint.x, point.x);
-		minPoint.y = std::min(minPoint.y, point.y);
-		minPoint.z = std::min(minPoint.z, point.z);
-		maxPoint.x = std::max(maxPoint.x, point.x);
-		maxPoint.y = std::max(maxPoint.y, point.y);
-		maxPoint.z = std::max(maxPoint.z, point.z);
-	}
-
-	spacePoint baseSize = spacePoint(
-		maxPoint.x - minPoint.x,
-		maxPoint.y - minPoint.y,
-		maxPoint.z - minPoint.z
+	spacePoint newSize(
+		maxCorner.x - minCorner.x,
+		maxCorner.y - minCorner.y,
+		maxCorner.z - minCorner.z
 	);
 
-	// 计算导轨方向上的宽度
-	// 通过将所有角点投影到导轨方向上来计算宽度
-	std::vector<double> projections;
-	for (const auto& point : baseCornerPoints) {
-		double proj = projectToDirection(point, railDirection);
-		projections.push_back(proj);
-	}
-
-	double minProj = *std::min_element(projections.begin(), projections.end());
-	double maxProj = *std::max_element(projections.begin(), projections.end());
-	double railWidth = maxProj - minProj;
-
-	// 计算所需时间：工作空间在此方向的宽度/(喷涂速度-导轨运动速度)
-	double timeRequired = 0;
-	if (spraySpeed > railSpeed) {
-		timeRequired = railWidth / (spraySpeed - railSpeed);
-	}
-	else {
-		// 如果导轨速度大于等于喷涂速度，则无法有效覆盖
-		timeRequired = railWidth / 0.001; // 使用一个很小的速度差，避免除零
-	}
-
-	// 计算导轨方向上的扩张长度：时间 × 导轨运动速度
-	double expansionLength = timeRequired * railSpeed;
-
-	// 获取导轨方向的单位向量
-	std::vector<double> railUnitVector = normalizeVector(railDirection);
-	spacePoint railVec(railUnitVector[0], railUnitVector[1], railUnitVector[2]);
-
-	// 根据导轨方向计算新的中心点和尺寸
-	spacePoint newCenter = initialCenter;
-	spacePoint newSize = baseSize;
-
-	// 沿导轨方向扩展工作空间
-	// 扩展后的工作空间在导轨方向上的尺寸变为原来的尺寸加上扩张长度
-	// 同时调整中心点位置
-	newCenter = newCenter + railVec * (expansionLength / 2.0);
-	// 为了在导轨方向上扩展，我们需要增加对应方向的尺寸
-	// 这里我们假设导轨方向与某个坐标轴平行或接近平行
-
-	// 为了更好地处理任意方向的导轨，我们使用局部坐标系
-	LocalCoordinateSystem tempCoordSystem(initialCenter, direction);
-
-	// 正确的坐标转换：获取世界坐标系下的导轨方向
-	spacePoint worldRailDirection = railVec;  // railVec已经是世界坐标系下的方向
-
-	// 计算扩展量在各轴上的分量
-	double xExpansion = std::abs(worldRailDirection.x) * expansionLength;
-	double yExpansion = std::abs(worldRailDirection.y) * expansionLength;
-	double zExpansion = std::abs(worldRailDirection.z) * expansionLength;
-
-	// 更新尺寸和中心点
-	newSize.x += xExpansion;
-	newSize.y += yExpansion;
-	newSize.z += zExpansion;
-
-	// 调整中心点
-	newCenter.x += (worldRailDirection.x * expansionLength) / 2.0;
-	newCenter.y += (worldRailDirection.y * expansionLength) / 2.0;
-	newCenter.z += (worldRailDirection.z * expansionLength) / 2.0;
-
-	// 创建并返回扩展的工作空间
 	return Workspace(newCenter, newSize, m_ptrKit, m_ptrKitCallback, direction);
 }
 
-// 新增函数：支持多个导轨方向的联动工作空间计算
+// 新增函数：支持多个导轨方向的联动工作空间计算 - 直接使用输入的8个角点
 Workspace Workspace::calculateMultiRailRobotWorkspace(
 	ULONG robotID,
+	const std::vector<spacePoint>& inputCornerPoints,  // 直接输入8个角点
 	const std::vector<std::vector<double>>& railDirections,
 	const std::vector<double>& spraySpeeds,
 	const std::vector<double>& railSpeeds,
 	const spacePoint& initialCenter,
-	double initialStepSize,
 	double thickness,
 	double theta,
 	const std::vector<double>& direction,
 	int samplePointsPerFace,
 	double minStepSize)
 {
-	// 验证输入参数
-	if (railDirections.size() != spraySpeeds.size() || railDirections.size() != railSpeeds.size()) {
+	// 验证输入参数的一致性
+	if (railDirections.size() != spraySpeeds.size() ||
+		railDirections.size() != railSpeeds.size()) {
 		throw std::invalid_argument("Rail directions, spray speeds, and rail speeds must have the same size");
 	}
 
-	// 首先计算基础工作空间
-	Workspace currentWorkspace = calculateRailRobotWorkspace(
-		robotID,
-		railDirections[0],
-		spraySpeeds[0],
-		railSpeeds[0],
-		initialCenter,
-		initialStepSize,
-		thickness,
-		theta,
-		direction,
-		samplePointsPerFace,
-		minStepSize
-	);
-
-	// 对于后续的导轨方向，依次扩展工作空间
-	for (size_t i = 1; i < railDirections.size(); ++i) {
-		// 使用当前工作空间的中心点和尺寸作为下一个扩展的起点
-		currentWorkspace = calculateRailRobotWorkspace(
-			robotID,
-			railDirections[i],
-			spraySpeeds[i],
-			railSpeeds[i],
-			currentWorkspace.m_center,
-			initialStepSize,
-			currentWorkspace.m_size.z, // 保持当前Z方向的尺寸
-			theta,
-			direction,
-			samplePointsPerFace,
-			minStepSize
-		);
+	if (inputCornerPoints.size() != 8) {
+		throw std::invalid_argument("Input corner points must contain exactly 8 points");
 	}
 
-	return currentWorkspace;
+	// 计算每个导轨方向上的扩展
+	std::vector<spacePoint> allExtendedCorners = inputCornerPoints;
+
+	for (size_t i = 0; i < railDirections.size(); ++i) {
+		double extensionDistance = (spraySpeeds[i] / railSpeeds[i]) * thickness;
+		const auto& railDir = railDirections[i];
+
+		// 为当前导轨方向扩展所有现有角点
+		std::vector<spacePoint> currentExtendedCorners;
+
+		// 添加原始角点
+		for (const auto& corner : allExtendedCorners) {
+			currentExtendedCorners.push_back(corner);
+		}
+
+		// 添加沿当前导轨方向扩展的角点
+		for (const auto& corner : inputCornerPoints) {
+			spacePoint extendedPoint = spacePoint(
+				corner.x + extensionDistance * railDir[0],
+				corner.y + extensionDistance * railDir[1],
+				corner.z + extensionDistance * railDir[2]
+			);
+			currentExtendedCorners.push_back(extendedPoint);
+		}
+
+		allExtendedCorners = currentExtendedCorners;
+	}
+
+	// 计算包围盒
+	spacePoint minCorner(std::numeric_limits<double>::max(),
+		std::numeric_limits<double>::max(),
+		std::numeric_limits<double>::max());
+	spacePoint maxCorner(std::numeric_limits<double>::lowest(),
+		std::numeric_limits<double>::lowest(),
+		std::numeric_limits<double>::lowest());
+
+	for (const auto& corner : allExtendedCorners) {
+		minCorner.x = std::min(minCorner.x, corner.x);
+		minCorner.y = std::min(minCorner.y, corner.y);
+		minCorner.z = std::min(minCorner.z, corner.z);
+
+		maxCorner.x = std::max(maxCorner.x, corner.x);
+		maxCorner.y = std::max(maxCorner.y, corner.y);
+		maxCorner.z = std::max(maxCorner.z, corner.z);
+	}
+
+	// 计算新的中心点和尺寸
+	spacePoint newCenter(
+		(minCorner.x + maxCorner.x) / 2.0,
+		(minCorner.y + maxCorner.y) / 2.0,
+		(minCorner.z + maxCorner.z) / 2.0
+	);
+
+	spacePoint newSize(
+		maxCorner.x - minCorner.x,
+		maxCorner.y - minCorner.y,
+		maxCorner.z - minCorner.z
+	);
+
+	return Workspace(newCenter, newSize, m_ptrKit, m_ptrKitCallback, direction);
 }

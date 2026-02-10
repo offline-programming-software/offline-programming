@@ -81,7 +81,7 @@ private:
 	QMap<QString, QVector<RobotWorkspaceBoundary>> m_list;
 	// 修改：使用 QMap 按机器人名称存储工作空间信息
 	QMap<QString, QVector<workSpaceInformation>> m_spaceInformation;
-
+	
 
 	// 存储坐标轴数据
 	struct AxisData {

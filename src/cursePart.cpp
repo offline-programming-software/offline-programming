@@ -335,8 +335,15 @@ void cursePart::init() {
 		ui->comboBox_3->setCurrentIndex(0);
 	}
 
+	//将联动轨迹设置为不可选中
+	ui->checkBox_3->setEnabled(false);
+	ui->checkBox_4->setEnabled(false);
+	ui->checkBox_5->setEnabled(false);
+
+	//设置采样点间距默认为500
 	ui->textEdit->setPlainText("500");//初始化间距
 
+	//设置确认和预览按钮不可选中
 	ui->pushButton_1->setEnabled(false);
 	ui->pushButton_3->setEnabled(false);
 

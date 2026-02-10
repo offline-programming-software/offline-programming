@@ -269,35 +269,36 @@ public:
 		const std::map<std::pair<double, double>, std::vector<spacePoint>>& aabbMap,
 		double targetThick, double targetTheta);
 
+
 	//5、计算导轨式机器人工作空间（单个导轨）
 	Workspace calculateRailRobotWorkspace(
 		ULONG robotID,
+		const std::vector<spacePoint>& inputCornerPoints,  // 直接输入8个角点
 		const std::vector<double>& railDirection,
 		double spraySpeed,
 		double railSpeed,
 		const spacePoint& initialCenter,
-		double initialStepSize,
 		double thickness,
 		double theta,
 		const std::vector<double>& direction,
 		int samplePointsPerFace,
 		double minStepSize);
 
-	//5、计算导轨式机器人工作空间（多个导轨）
+	//6、计算导轨式机器人工作空间（多个导轨）
 	Workspace calculateMultiRailRobotWorkspace(
 		ULONG robotID,
+		const std::vector<spacePoint>& inputCornerPoints,  // 直接输入8个角点
 		const std::vector<std::vector<double>>& railDirections,
 		const std::vector<double>& spraySpeeds,
 		const std::vector<double>& railSpeeds,
 		const spacePoint& initialCenter,
-		double initialStepSize,
 		double thickness,
 		double theta,
 		const std::vector<double>& direction,
 		int samplePointsPerFace,
 		double minStepSize);
 
-	//5、中心点优化方法
+	//7、中心点优化方法
 	spacePoint optimizeCenterPoint(ULONG robotID,
 		const spacePoint& initialCenter,
 		const std::vector<double>& direction,

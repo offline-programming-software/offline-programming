@@ -40,11 +40,8 @@
 #include "boundBox.h"
 #include "robxFileIO.h"
 #include "TrajCorrectDock.h"
-<<<<<<< HEAD
-//#include "BendingCorrectDock.h"
-=======
 #include "test\robxFileIOManagerWidget.h"
->>>>>>> origin/fix/RobxFileIO-error
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

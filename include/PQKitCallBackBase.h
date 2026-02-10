@@ -137,6 +137,16 @@ public:
 		return S_OK;
 	}
 
+	HRESULT Fire_Simulate_Point_Error(DOUBLE i_dPtPositionX, DOUBLE i_dPtPositionY, DOUBLE i_dPtPositionZ, PQPathPtState i_ePtState)
+	{
+		return S_OK;
+	}
+	
+	HRESULT Fire_Object_Deleted(unsigned long i_ulObjID, LPWSTR i_wObjName, PQDataType i_eObjType)
+	{
+		return S_OK;
+	}
+
 private:
 	LONG m_lRefCount;
 

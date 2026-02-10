@@ -233,7 +233,7 @@ void RobxIO::updateData(QVector<workSpaceInformation>& list,
 	}
 }
 
-<<<<<<< HEAD
+
 void RobxIO::updateData(QVector<std::tuple<QString, QString, QString>>& list,
 	const std::string& fileName)
 {
@@ -298,8 +298,7 @@ void RobxIO::updateData(QVector<std::tuple<QString, QString, QString>>& list,
 //}
 
 
-=======
->>>>>>> origin/fix/RobxFileIO-error
+
 namespace fs = std::filesystem;
 
 void RobxFileIO::uploadJson(std::wstring& robxPath)   

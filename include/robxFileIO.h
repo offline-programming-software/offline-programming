@@ -125,14 +125,12 @@ public:
 	void updateData(QVector<workSpaceInformation>& list,
 		const std::string& fileName);
 
-<<<<<<< HEAD
+
 	void updateData(QVector<std::tuple<QString, QString, QString>>& list,
 		const std::string& fileName);
 
 	//void writeData(const QVector<鏂扮殑鏁版嵁缁撴瀯绫诲瀷>& list,
-=======
-	//void writeData(const QVector<新的数据结构类型>& list,
->>>>>>> origin/fix/RobxFileIO-error
+
 	//	const std::string& fileName);
 
 	//void updateData(QVector<新的数据结构类型>& list,
