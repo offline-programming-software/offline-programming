@@ -7,54 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>375</width>
-    <height>217</height>
+    <height>166</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>添加机器人工作空间配置</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>机器人名称：</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QTextBrowser" name="textBrowser">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>30</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>30</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="1" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,4">
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>坐标系选取：</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="comboBox"/>
-     </item>
-    </layout>
-   </item>
    <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,4">
      <item>
@@ -101,27 +60,6 @@
     </layout>
    </item>
    <item row="3" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_5">
-     <item>
-      <widget class="QCheckBox" name="checkBox">
-       <property name="text">
-        <string>是否联动</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>联动轴选取：</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="comboBox_3"/>
-     </item>
-    </layout>
-   </item>
-   <item row="4" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <spacer name="horizontalSpacer">
@@ -149,6 +87,47 @@
         <string>取消</string>
        </property>
       </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>机器人名称：</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTextBrowser" name="textBrowser">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>30</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,4">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>坐标系选取：</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox"/>
      </item>
     </layout>
    </item>

@@ -30,16 +30,8 @@ void RobotWorkspaceHandler::writeRobotWorkspaceBoundary(const RobotWorkspaceBoun
 	newBoundary["robotID"] = boundary.robotID;
 	newBoundary["thickness"] = boundary.thickness;
 	newBoundary["theta"] = boundary.theta;
-	newBoundary["isLink"] = boundary.isLink;
 	newBoundary["CoordinateName"] = boundary.CoordinateName.toStdString();
 	newBoundary["DirectionName"] = boundary.DirectionName.toStdString();
-
-	// 转换railName向量
-	json railNamesArray = json::array();
-	for (const auto& name : boundary.railName) {
-		railNamesArray.push_back(name.toStdString());
-	}
-	newBoundary["railName"] = railNamesArray;
 
 	// 转换points向量
 	json pointsArray = json::array();
@@ -72,7 +64,6 @@ std::vector<double> RobotWorkspaceHandler::findMatchingPoints(
 	bool isLink,
 	const QString& coordinateName,
 	const QString& directionName,
-	const QString& railName,
 	double targetTheta,
 	double targetThickness) {
 
@@ -82,9 +73,6 @@ std::vector<double> RobotWorkspaceHandler::findMatchingPoints(
 	conditions["isLink"] = isLink;
 	conditions["CoordinateName"] = coordinateName.toStdString();
 	conditions["DirectionName"] = directionName.toStdString();
-
-	// 修复railName匹配问题 - 将字符串转换为数组元素匹配
-	conditions["railName"] = railName.toStdString();
 
 	auto results = queryHelper.findObjectsByMultipleKeys(conditions);
 
@@ -187,12 +175,11 @@ std::vector<double> RobotWorkspaceHandler::processRobotWorkspaceQuery(
 	const QString& directionName,
 	bool isLink,
 	double theta,
-	double thickness,
-	const QString& railName) {
+	double thickness) {
 
 	// 首先查找匹配的记录
 	auto matchingPoints = findMatchingPoints(
-		robotID, isLink, coordinateName, directionName, railName, theta, thickness
+		robotID, isLink, coordinateName, directionName, theta, thickness
 	);
 
 	if (matchingPoints.empty()) {
@@ -250,6 +237,9 @@ cursePart::cursePart(QWidget *parent,
 	connect(ui->pushButton_6, &QPushButton::clicked, this, &cursePart::on_pickUpButton_clicked);//拾取
 	connect(ui->pushButton_7, &QPushButton::clicked, this, &cursePart::on_deleteButton_clicked);//删除曲面
 	connect(ui->pushButton_8, &QPushButton::clicked, this, &cursePart::on_finishButton_clicked);//结束拾取模式
+
+	connect(ui->pushButton, &QPushButton::clicked, this, &cursePart::on_pickupPoint_clicked);//拾取按钮
+	connect(ui->textEdit_6, &QTextEdit::textChanged, this, &cursePart::on_finishButton_clicked);//关闭拾取模式
 
 	connect(ui->pushButton_3, &QPushButton::clicked, this, &cursePart::on_previewButton_clicked);//预览
 	connect(ui->pushButton_9, &QPushButton::clicked, this, &cursePart::on_spaceSettingButton_clicked);//计算最大偏差角和厚度
@@ -314,26 +304,31 @@ void cursePart::init() {
 	updateRailOptions(currentRobot, m_robotMap);
 
 
-	// 设置坐标系
-	PQDataType CoodernateType = PQ_COORD;
-	CoodernateMap = getObjectsByType(CoodernateType);
+	//// 设置坐标系
+	//PQDataType CoodernateType = PQ_COORD;
+	//CoodernateMap = getObjectsByType(CoodernateType);
 
-	// 创建一个新的QMap，先插入"世界坐标系"，再插入原有的数据
-	QMap<ULONG, QString> newCoodernateMap;
-	newCoodernateMap.insert(0, "世界坐标系");  // 先插入首位
+	//// 创建一个新的QMap，先插入"世界坐标系"，再插入原有的数据
+	//QMap<ULONG, QString> newCoodernateMap;
+	//newCoodernateMap.insert(0, "世界坐标系");  // 先插入首位
 
-	// 将原有数据插入到后面（键值从1开始）
-	for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
-		newCoodernateMap.insert(it.key(), it.value());
-	}
+	//// 将原有数据插入到后面（键值从1开始）
+	//for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
+	//	newCoodernateMap.insert(it.key(), it.value());
+	//}
 
-	CoodernateMap = newCoodernateMap;  // 替换原来的map
-	QStringList CoodernateNames = CoodernateMap.values();
+	//CoodernateMap = newCoodernateMap;  // 替换原来的map
+	//QStringList CoodernateNames = CoodernateMap.values();
+	QStringList CoodernateNames;
+	CoodernateNames.push_back("机器人基座标系");
 
 	ui->comboBox_3->addItems(CoodernateNames);
 	if (!CoodernateNames.isEmpty()) {
 		ui->comboBox_3->setCurrentIndex(0);
 	}
+
+	//获取机器人导轨
+
 
 	//将联动轨迹设置为不可选中
 	ui->checkBox_3->setEnabled(false);
@@ -512,7 +507,7 @@ void cursePart::on_verticalSlider_valueChanged(int value)
 	// 计算新值：500 + 500 * 百分比
 	double newValue = z_value + 500 * percentage;
 
-	// 更新textEdit_3的显示
+	// 更新textEdit_5的显示
 	ui->textEdit_5->setPlainText(QString::number(newValue, 'f', 2));
 
 	// 实现onAreaPosition()功能
@@ -600,12 +595,6 @@ void cursePart::on_calculate_workspace()
 	thetaStr = thetaStr.simplified();  // 去除多余的空白字符
 	double theta = thetaStr.toDouble();
 
-	QList<QString> railNameList;
-	if (ui->checkBox->isChecked()) {
-		
-	}
-	QString railName = "J1";
-
 	QString thicknessStr = ui->textBrowser_2->toPlainText();
 	double thickness = thicknessStr.toDouble();
 
@@ -622,7 +611,7 @@ void cursePart::on_calculate_workspace()
 
 	// 使用RobotWorkspaceHandler进行查询
 	auto foundPoints = m_workspaceHandler->processRobotWorkspaceQuery(
-		robotName, robotID, coordinateName, directionName, isLink, theta, thickness, railName
+		robotName, robotID, coordinateName, directionName, isLink, theta, thickness
 	);
 
 	if (!foundPoints.empty()) {
@@ -886,6 +875,7 @@ void cursePart::on_finishButton_clicked()
 	if (isPickupActive || isPreview) {
 		isPickupActive = false;
 		isPreview = false;
+		isPoint = false;
 		this->setModal(true);
 		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 		HRESULT hr = m_ptrKit->Doc_end_module(cmd);
@@ -901,7 +891,7 @@ void cursePart::on_previewButton_clicked()
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
 	if (SUCCEEDED(hr)) {
-		isPoint = true;
+		isPreview = true;
 		isPickupActive = false; // 关闭拾取模式
 	}
 }
@@ -1176,6 +1166,16 @@ void cursePart::on_deleteButton_clicked()
 
 		qDebug() << "总共删除了" << deletedCount << "个曲面";
 	}
+}
+
+void cursePart::on_pickupPoint_clicked()
+{
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+	if (SUCCEEDED(hr)) {
+		isPoint = true;
+	}
+
 }
 
 void cursePart::on_comboBox_currentTextChanged(const QString& text)
@@ -1648,21 +1648,7 @@ void cursePart::CreateBoundingBox()
 void cursePart::OnDraw()
 {
 
-	CComBSTR strText = "point";
-	double dPos[3] = { 0.0 };
-	int counter = 0;
-	for (size_t i = 0; i < partPositions.size(); i++)
-	{
-		dPos[counter++] = partPositions[i];
-		if ((counter % 3) == 0)
-		{
-			m_ptrKit->View_draw_point(dPos, 0, 3, RGB(10, 100, 200), strText, RGB(20, 200, 20));
-			counter = 0;
-		}
-
-	}
-
-	if (isPoint) {
+	if (isPreview) {
 		std::map<int, std::array<double, 3>> pointMap;
 		std::array<double, 3> tempPoint;
 
@@ -1752,6 +1738,16 @@ void cursePart::OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEnti
 			pickupMap[i_ulObjID].push_back(i_lEntityID ? i_lEntityID : L"");
 		}
 	}
+
+	// 然后处理拾取结果
+	if (isPoint && this) {
+		// 可以添加更多条件检查，比如只处理特定类型的元素
+		if (i_nEntityType == 1) { // 例如，只处理类型1的元素
+			ui->textEdit_7->setPlainText(QString::number(i_dPointY, 'f', 2));
+			ui->textEdit_8->setPlainText(QString::number(i_dPointZ, 'f', 2));
+			ui->textEdit_6->setPlainText(QString::number(i_dPointX, 'f', 2));
+		}
+	}
 }
 
 // 保存工作空间数据的方法实现
@@ -1764,14 +1760,8 @@ void cursePart::saveWorkspaceData() {
 	boundary.robotID = robotID;
 	boundary.thickness = m_thickness;
 	boundary.theta = ui->textBrowser_1->toPlainText().toDouble();
-	boundary.isLink = ui->checkBox->isChecked();
 	boundary.CoordinateName = ui->comboBox_3->currentText();
 	boundary.DirectionName = ui->comboBox_4->currentText();
-
-	//// 添加轨道名称到railName向量
-	//if (!ui->comboBox_2->currentText().isEmpty()) {
-	//	boundary.railName.push_back(ui->comboBox_2->currentText());
-	//}
 
 	// 添加当前points到boundary
 	boundary.points = points;
@@ -1783,3 +1773,5 @@ void cursePart::saveWorkspaceData() {
 	m_workspaceHandler = new RobotWorkspaceHandler(jsonName.toStdString());
 	m_workspaceHandler->writeRobotWorkspaceBoundary(boundary);
 }
+
+

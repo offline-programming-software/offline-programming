@@ -47,10 +47,8 @@ struct RobotWorkspaceBoundary {
 	ULONG robotID;
 	double thickness;
 	double theta;
-	bool isLink;
 	QString CoordinateName;
 	QString DirectionName;
-	std::vector<QString> railName;
 	std::vector<double> points;
 };
 
@@ -59,21 +57,15 @@ struct workSpaceInformation {
 	int number;
 	QString coodinate;
 	QString mainDir;
-	bool isLink;
-	QString railName;
 
 	workSpaceInformation(const QString& rName = "",
 		int num = 0,
 		const QString& coord = "",
-		const QString& mDir = "",
-		bool m_isLink = 0,
-		const QString& railName = "") :
+		const QString& mDir = "") :
 		robotName(rName),
 		number(num),
 		coodinate(coord),
-		mainDir(mDir),
-		isLink(m_isLink),
-		railName(railName)
+		mainDir(mDir)
 	{}
 };
 

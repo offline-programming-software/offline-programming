@@ -36,8 +36,7 @@ public:
 
 	~robotSpaceDefine();
 
-	void addAxisInfo(int number, const QString& axisName, const QString& mainNormalVector,
-		bool hasGuideRail, const QString guideName);
+	void addAxisInfo(int number, const QString& axisName, const QString& mainNormalVector);
 
 	QString getRobotName();//获取机器人名称
 
@@ -88,8 +87,6 @@ private:
 		int number;
 		QString axisName;
 		QString mainNormalVector;
-		bool hasGuideRail;
-		QString guideName;
 	};
 
 	QList<AxisData> axisList;

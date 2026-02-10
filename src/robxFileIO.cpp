@@ -60,17 +60,8 @@ void RobxIO::writeData(const QVector<RobotWorkspaceBoundary>& list, const std::s
 		jws["robotID"] = ws.robotID;
 		jws["thickness"] = ws.thickness;
 		jws["theta"] = ws.theta;
-		jws["isLink"] = ws.isLink;
 		jws["CoordinateName"] = ws.CoordinateName.toStdString();
 		jws["DirectionName"] = ws.DirectionName.toStdString();
-
-		// 序列化 railName（std::vector<QString>）
-		std::vector<std::string> railNameStrs;
-		for (const QString& qstr : ws.railName) {
-			railNameStrs.push_back(qstr.toStdString());
-		}
-		jws["railName"] = railNameStrs;
-
 		jws["points"] = ws.points;
 
 		j.push_back(jws);
@@ -97,8 +88,6 @@ void RobxIO::writeData(const QVector<workSpaceInformation>& list,
 			{"number", wsInfo.number},
 			{"coodinate", wsInfo.coodinate.toStdString()},
 			{"mainDir", wsInfo.mainDir.toStdString()},
-			{"isLink",wsInfo.isLink},
-			{"railName", wsInfo.railName.toStdString()}
 		};
 		j.push_back(jws);
 	}
@@ -186,18 +175,10 @@ void RobxIO::updateData(QVector<RobotWorkspaceBoundary>& list, const std::string
 		ws.robotID = item.at("robotID").get<ULONG>();
 		ws.thickness = item.at("thickness").get<double>();
 		ws.theta = item.at("theta").get<double>();
-		ws.isLink = item.value("isLink", false); // 提供默认值增强健壮性
 
 		// 反序列化 QString 字段
 		ws.CoordinateName = QString::fromStdString(item.value("CoordinateName", std::string{}));
 		ws.DirectionName = QString::fromStdString(item.value("DirectionName", std::string{}));
-
-		// 反序列化 railName（std::vector<QString>）
-		std::vector<std::string> tempRailNames = item.value("railName", std::vector<std::string>{});
-		ws.railName.clear();
-		for (const std::string& str : tempRailNames) {
-			ws.railName.push_back(QString::fromStdString(str));
-		}
 
 		ws.points = item.at("points").get<std::vector<double>>();
 
@@ -227,8 +208,6 @@ void RobxIO::updateData(QVector<workSpaceInformation>& list,
 		wsInfo.number = item.at("number").get<int>();
 		wsInfo.coodinate = QString::fromStdString(item.at("coodinate").get<std::string>());
 		wsInfo.mainDir = QString::fromStdString(item.at("mainDir").get<std::string>());
-		wsInfo.isLink = item.at("isLink").get<bool>();
-		wsInfo.railName = QString::fromStdString(item.at("railName").get<std::string>());
 		list.push_back(wsInfo);
 	}
 }

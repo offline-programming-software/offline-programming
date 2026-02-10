@@ -40,7 +40,6 @@ public:
 		bool isLink,
 		const QString& coordinateName,
 		const QString& directionName,
-		const QString& railName,
 		double targetTheta,
 		double targetThickness);
 
@@ -55,8 +54,7 @@ public:
 		const QString& directionName,
 		bool isLink,
 		double theta,
-		double thickness,
-		const QString& railName);
+		double thickness);
 };
 
 
@@ -80,6 +78,7 @@ private slots:
 	void on_pickUpButton_clicked();    // 信号1
 	void on_finishButton_clicked();  // 关闭信号
 	void on_deleteButton_clicked();  // 删除选中项
+	void on_pickupPoint_clicked(); //拾取点
 	void on_comboBox_currentTextChanged(const QString& text);  // 机器人组合框变化
 	void on_previewButton_clicked();  // 预览按钮
 	void on_spaceSettingButton_clicked();  // 文本确认按钮
@@ -156,7 +155,5 @@ private:
 	// 新增：保存工作空间数据的方法
 	void saveWorkspaceData();
 };
-
-
 
 

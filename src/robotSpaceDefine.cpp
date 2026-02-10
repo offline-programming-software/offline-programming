@@ -73,7 +73,7 @@ void robotSpaceDefine::setupTableView()
 {
 	// 设置表头
 	QStringList headers;
-	headers << "序号" << "坐标系名称" << "法向量" << "是否有导轨" << "导轨名称";
+	headers << "序号" << "坐标系名称" << "法向量";
 	axisModel->setHorizontalHeaderLabels(headers);
 
 	// 设置模型
@@ -89,19 +89,14 @@ void robotSpaceDefine::setupTableView()
 	ui->tableView->setColumnWidth(0, 60);
 	ui->tableView->setColumnWidth(1, 100);
 	ui->tableView->setColumnWidth(2, 100);
-	ui->tableView->setColumnWidth(3, 80);
-	ui->tableView->setColumnWidth(4, 120);
 }
 
-void robotSpaceDefine::addAxisInfo(int number, const QString& axisName,
-	const QString& mainNormalVector, bool hasGuideRail, const QString guideName)
+void robotSpaceDefine::addAxisInfo(int number, const QString& axisName,const QString& mainNormalVector)
 {
 	AxisData data;
 	data.number = number;
 	data.axisName = axisName;
 	data.mainNormalVector = mainNormalVector;
-	data.hasGuideRail = hasGuideRail;
-	data.guideName = guideName;
 
 	axisList.append(data);
 	updateTableView();
@@ -137,16 +132,6 @@ void robotSpaceDefine::updateTableView()
 		normalItem->setTextAlignment(Qt::AlignCenter);  // 居中对齐
 		items.append(normalItem);
 
-		// 是否有导轨
-		QStandardItem* railItem = new QStandardItem(data.hasGuideRail ? "是" : "否");
-		railItem->setTextAlignment(Qt::AlignCenter);  // 居中对齐
-		items.append(railItem);
-
-		// 导轨名称
-		QStandardItem* speedItem = new QStandardItem(data.guideName);
-		speedItem->setTextAlignment(Qt::AlignCenter);  // 居中对齐（之前是右对齐）
-		items.append(speedItem);
-
 		axisModel->appendRow(items);
 	}
 }
@@ -169,163 +154,200 @@ void robotSpaceDefine::onAddAxis()
 		return;
 	}
 
-	PQDataType CoodernateType = PQ_COORD;
-	QMap<ULONG, QString> CoodernateMap = getObjectsByType(CoodernateType);
+	/*PQDataType CoodernateType = PQ_COORD;*/
 
+	//QMap<ULONG, QString> CoodernateMap = getObjectsByType(CoodernateType);获取坐标系
 	// 创建新的坐标系列表，添加"坐标系"选项
-	QMap<ULONG, QString> newCoodernateMap;
-	newCoodernateMap.insert(0, "世界坐标系");  // 默认选项
+	//QMap<ULONG, QString> newCoodernateMap;
+	//newCoodernateMap.insert(0, "机器人基坐标系");  // 默认选项
 
 	// 将原有数据添加到新map中（从1开始）
-	for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
-		newCoodernateMap.insert(it.key(), it.value());
-	}
-
-	CoodernateMap = newCoodernateMap;
-	QStringList CoodernateNames = CoodernateMap.values();
+	//for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
+	//	newCoodernateMap.insert(it.key(), it.value());
+	//}
+	//CoodernateMap = newCoodernateMap;
+	/*QStringList CoodernateNames = CoodernateMap.values();*/
+	
+	QStringList CoodernateNames;
+	CoodernateNames.push_back("机器人基座标系");
 	dlg->setCoordinate(CoodernateNames); // 设置坐标系
 
-	// 获取导轨信息
-	ULONG uExternalID = 0;
-	QString railname = robotName + "_rail";
-	GetObjIDByName(PQ_ROBOT, railname.toStdWString(), uExternalID);
+	//// 获取导轨信息
+	//ULONG uExternalID = 0;
+	//QString railname = robotName + "_rail";
+	//GetObjIDByName(PQ_ROBOT, railname.toStdWString(), uExternalID);
 
-	QStringList rail;
+	//QStringList rail;
 
-	// 只有在成功获取到机器人ID时才尝试获取关节信息
-	if (uExternalID != 0) {
-		int railCount = 0;
-		HRESULT hr = m_ptrKit->Doc_get_obj_joint_count(uExternalID, &railCount);
+	//// 只有在成功获取到机器人ID时才尝试获取关节信息
+	//if (uExternalID != 0) {
+	//	int railCount = 0;
+	//	HRESULT hr = m_ptrKit->Doc_get_obj_joint_count(uExternalID, &railCount);
 
-		if (SUCCEEDED(hr) && railCount > 0) {
-			for (int i = 0; i < railCount; i++) {
-				QString railName = "J" + QString::number(i + 1);
-				rail.append(railName);
-			}
+	//	if (SUCCEEDED(hr) && railCount > 0) {
+	//		for (int i = 0; i < railCount; i++) {
+	//			QString railName = "J" + QString::number(i + 1);
+	//			rail.append(railName);
+	//		}
+	//	}
+	//}
+
+	//connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName, dlg, CoodernateMap]() {
+
+	//	spacePoint center(0, 0, 0);
+	//	spacePoint size(0, 0, 0);
+
+	//	Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
+
+	//	ULONG robotID = 0;
+	//	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
+	//	spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);
+	//	int number = ui->tableView->model()->rowCount() + 1; // 序号从1开始
+
+	//	//获取主法矢量
+	//	QString axisName = dlg->getCoordinate();
+	//	QString mainNormalVector = dlg->getMainDir();
+	//	ULONG zuobiaoximingcheng;
+	//	GetObjIDByName(PQ_COORD, axisName.toStdWString(), zuobiaoximingcheng);
+
+	//	std::vector<double> direction = getDir(CoodernateMap.key(axisName), mainNormalVector);
+
+	//	//需要将direction转化到机器人基座标系下
+	//	ULONG robotCoordinateID = 0;
+	//	m_ptrKit->Robot_get_base_coordinate(robotID, &robotCoordinateID);
+
+	//	int nCount = 0;
+	//	double* dPosture = nullptr;
+	//	m_ptrKit->Doc_get_coordinate_posture(robotCoordinateID, EULERANGLEXYZ, &nCount, &dPosture, 0);
+
+	//	// 创建转换矩阵
+	//	Eigen::Matrix4d transformMatrix = Eigen::Matrix4d::Identity();
+
+	//	if (nCount >= 6 && dPosture != nullptr) {
+	//		// 提取位置和欧拉角
+	//		double x = dPosture[0];
+	//		double y = dPosture[1];
+	//		double z = dPosture[2];
+	//		double rx = dPosture[3] * M_PI / 180.0;  // 角度转弧度
+	//		double ry = dPosture[4] * M_PI / 180.0;
+	//		double rz = dPosture[5] * M_PI / 180.0;
+
+	//		// 构建旋转矩阵（欧拉角转旋转矩阵）
+	//		Eigen::Matrix3d rotationMatrix;
+	//		rotationMatrix = Eigen::AngleAxisd(rz, Eigen::Vector3d::UnitZ()) *
+	//			Eigen::AngleAxisd(ry, Eigen::Vector3d::UnitY()) *
+	//			Eigen::AngleAxisd(rx, Eigen::Vector3d::UnitX());
+
+	//		// 构建齐次变换矩阵（世界坐标系到机器人基坐标系）
+	//		transformMatrix.block<3, 3>(0, 0) = rotationMatrix.transpose(); // 旋转部分
+	//		transformMatrix.block<3, 1>(0, 3) = -rotationMatrix.transpose() * Eigen::Vector3d(x, y, z); // 平移部分
+
+	//		// 将方向向量转换为齐次坐标（第四维为0）
+	//		Eigen::Vector4d worldDirection(direction[0], direction[1], direction[2], 0);
+
+	//		// 转换到机器人基坐标系
+	//		Eigen::Vector4d robotDirection = transformMatrix * worldDirection;
+
+	//		// 更新direction向量（只取前三个元素）
+	//		direction = { robotDirection[0], robotDirection[1], robotDirection[2] };
+
+	//		// 可选：归一化方向向量
+	//		double length = sqrt(direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2]);
+	//		if (length > 1e-9) {
+	//			direction[0] /= length;
+	//			direction[1] /= length;
+	//			direction[2] /= length;
+	//		}
+	//	}
+
+	//	m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
+
+	//	std::map<std::pair<double, double>, std::vector<spacePoint>> inputMap;
+	//	inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 10, 50,
+	//		1500, 0, 22.5, direction, 5, 10.0);
+
+	//	for (const auto& keyValuePair : inputMap) { // 遍历map
+	//		RobotWorkspaceBoundary ws;
+	//		ws.robotID = robotID; // 设置robotID
+	//		ws.thickness = keyValuePair.first.first;  // 键(pair)的第一个double
+	//		ws.theta = keyValuePair.first.second;     // 键(pair)的第二个double
+	//		ws.CoordinateName = axisName;
+	//		ws.DirectionName = mainNormalVector;
+
+	//		// 转换 vector<spacePoint> 到 vector<double>
+	//		for (const auto& sp : keyValuePair.second) { // 遍历vector<spacePoint>
+	//			// 假设我们取 spacePoint 的 x 成员
+	//			ws.points.push_back(sp.x);
+	//			ws.points.push_back(sp.y);
+	//			ws.points.push_back(sp.z);
+	//		}
+
+	//		m_list[robotName].push_back(ws);
+	//	}
+
+	//	QString filename = QString("workspace_%1.json").arg(robotName);
+
+	//	m_io->writeData(m_list[robotName], filename.toStdString().c_str());
+
+	//	dlg->close();
+	//});
+
+connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName, dlg]() {
+
+	spacePoint center(0, 0, 0);
+	spacePoint size(0, 0, 0);
+
+	Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
+
+	ULONG robotID = 0;
+	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
+	spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);
+
+	QString mainNormalVector = dlg->getMainDir();
+	ULONG robotCoordinateID = 0;
+	m_ptrKit->Robot_get_base_coordinate(robotID, &robotCoordinateID);
+	std::vector<double> direction = getDir(robotCoordinateID, mainNormalVector);
+
+	std::map<std::pair<double, double>, std::vector<spacePoint>> inputMap;
+	inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 10, 50,
+		1500, 0, 22.5, direction, 5, 10.0);
+
+	for (const auto& keyValuePair : inputMap) { // 遍历map
+		RobotWorkspaceBoundary ws;
+		ws.robotID = robotID; // 设置robotID
+		ws.thickness = keyValuePair.first.first;  // 键(pair)的第一个double
+		ws.theta = keyValuePair.first.second;     // 键(pair)的第二个double
+		ws.DirectionName = mainNormalVector;
+		ws.CoordinateName = dlg->getCoordinate();
+
+		// 转换 vector<spacePoint> 到 vector<double>
+		for (const auto& sp : keyValuePair.second) { // 遍历vector<spacePoint>
+			// 假设我们取 spacePoint 的 x 成员
+			ws.points.push_back(sp.x);
+			ws.points.push_back(sp.y);
+			ws.points.push_back(sp.z);
 		}
+
+		m_list[robotName].push_back(ws);
 	}
 
-	// 即使没有导轨也要设置空列表
-	dlg->setRail(rail);
+	QString filename = QString("workspace_%1.json").arg(robotName);
 
+	m_io->writeData(m_list[robotName], filename.toStdString().c_str());
+	m_io->writeData(m_list[robotName], filename.toStdString().c_str());
 
-	connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName, dlg, CoodernateMap]() {
+	// 获取用户选择的坐标系名称和法向量，然后添加到界面表格中
+	QString coordinateName = dlg->getCoordinate();  // 坐标系名称
+	QString mainDir = dlg->getMainDir();           // 法向量方向
 
-		spacePoint center(0, 0, 0);
-		spacePoint size(0, 0, 0);
+	// 计算序号（当前表格行数+1）
+	int number = axisList.size() + 1;
 
-		Workspace spaceModel(center, size, m_ptrKit, m_ptrKitCallback);
+	// 添加到界面表格中
+	addAxisInfo(number, coordinateName, mainDir);
 
-		ULONG robotID = 0;
-		GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
-		spacePoint centerPoint = spaceModel.calculateRobotWorkspaceCenter(robotID);
-		int number = ui->tableView->model()->rowCount() + 1; // 序号从1开始
-
-		//获取主法矢量
-		QString axisName = dlg->getCoordinate();
-		QString mainNormalVector = dlg->getMainDir();
-		ULONG zuobiaoximingcheng;
-		GetObjIDByName(PQ_COORD, axisName.toStdWString(), zuobiaoximingcheng);
-
-		std::vector<double> direction = getDir(CoodernateMap.key(axisName), mainNormalVector);
-
-		//需要将direction转化到机器人基座标系下
-		ULONG robotCoordinateID = 0;
-		m_ptrKit->Robot_get_base_coordinate(robotID, &robotCoordinateID);
-
-		int nCount = 0;
-		double* dPosture = nullptr;
-		m_ptrKit->Doc_get_coordinate_posture(robotCoordinateID, EULERANGLEXYZ, &nCount, &dPosture, 0);
-
-		// 创建转换矩阵
-		Eigen::Matrix4d transformMatrix = Eigen::Matrix4d::Identity();
-
-		if (nCount >= 6 && dPosture != nullptr) {
-			// 提取位置和欧拉角
-			double x = dPosture[0];
-			double y = dPosture[1];
-			double z = dPosture[2];
-			double rx = dPosture[3] * M_PI / 180.0;  // 角度转弧度
-			double ry = dPosture[4] * M_PI / 180.0;
-			double rz = dPosture[5] * M_PI / 180.0;
-
-			// 构建旋转矩阵（欧拉角转旋转矩阵）
-			Eigen::Matrix3d rotationMatrix;
-			rotationMatrix = Eigen::AngleAxisd(rz, Eigen::Vector3d::UnitZ()) *
-				Eigen::AngleAxisd(ry, Eigen::Vector3d::UnitY()) *
-				Eigen::AngleAxisd(rx, Eigen::Vector3d::UnitX());
-
-			// 构建齐次变换矩阵（世界坐标系到机器人基坐标系）
-			transformMatrix.block<3, 3>(0, 0) = rotationMatrix.transpose(); // 旋转部分
-			transformMatrix.block<3, 1>(0, 3) = -rotationMatrix.transpose() * Eigen::Vector3d(x, y, z); // 平移部分
-
-			// 将方向向量转换为齐次坐标（第四维为0）
-			Eigen::Vector4d worldDirection(direction[0], direction[1], direction[2], 0);
-
-			// 转换到机器人基坐标系
-			Eigen::Vector4d robotDirection = transformMatrix * worldDirection;
-
-			// 更新direction向量（只取前三个元素）
-			direction = { robotDirection[0], robotDirection[1], robotDirection[2] };
-
-			// 可选：归一化方向向量
-			double length = sqrt(direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2]);
-			if (length > 1e-9) {
-				direction[0] /= length;
-				direction[1] /= length;
-				direction[2] /= length;
-			}
-		}
-
-		m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
-
-		bool hasGuideRail = dlg->isLink();
-		QString guideName = dlg->getRail();
-
-		std::map<std::pair<double, double>, std::vector<spacePoint>> inputMap;
-		inputMap = spaceModel.calculateRobotSpaceRange(robotID, centerPoint, 10, 50,
-			1500, 0, 22.5, direction, 5, 10.0);
-
-		for (const auto& keyValuePair : inputMap) { // 遍历map
-			RobotWorkspaceBoundary ws;
-			ws.robotID = robotID; // 设置robotID
-			ws.thickness = keyValuePair.first.first;  // 键(pair)的第一个double
-			ws.theta = keyValuePair.first.second;     // 键(pair)的第二个double
-			ws.isLink = hasGuideRail;
-			ws.CoordinateName = axisName;
-			ws.DirectionName = mainNormalVector;
-
-			if (hasGuideRail) {
-				ws.railName.push_back(guideName);
-			}
-			else {
-				ws.railName.push_back("");
-			}
-
-			// 转换 vector<spacePoint> 到 vector<double>
-			for (const auto& sp : keyValuePair.second) { // 遍历vector<spacePoint>
-				// 假设我们取 spacePoint 的 x 成员
-				ws.points.push_back(sp.x);
-				ws.points.push_back(sp.y);
-				ws.points.push_back(sp.z);
-			}
-
-			m_list[robotName].push_back(ws);
-		}
-
-		QString filename = QString("workspace_%1.json").arg(robotName);
-
-		m_io->writeData(m_list[robotName], filename.toStdString().c_str());
-
-		if (hasGuideRail) {
-			addAxisInfo(number, axisName, mainNormalVector, hasGuideRail, guideName);
-		}
-		else {
-			addAxisInfo(number, axisName, mainNormalVector, hasGuideRail, " ");
-		}
-
-		dlg->close();
-	});
+	dlg->close();
+});
 
 
 	// 显示对话框并处理结果
@@ -368,21 +390,8 @@ void robotSpaceDefine::onConfirm()
 		QVariant data_2 = axisModel->data(axisModel->index(row, 2));
 		QString mainDir = data_2.toString(); // 如果明确是文本
 
-		QVariant data_3 = axisModel->data(axisModel->index(row, 3));
-		QString m_isLink = data_3.toString(); // 如果明确是文本
 
-		bool isLink;
-		if (m_isLink == "是") {
-			isLink = 1;
-		}
-		else {
-			isLink = 0;
-		}
-
-		QVariant data_4 = axisModel->data(axisModel->index(row, 4));
-		QString railName = data_4.toString(); // 如果明确是文本
-
-		workSpaceInformation spaceDate(robotName, number, coordinate, mainDir, isLink, railName);
+		workSpaceInformation spaceDate(robotName, number, coordinate, mainDir);
 		m_spaceInformation[robotName].push_back(spaceDate);
 	}
 
@@ -418,7 +427,7 @@ void robotSpaceDefine::loadRobotData(const QString& robotName)
 	if (m_spaceInformation.contains(robotName)) {
 		QVector<workSpaceInformation> robotData = m_spaceInformation[robotName];
 		for (const workSpaceInformation& data : robotData) {
-			addAxisInfo(data.number, data.coodinate, data.mainDir, data.isLink, data.railName);
+			addAxisInfo(data.number, data.coodinate, data.mainDir);
 		}
 	}
 
