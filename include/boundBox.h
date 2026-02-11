@@ -26,6 +26,16 @@ struct Point3D {
 	Point3D cross(const Point3D& other) const;
 	double length() const;
 	Point3D normalize() const;
+	double magnitude() const {
+		return sqrt(x*x + y * y + z * z);
+	}
+
+	double distance(const Point3D& other) const {
+		double dx = x - other.x;
+		double dy = y - other.y;
+		double dz = z - other.z;
+		return sqrt(dx*dx + dy * dy + dz * dz);
+	}
 };
 
 // 非成员函数：标量乘以点
@@ -39,6 +49,12 @@ struct AABB {
 	AABB() : minPoint(0, 0, 0), maxPoint(0, 0, 0) {}
 	std::vector<Point3D> getCorners() const;
 	double volume() const;
+
+	// 合并另一个AABB到当前AABB
+	void merge(const AABB& other);
+
+	// 从8个角点合并包围盒
+	void mergeFromVertices(const std::vector<double>& vertices);
 };
 
 // OBB（有向包围盒）

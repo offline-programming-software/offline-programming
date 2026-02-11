@@ -103,7 +103,7 @@ private:
 	bool isPoint = false;
 
 	//包围盒
-	AABB box;
+	OBB box;
 	std::vector<double> m_vPosition;
 	std::vector<double> ABBPosition;//包围盒八个角点
 	std::vector<double> points;
@@ -148,6 +148,9 @@ private:
 	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
 	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);
 	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);
+
+	static std::vector<double> cursePart::calculateOBBCoordinateSystemFromCorners(
+		const std::vector<double>& corners);//创建最小包围盒坐标系
 
 	// 保存机器人映射以便在槽函数中使用
 	QMap<ULONG, QString> m_robotMap;

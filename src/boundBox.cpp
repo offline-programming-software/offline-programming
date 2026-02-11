@@ -66,6 +66,32 @@ std::vector<Point3D> AABB::getCorners() const {
 	return corners;
 }
 
+// 合并另一个AABB到当前AABB
+void AABB::merge(const AABB& other) {
+	minPoint.x = std::min(minPoint.x, other.minPoint.x);
+	minPoint.y = std::min(minPoint.y, other.minPoint.y);
+	minPoint.z = std::min(minPoint.z, other.minPoint.z);
+
+	maxPoint.x = std::max(maxPoint.x, other.maxPoint.x);
+	maxPoint.y = std::max(maxPoint.y, other.maxPoint.y);
+	maxPoint.z = std::max(maxPoint.z, other.maxPoint.z);
+}
+
+// 从8个角点合并包围盒
+void AABB::mergeFromVertices(const std::vector<double>& vertices) {
+	if (vertices.size() < 24) return; // 至少需要8个点
+
+	for (int i = 0; i < 24; i += 3) {
+		minPoint.x = std::min(minPoint.x, vertices[i]);
+		minPoint.y = std::min(minPoint.y, vertices[i + 1]);
+		minPoint.z = std::min(minPoint.z, vertices[i + 2]);
+
+		maxPoint.x = std::max(maxPoint.x, vertices[i]);
+		maxPoint.y = std::max(maxPoint.y, vertices[i + 1]);
+		maxPoint.z = std::max(maxPoint.z, vertices[i + 2]);
+	}
+}
+
 double AABB::volume() const {
 	double dx = maxPoint.x - minPoint.x;
 	double dy = maxPoint.y - minPoint.y;
