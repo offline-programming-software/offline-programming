@@ -37,7 +37,6 @@ public:
 	// 根据条件查找并获取最匹配的points值
 	std::vector<double> findMatchingPoints(
 		ULONG robotID,
-		bool isLink,
 		const QString& coordinateName,
 		const QString& directionName,
 		double targetTheta,
@@ -52,7 +51,6 @@ public:
 		ULONG robotID,
 		const QString& coordinateName,
 		const QString& directionName,
-		bool isLink,
 		double theta,
 		double thickness);
 };
@@ -117,7 +115,7 @@ private:
 
 	//实现曲面的选取
 	std::map<ULONG, std::vector<std::wstring>> pickupMap;//用于记录选取的曲面
-	QMap<ULONG, QString> CoodernateMap; //记录坐标系名称和ID
+	//QMap<ULONG, QString> CoodernateMap; //记录坐标系名称和ID
 	int indx = 0;
 
 	double x_value;

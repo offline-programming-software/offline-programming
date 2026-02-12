@@ -61,7 +61,6 @@ void RobotWorkspaceHandler::writeRobotWorkspaceBoundary(const RobotWorkspaceBoun
 
 std::vector<double> RobotWorkspaceHandler::findMatchingPoints(
 	ULONG robotID,
-	bool isLink,
 	const QString& coordinateName,
 	const QString& directionName,
 	double targetTheta,
@@ -70,7 +69,6 @@ std::vector<double> RobotWorkspaceHandler::findMatchingPoints(
 	parseJSON queryHelper(jsonFileName);
 	std::map<std::string, json> conditions;
 	conditions["robotID"] = robotID;
-	conditions["isLink"] = isLink;
 	conditions["CoordinateName"] = coordinateName.toStdString();
 	conditions["DirectionName"] = directionName.toStdString();
 
@@ -173,13 +171,12 @@ std::vector<double> RobotWorkspaceHandler::processRobotWorkspaceQuery(
 	ULONG robotID,
 	const QString& coordinateName,
 	const QString& directionName,
-	bool isLink,
 	double theta,
 	double thickness) {
 
 	// 首先查找匹配的记录
 	auto matchingPoints = findMatchingPoints(
-		robotID, isLink, coordinateName, directionName, theta, thickness
+		robotID, coordinateName, directionName, theta, thickness
 	);
 
 	if (matchingPoints.empty()) {
@@ -303,22 +300,21 @@ void cursePart::init() {
 	QString currentRobot = robotNames.isEmpty() ? "" : robotNames.first();
 	updateRailOptions(currentRobot, m_robotMap);
 
+	//// 设置坐标系
+	//PQDataType CoodernateType = PQ_COORD;
+	//CoodernateMap = getObjectsByType(CoodernateType);
 
-	// 设置坐标系
-	PQDataType CoodernateType = PQ_COORD;
-	CoodernateMap = getObjectsByType(CoodernateType);
+	//// 创建一个新的QMap，先插入"世界坐标系"，再插入原有的数据
+	//QMap<ULONG, QString> newCoodernateMap;
+	//newCoodernateMap.insert(0, "世界坐标系");  // 先插入首位
 
-	// 创建一个新的QMap，先插入"世界坐标系"，再插入原有的数据
-	QMap<ULONG, QString> newCoodernateMap;
-	newCoodernateMap.insert(0, "世界坐标系");  // 先插入首位
+	//// 将原有数据插入到后面（键值从1开始）
+	//for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
+	//	newCoodernateMap.insert(it.key(), it.value());
+	//}
 
-	// 将原有数据插入到后面（键值从1开始）
-	for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
-		newCoodernateMap.insert(it.key(), it.value());
-	}
-
-	CoodernateMap = newCoodernateMap;  // 替换原来的map
-	//QStringList CoodernateNames = CoodernateMap.values();
+	//CoodernateMap = newCoodernateMap;  // 替换原来的map
+	////QStringList CoodernateNames = CoodernateMap.values();
 	QStringList CoodernateNames;
 	CoodernateNames.push_back("机器人基座标系");
 
@@ -585,23 +581,82 @@ void cursePart::on_calculate_workspace()
 
 	QString coordinateName = ui->comboBox_3->currentText();
 	QString directionName = ui->comboBox_4->currentText();
-
 	QString divisionDirName = ui->comboBox_7->currentText();
-
 	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
-	bool isLink = ui->checkBox->isChecked();
+
+	//创建划分坐标系列表
+	// 获取坐标系和方向
+	QString coordanateName = ui->comboBox_5->currentText();
+	QString mainDivisionDirectionText = ui->comboBox_6->currentText();
+	QString otherDivisionDirectionText = ui->comboBox_7->currentText();
+
+	//获取机器人基座标系
+	ULONG robotCoordinateID = 0;
+	m_ptrKit->Robot_get_base_coordinate(robotID, &robotCoordinateID);
+
+	double robotCoordinate[6] = { 0 };
+	if (robotCoordinateID != 0) {
+		int nCount = 0;
+		double* dPosture = nullptr;
+		m_ptrKit->Doc_get_coordinate_posture(robotCoordinateID, EULERANGLEXYZ, &nCount, &dPosture, 0);
+		if (dPosture) {
+			for (int i = 0; i < 6; i++) robotCoordinate[i] = dPosture[i];
+			m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
+		}
+	}
+
+	// 创建划分坐标系
+	QMap<int, std::vector<double>> divisionCoordinateMap;
+
+	// 添加世界坐标系
+	std::vector<double> worldCoor = { 0, 0, 0, 0, 0, 0 };
+	divisionCoordinateMap.insert(0, worldCoor);
+
+	// 添加机器人坐标系
+	std::vector<double> robotCoor(6);
+	std::copy(robotCoordinate, robotCoordinate + 6, robotCoor.begin());
+	divisionCoordinateMap.insert(1, robotCoor);
+
+	// 计算包围盒坐标系
+	std::vector<double> OBBCoor = calculateOBBCoordinateSystemFromCorners(ABBPosition);
+	if (OBBCoor.size() != 6) {
+		OBBCoor.resize(6, 0.0);
+	}
+	divisionCoordinateMap.insert(2, OBBCoor);
+
+	// 获取划分坐标系
+	int divisionCoorIndx = ui->comboBox_5->currentIndex();
+	auto divisionCoorIt = divisionCoordinateMap.find(divisionCoorIndx);
+
+	std::vector<std::vector<double>> divisionCoorVector;
+	std::vector<double> mainDivisionDirection;
+	std::vector<double> otherDivisionDirection;
+	if (divisionCoorIt != divisionCoordinateMap.end()) {
+		std::vector<double>& divisionCoor = divisionCoorIt.value();
+
+		// 确保有6个元素
+		if (divisionCoor.size() >= 6) {
+			// 传递指针给函数
+			divisionCoorVector = getCoordinateAxesFromEuler(divisionCoor.data());
+
+			mainDivisionDirection = getAxisVector(divisionCoorVector, mainDivisionDirectionText);
+
+			otherDivisionDirection = getAxisVector(divisionCoorVector, otherDivisionDirectionText);
+		}
+		else {
+			// 处理数据不足
+			qWarning() << "坐标数据不足6个元素";
+		}
+	}
 	QString thetaStr = ui->textBrowser_1->toPlainText();
 	thetaStr.remove(QRegExp(R"([°º˚°⁰])"));  // 移除常见的角度符号
 	thetaStr = thetaStr.simplified();  // 去除多余的空白字符
 	double theta = thetaStr.toDouble();
 
-	QString thicknessStr = ui->textBrowser_2->toPlainText();
+	QString thicknessStr = ui->textBrowser_4->toPlainText();
 	double thickness = thicknessStr.toDouble();
 
 	QString jsonName = m_tempDir + "workspace_" + robotName + ".json";
-
-	theta = 8;
-	thickness = 300;
 
 	// 创建或更新工作空间处理器
 	if (m_workspaceHandler) {
@@ -611,9 +666,11 @@ void cursePart::on_calculate_workspace()
 
 	// 使用RobotWorkspaceHandler进行查询
 	auto foundPoints = m_workspaceHandler->processRobotWorkspaceQuery(
-		robotName, robotID, coordinateName, directionName, isLink, theta, thickness
+		robotName, robotID, coordinateName, directionName, theta, thickness
 	);
 
+
+	//查询划分区域的长和宽
 	if (!foundPoints.empty()) {
 		// 使用查询到的points更新UI
 		if (foundPoints.size() >= 1) {
@@ -763,6 +820,13 @@ void cursePart::on_calculate_workspace()
 
 	Point3D direction(mainDirction[0], mainDirction[1], mainDirction[2]);
 	// 使用之前计算的包围盒信息生成点阵
+
+	std::vector<Point3D> corners;
+	for (int i = 0; i < ABBPosition.size() / 3; i++) {
+		Point3D ans(ABBPosition[3 * i], ABBPosition[3 * i + 1], ABBPosition[3 * i + 2]);
+		corners.push_back(ans);
+	}
+	box = calculateOBB(corners);
 	auto grid = createGridOnClosestSurface(box, length, width, direction);
 
 	points.clear(); // 清空之前的点数据
@@ -936,7 +1000,6 @@ void cursePart::on_spaceSettingButton_clicked()
 		std::vector<std::vector<double>> axisVector = getCoordinateAxesFromEuler(robotCoordinate);
 		std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
 
-
 		// 创建划分坐标系
 		QMap<int, std::vector<double>> divisionCoordinateMap;
 
@@ -983,8 +1046,11 @@ void cursePart::on_spaceSettingButton_clicked()
 
 		// 计算最大角度
 		Point3D viewDirection(mainVector[0], mainVector[1], mainVector[2]);
-		//box = calculateOBB(ABBPosition);
-		std::vector<Point3D> corners = box.getCorners();
+		std::vector<Point3D> corners;
+		for (int i = 0; i < ABBPosition.size()/3; i++) {
+			Point3D ans(ABBPosition[3*i], ABBPosition[3 * i + 1], ABBPosition[3 * i + 2]);
+			corners.push_back(ans);
+		}
 		std::vector<Point3D> result = createGridOnClosestSurface(corners, spacing, spacing, viewDirection);
 
 		double maxtheta = 0;
@@ -1871,6 +1937,10 @@ void cursePart::OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEnti
 			ui->textEdit_7->setPlainText(QString::number(i_dPointY, 'f', 2));
 			ui->textEdit_8->setPlainText(QString::number(i_dPointZ, 'f', 2));
 			ui->textEdit_6->setPlainText(QString::number(i_dPointX, 'f', 2));
+
+			ui->textEdit_3->setPlainText(QString::number(i_dPointX, 'f', 2));
+			ui->textEdit_4->setPlainText(QString::number(i_dPointY, 'f', 2));
+			ui->textEdit_5->setPlainText(QString::number(i_dPointZ, 'f', 2));
 		}
 	}
 }
