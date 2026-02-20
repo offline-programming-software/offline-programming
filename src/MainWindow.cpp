@@ -14,6 +14,8 @@
 #include"model\CorrectionModel.h"
 #include"core\Correction.h"
 #include"ui\PositionCorrectWidget.h"
+#include"robxFileIO.h"
+#include "test\RobxFileIOManagerWidget.h"
 
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
@@ -76,6 +78,16 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	QAction* action100 = complie->addAction("批量后置", QIcon(":/image/resource/26.png"), QToolButton::InstantPopup);
 
 
+		//添加
+	SARibbonCategory* otherCate = bar->addCategoryPage(tr("Other"));
+	SARibbonPannel* pannel2 = otherCate->addPannel(tr("other"));
+	QAction* action59 = pannel2->addAction("机器人库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+	QAction* action60 = pannel2->addAction("设备库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+	QAction* action61 = pannel2->addAction("机器人求解",QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+	QAction* action62 = pannel2->addAction("联动求解求解", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+	QAction* action63 = pannel2->addAction("输出动画到本地", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+	QAction* action64 = pannel2->addAction("输出视频", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+	QAction* openRobxFileIOManagerAction = pannel2->addAction("Robx文件管理器", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
 	resize(800, 600);
 
 	connect(action1, SIGNAL(triggered()), this, SLOT(OnOpenRobx()));//打开
@@ -99,15 +111,10 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
 	connect(action102, &QAction::triggered, this, &MainWindow::on_bendingManagerWidget_open);
 	connect(action103, &QAction::triggered, this, &MainWindow::on_PositionCorrectWidget_open);
-
+	connect(openRobxFileIOManagerAction, SIGNAL(triggered()), this,SLOT(on_robxFileIOManager_open()));//Robx文件管理器
 	InitPQKit();
-
-	//临时
-
-
-
 }
-
+	
 
 MainWindow::~MainWindow()
 {
@@ -154,14 +161,39 @@ BSTR QStringToBSTR(const QString& str)
 void MainWindow::OnOpenRobx()
 {
 	
+	//提示保存当前文件
+	CComBSTR currentRobxName = " ";
+	m_ptrKit->Doc_get_name(&currentRobxName);
+	if (currentRobxName != L"设计")
+	{
+		//打开了robx文件，需要提示保存
+		QMessageBox::StandardButton reply;
+		reply = QMessageBox::question(this, "提示", "当前文件未保存，是否保存？",
+			QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+		if(reply == QMessageBox::Yes)
+		{
+			OnSaveRobx();
+			m_ptrKit->pq_CloseDocument(currentRobxName);
+			RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
+			RobxFileIO::clearFolder(L"temp");
+		}
+		else if (reply == QMessageBox::Cancel)
+		{
+			return;
+		}
+		else if(reply == QMessageBox::No)
+		{
+			m_ptrKit->pq_CloseDocument(currentRobxName);
+			RobxFileIO::clearFolder(L"temp");
+		}
+	}
+
 	QString fileName = QFileDialog::getOpenFileName(this, tr("open robx file"), "",
 		tr("Robx files(*.robx)"));
-
 	QString qstr = fileName;
 	qstr.replace("\\", "/");
 	std::wstring wpath = qstr.toStdWString();
 	RobxFileIO::setPath(wpath);
-
 	if (fileName.isEmpty())
 	{
 		return;
@@ -192,6 +224,7 @@ void MainWindow::OnSaveRobx()
 	CComBSTR bsParam = "";
 	CComBSTR bsCmd = "RO_CMD_FILE_SAVE";
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsParam, CComVariant(), lResult);
+	RobxFileIO::updateRobxData(RobxFileIO::GlobalPath());
 }
 
 void MainWindow::OnSaveasRobx()
@@ -1481,6 +1514,18 @@ void MainWindow::on_PositionCorrectWidget_open()
 	widget->show();
 }
 
+void MainWindow::on_robxFileIOManager_open()
+{
+	if (!m_robxIOMgr)
+	{
+		m_robxIOMgr = new RobxFileIOManagerWidget();
+
+	}
+	m_robxIOMgr->show();
+	m_robxIOMgr->raise();
+	m_robxIOMgr->activateWindow();
+}
+
 void MainWindow::on_effectiveness_analysis()
 {
 	effectiveness_analysis dlg;
@@ -1929,13 +1974,14 @@ void MainWindow::ShowPQKitWindown()
 	setCentralWidget(splitter);
 }
 
-void MainWindow::closeEvent(QCloseEvent* event)
+void MainWindow::closeEvent(QCloseEvent* event)   //清除原版，副本更名
 {
 
 	CComBSTR robxName = " ";
 	m_ptrKit->Doc_get_name(&robxName);
 	if (m_ptrKit)
 	{
+
 		m_ptrKit->pq_CloseComponent();
 	}
 

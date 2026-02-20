@@ -139,16 +139,62 @@ protected:
 };
 
 namespace RobxFileIO{
+	/**
+	 * @fn uploadJson.
+	 * 
+	 * @brief 将本地temp目录下的内容写入目标ROBX文件.
+	 */
 	void uploadJson(std::wstring& robxPath);
+
+	/**
+	 * @fn downloadJson
+	 * 
+	 * @brief 将目标ROBX文件的内容读取到本地temp目录下.
+	 */
 	void downloadJson(std::wstring& robxPath);
+	/**
+	 * @fn updateRobxData.
+	 * 
+	 * @brief 将保存后的robx文件的data部分更新写入到temp文件夹中
+	 */
+	void updateRobxData(std::wstring& robxPath);
 	void setPath(std::wstring path);
 	std::wstring& GlobalPath();
+	void clearFolder(const std::wstring& path);
 
 
 }
 namespace fs = std::filesystem;
+
+/**
+ * @fn addFileToArchive.
+ *
+ * @brief 将单个文件写入 libarchive 归档对象。
+ *
+ * @details
+ * - `filePath` 为待写入的真实文件路径；
+ * - 归档内的相对路径由 `filePath` 相对于 `baseDir` 计算得到（保持目录结构）；
+ * - 函数通常由 `addDirToArchive` 递归遍历目录时调用；
+ * - 要求 `a` 已经通过 `archive_write_*` 正确初始化并打开输出。
+ *
+ * @param [in,out] a libarchive 归档写入句柄
+ * @param [in] filePath 待写入的文件路径
+ * @param [in] baseDir 用于计算归档内相对路径的基准目录
+ */
 void addFileToArchive(struct archive* a, const fs::path& filePath, const fs::path& baseDir);
+/**
+ * @brief 递归遍历目录并将其中所有内容写入 libarchive 归档对象。
+ *
+ * @details
+ * - 遍历 `dirPath` 下的文件与子目录；
+ * - 文件通过 `addFileToArchive` 写入；
+ * - 归档内路径统一以 `baseDir` 作为相对路径基准，确保还原时目录结构一致。
+ *
+ * @param [in,out] a libarchive 归档写入句柄
+ * @param [in] dirPath 待写入的目录路径
+ * @param [in] baseDir 用于计算归档内相对路径的基准目 */
 void addDirToArchive(struct archive* a, const fs::path& dirPath, const fs::path& baseDir);
+
 void writeRobx(const std::wstring& outname, const std::vector<std::string>& dirList);
 void readRobx(const std::wstring& robxName, const std::string targetPath);
 

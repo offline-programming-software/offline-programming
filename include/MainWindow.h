@@ -40,6 +40,7 @@
 #include "boundBox.h"
 #include "robxFileIO.h"
 #include "TrajCorrectDock.h"
+#include "test\robxFileIOManagerWidget.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -75,6 +76,7 @@ private:
 	//数据模型
 	CorrectionModel* m_correctionModel;
 	QVector<Correction> m_corList;
+	RobxFileIOManagerWidget* m_robxIOMgr = nullptr;//robx文件读写管理界面指针
 
 private:
 	void closeEvent(QCloseEvent* event);
@@ -202,6 +204,7 @@ protected slots:
 	void on_trajCorrectdock_open();
 	void on_bendingManagerWidget_open();
 	void on_PositionCorrectWidget_open();
+	void on_robxFileIOManager_open();
 
 };
 #endif 
