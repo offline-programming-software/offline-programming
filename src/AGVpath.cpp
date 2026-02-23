@@ -307,7 +307,7 @@ AABB AGVpath::creatAABB(ULONG uID, ULONG uCoordinate)
 		vertices.emplace_back(x, y, z);
 	}
 
-	bbox = calculateAABB(vertices);
+	bbox = bbox.calculateAABB(vertices);
 
 	return bbox;
 }

@@ -77,7 +77,6 @@ private slots:
 	void on_finishButton_clicked();  // 关闭信号
 	void on_deleteButton_clicked();  // 删除选中项
 	void on_pickupPoint_clicked(); //拾取点
-	void on_comboBox_currentTextChanged(const QString& text);  // 机器人组合框变化
 	void on_previewButton_clicked();  // 预览按钮
 	void on_spaceSettingButton_clicked();  // 文本确认按钮
 	void on_horizontalSlider_valueChanged(int value);//修改划分起点的长度方向位置
@@ -86,6 +85,7 @@ private slots:
 	void on_confirm_clicked(); //最后确认按钮
 	void on_calculate_workspace();//获取机器人工作空间
 	void OnDraw();
+	void onRobotSelectionChanged(const QString& currentRobotName);
 	void OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
 		double i_dPointX, double i_dPointY, double i_dPointZ);
 
@@ -98,15 +98,17 @@ private:
 
 	bool isPickupActive = false;       // 使用成员变量而不是局部变量
 	bool isPreview = false;
-	bool isPoint = false;
+	bool isPoint = false;			   //拾取点
 
 	//包围盒
-	OBB box;
-	std::vector<double> m_vPosition;
-	std::vector<double> ABBPosition;//包围盒八个角点
-	std::vector<double> points;
+	AABB divideBox; //划分包围盒
+	OBB minBox;   //最小包围盒
+	
 
-	std::vector<double> partPositions;
+	std::vector<double> OBBPosition;  //最小包围盒八个角点
+	std::vector<double> AABBPosition; //划分包围盒八个角点
+	std::vector<double> points;      //划分区域角点
+	std::vector<double> partPositions; //
 
 	//方向读取
 	std::vector<double> mainDirction;//主方向
@@ -115,43 +117,78 @@ private:
 
 	//实现曲面的选取
 	std::map<ULONG, std::vector<std::wstring>> pickupMap;//用于记录选取的曲面
-	//QMap<ULONG, QString> CoodernateMap; //记录坐标系名称和ID
 	int indx = 0;
-
 	double x_value;
 	double y_value;
 	double z_value;
 
 	// 新增：包围盒在选择方向上的厚度
 	double m_thickness = 0.0;
+	double d_thickness = 0.0;
 	QString m_tempDir = "./temp/jsons/";
 
 	// 新增：机器人工作空间处理器
 	RobotWorkspaceHandler* m_workspaceHandler = nullptr;
+
+	// 保存机器人映射以便在槽函数中使用
+	QMap<ULONG, QString> m_robotMap;
+
+	//存储从 relations.json 加载的机器人关系
+	std::map<std::string, std::pair<std::string, std::string>> relationsMap;
 
 
 private:
 	void setupGraphicsScenes(); // 初始化图形场景
 	void setStepsExplanation();// 设置每个界面的功能介绍
 	void init(); //初始化界面
-	void updateRailOptions(const QString & robotName, const QMap<ULONG, QString>& robotMap);
-	void addItemToListView(const QString& item);
+	void addItemToListView(const QString& item);//在曲面控件中添加曲面
 	std::vector<double> calculateAABBCornersFromPickupMap(const std::map<unsigned long,
 		std::vector<std::wstring>>&pickupMap);//设置工作空间八个角点
-	void CreateBoundingBox();
-	std::vector<double> getAxisVector(const std::vector<std::vector<double>>& axis, const QString& name);
-	std::vector<std::vector<double>> getCoordinateAxesFromEuler(double* eulerAngles);
-	QMap<ULONG, QString> getObjectsByType(PQDataType objType);
-	QStringList extractStringArrayFromVariant(const VARIANT& variant);
-	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
-	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);
-	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);
+	std::vector<double> calculateOBBCornersFromPickupMap(
+		const std::map<unsigned long, std::vector<std::wstring>>& pickupMap);
+	std::vector<double> getAxisVector(const std::vector<std::vector<double>>& axis, const QString& name);//获取坐标系某个轴的方向向量
+	std::vector<std::vector<double>> getCoordinateAxesFromEuler(double* eulerAngles);//通过坐标系ID获取坐标系位置
+	QMap<ULONG, QString> getObjectsByType(PQDataType objType);//通过数据类型获取ID和名称
+	std::map<std::string, std::pair<std::string, std::string>> loadRobotRelations(const std::string& filePath = "relations.json");
+	void updateLinkedJointCheckBoxes(const std::string& railNameStr);
+	QStringList extractStringArrayFromVariant(const VARIANT& variant);//将variant转化为QStringList
+	QList<long> extractLongArrayFromVariant(const VARIANT& variant);//将variant转化为QList
+	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);//获取喷涂机器人列表
+	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);//通过名称获取ID
+	
+	//创建坐标系
+	std::vector<double> convertToLocalEulerAngles(
+		const std::vector<double>& point,
+		const std::vector<double>& mainDirection,
+		const std::vector<double>& otherDirection);
 
-	static std::vector<double> cursePart::calculateOBBCoordinateSystemFromCorners(
-		const std::vector<double>& corners);//创建最小包围盒坐标系
+	//将世界坐标系点转化为局部坐标系
+	std::vector<double> transformPointToLocal(
+		const std::vector<double>& worldPoint,
+		const std::vector<double>& localCoordinateSystem);
 
-	// 保存机器人映射以便在槽函数中使用
-	QMap<ULONG, QString> m_robotMap;
+	//将局部坐标系点转化为世界坐标系
+	std::vector<double> transformPointToWorld(
+		const std::vector<double>& localPoint,
+		const std::vector<double>& localCoordinateSystem);
+
+	std::vector<double> transformMultiplePointsToLocal(
+		const std::vector<double>& worldPoints,
+		const std::vector<double>& localCoordinateSystem);
+
+	std::vector<double> transformMultiplePointsToWorld(
+		const std::vector<double>& localPoints,
+		const std::vector<double>& localCoordinateSystem);
+
+	// 新增：通过叉乘计算除两个方向外的第三个坐标轴方向
+	std::vector<double> getThirdAxisVectorFromTwoAxes(
+		const std::vector<std::vector<double>>& axisVector,
+		const QString& firstAxisName,
+		const QString& secondAxisName);
+
+	//计算得到包围盒长宽厚
+	bool calculateDimensionsFromCorners(const std::vector<double>& OBBPosition,
+		const QString& mainVectorText, double& length, double& width, double& thickness);
 
 	// 新增：保存工作空间数据的方法
 	void saveWorkspaceData();

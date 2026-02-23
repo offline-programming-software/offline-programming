@@ -6,6 +6,23 @@
 #include <stdexcept>
 #include <cmath>
 
+static void normalizeVector(std::vector<double>& v) {
+	double length = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+	if (length > 1e-9) {
+		v[0] /= length;
+		v[1] /= length;
+		v[2] /= length;
+	}
+}
+
+static std::vector<double> crossProduct(const std::vector<double>& a, const std::vector<double>& b) {
+	std::vector<double> result(3);
+	result[0] = a[1] * b[2] - a[2] * b[1];
+	result[1] = a[2] * b[0] - a[0] * b[2];
+	result[2] = a[0] * b[1] - a[1] * b[0];
+	return result;
+}
+
 // RobotWorkspaceHandler 类实现
 void RobotWorkspaceHandler::writeRobotWorkspaceBoundary(const RobotWorkspaceBoundary& boundary) {
 	json jsonData;
@@ -244,14 +261,21 @@ cursePart::cursePart(QWidget *parent,
 	connect(ui->pushButton_10, &QPushButton::clicked, this, &cursePart::on_calculate_workspace);//计算出划分区域长和宽
 
 	// 组合框和文本编辑框
-	connect(ui->comboBox_1, &QComboBox::currentTextChanged, this, &cursePart::on_comboBox_currentTextChanged);
 	connect(ui->comboBox_6, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &cursePart::on_coordanateTextChanged);
 
-	//设置是否联动
 	connect(ui->checkBox, &QCheckBox::toggled, this, [this](bool checked) {
-		ui->checkBox_3->setEnabled(checked);
-		ui->checkBox_4->setEnabled(checked);
-		ui->checkBox_5->setEnabled(checked);
+		// 获取当前选中机器人的 railNameStr
+		QString currentRobotName = ui->comboBox_1->currentText();
+		std::string robotStdName = currentRobotName.toStdString();
+		std::string currentRailNameStr = "无"; // 默认值
+
+		auto it = relationsMap.find(robotStdName);
+		if (it != relationsMap.end() && it->second.first != "无" && !it->second.first.empty()) {
+			currentRailNameStr = it->second.first;
+		}
+
+		// 调用辅助函数更新复选框状态
+		updateLinkedJointCheckBoxes(currentRailNameStr);
 	});
 
 	connect(ui->horizontalSlider, &QSlider::valueChanged, this, &cursePart::on_horizontalSlider_valueChanged);
@@ -290,15 +314,11 @@ void cursePart::init() {
 		return;
 	}
 
-	// 将机器人名称设置到对话框中
 	ui->comboBox_1->addItems(robotNames);
 	if (!robotNames.isEmpty()) {
 		ui->comboBox_1->setCurrentIndex(0);
 	}
 
-	// 初始设置轨道信息
-	QString currentRobot = robotNames.isEmpty() ? "" : robotNames.first();
-	updateRailOptions(currentRobot, m_robotMap);
 
 	//// 设置坐标系
 	//PQDataType CoodernateType = PQ_COORD;
@@ -324,12 +344,14 @@ void cursePart::init() {
 	}
 
 	//获取机器人导轨
+	QString relations = m_tempDir + "relations.json";
+	relationsMap = loadRobotRelations(relations.toStdString());
 
+	// 连接机器人选择框的变化信号
+	connect(ui->comboBox_1, QOverload<const QString &>::of(&QComboBox::currentTextChanged),
+		this, &cursePart::onRobotSelectionChanged);
 
-	//将联动轨迹设置为不可选中
-	ui->checkBox_3->setEnabled(false);
-	ui->checkBox_4->setEnabled(false);
-	ui->checkBox_5->setEnabled(false);
+	onRobotSelectionChanged(ui->comboBox_1->currentText());
 
 	//设置采样点间距默认为500
 	ui->textEdit->setPlainText("500");//初始化间距
@@ -355,8 +377,7 @@ void cursePart::init() {
 	z_value = 0.0;
 
 	// 初始化包围盒相关数据
-	m_vPosition.clear();
-	ABBPosition.clear();
+	OBBPosition.clear();
 	points.clear();
 	pickupMap.clear();
 }
@@ -618,7 +639,7 @@ void cursePart::on_calculate_workspace()
 	divisionCoordinateMap.insert(1, robotCoor);
 
 	// 计算包围盒坐标系
-	std::vector<double> OBBCoor = calculateOBBCoordinateSystemFromCorners(ABBPosition);
+	std::vector<double> OBBCoor = minBox.calculateCoordinateSystemFromCorners(OBBPosition);
 	if (OBBCoor.size() != 6) {
 		OBBCoor.resize(6, 0.0);
 	}
@@ -822,12 +843,12 @@ void cursePart::on_calculate_workspace()
 	// 使用之前计算的包围盒信息生成点阵
 
 	std::vector<Point3D> corners;
-	for (int i = 0; i < ABBPosition.size() / 3; i++) {
-		Point3D ans(ABBPosition[3 * i], ABBPosition[3 * i + 1], ABBPosition[3 * i + 2]);
+	for (int i = 0; i < OBBPosition.size() / 3; i++) {
+		Point3D ans(OBBPosition[3 * i], OBBPosition[3 * i + 1], OBBPosition[3 * i + 2]);
 		corners.push_back(ans);
 	}
-	box = calculateOBB(corners);
-	auto grid = createGridOnClosestSurface(box, length, width, direction);
+	minBox = minBox.calculateOBB(corners);
+	auto grid = minBox.createGridOnClosestSurface(length, width, direction, true);
 
 	points.clear(); // 清空之前的点数据
 	for (auto p : grid) {
@@ -962,19 +983,28 @@ void cursePart::on_previewButton_clicked()
 
 void cursePart::on_spaceSettingButton_clicked()
 {
-	m_vPosition.clear(); // 清空之前的数据
 
-	ABBPosition = calculateAABBCornersFromPickupMap(pickupMap);//计算出包围盒子
+	OBBPosition = calculateAABBCornersFromPickupMap(pickupMap);//计算出包围盒子
+
+	std::vector<Point3D> OBBPositions;
+	for (int i = 0; i < OBBPosition.size() / 3; i++) {
+		Point3D p(OBBPosition[3 * i], OBBPosition[3 * i + 1], OBBPosition[3 * i + 2]);
+		OBBPositions.push_back(p);
+	}
+
+	//计算得到最小包围盒
+	minBox = OBB::calculateOBB(OBBPositions);
 
 	//获取间距
 	QString text = ui->textEdit->toPlainText().trimmed();
 	bool ok;
 	double spacing = text.toDouble(&ok);
-
 	if (ok && spacing > 0) {
-		// 获取坐标系和方向
-		QString coordanateName = ui->comboBox_5->currentText();
+		//机器人工作空间和方向
 		QString mainVectorText = ui->comboBox_4->currentText();
+
+		//划分包围盒子
+		QString coordanateName = ui->comboBox_5->currentText();
 		QString mainDivisionDirectionText = ui->comboBox_6->currentText();
 		QString otherDivisionDirectionText = ui->comboBox_7->currentText();
 
@@ -984,7 +1014,7 @@ void cursePart::on_spaceSettingButton_clicked()
 		GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
 		ULONG robotCoordinateID = 0;
 		m_ptrKit->Robot_get_base_coordinate(robotID, &robotCoordinateID);
-		
+
 		double robotCoordinate[6] = { 0 };
 		if (robotCoordinateID != 0) {
 			int nCount = 0;
@@ -996,9 +1026,20 @@ void cursePart::on_spaceSettingButton_clicked()
 			}
 		}
 
-		//得到喷涂主法矢用于计算最大偏差角度
+		//计算喷涂主法矢
 		std::vector<std::vector<double>> axisVector = getCoordinateAxesFromEuler(robotCoordinate);
 		std::vector<double> mainVector = getAxisVector(axisVector, mainVectorText);
+
+		//计算得到用于计算喷涂主法矢的矢量
+		QString originX = ui->textEdit_6->toPlainText().trimmed();
+		QString originY = ui->textEdit_7->toPlainText().trimmed();
+		QString originZ = ui->textEdit_8->toPlainText().trimmed();
+
+		//获取原点
+		std::vector<double> origin;
+		origin.push_back(originX.toDouble());
+		origin.push_back(originY.toDouble());
+		origin.push_back(originZ.toDouble());
 
 		// 创建划分坐标系
 		QMap<int, std::vector<double>> divisionCoordinateMap;
@@ -1013,7 +1054,7 @@ void cursePart::on_spaceSettingButton_clicked()
 		divisionCoordinateMap.insert(1, robotCoor);
 
 		// 计算包围盒坐标系
-		std::vector<double> OBBCoor = calculateOBBCoordinateSystemFromCorners(ABBPosition);
+		std::vector<double> OBBCoor = minBox.calculateCoordinateSystemFromCorners(OBBPosition);
 		if (OBBCoor.size() != 6) {
 			OBBCoor.resize(6, 0.0);
 		}
@@ -1044,14 +1085,26 @@ void cursePart::on_spaceSettingButton_clicked()
 			}
 		}
 
-		// 计算最大角度
-		Point3D viewDirection(mainVector[0], mainVector[1], mainVector[2]);
-		std::vector<Point3D> corners;
-		for (int i = 0; i < ABBPosition.size()/3; i++) {
-			Point3D ans(ABBPosition[3*i], ABBPosition[3 * i + 1], ABBPosition[3 * i + 2]);
-			corners.push_back(ans);
+		//创建划分坐标系
+		std::vector<double> divideCoor = convertToLocalEulerAngles(origin, mainDivisionDirection, otherDivisionDirection);
+
+		AABBPosition = transformMultiplePointsToLocal(OBBPosition, divideCoor);
+		std::vector<Point3D> AABBPositions;
+		for (int i = 0; i < AABBPosition.size() / 3; i++) {
+			Point3D ans(AABBPosition[3 * i], AABBPosition[3 * i + 1], AABBPosition[3 * i + 2]);
 		}
-		std::vector<Point3D> result = createGridOnClosestSurface(corners, spacing, spacing, viewDirection);
+		//划分包围盒
+		divideBox = AABB::calculateAABB(AABBPositions);
+
+		//计算得到主法矢（通过排除坐标系两个方向计算得到主方向）
+		std::vector<double> spayVector = getThirdAxisVectorFromTwoAxes(divisionCoorVector,
+			mainDivisionDirectionText, otherDivisionDirectionText);
+
+		// 计算最大角度
+		/*Point3D viewDirection(mainVector[0], mainVector[1], mainVector[2]);*/
+		Point3D viewDirection(spayVector[0], spayVector[1], spayVector[2]);
+
+		std::vector<Point3D> result = divideBox.createGridOnClosestSurface(spacing, spacing, viewDirection, true);
 
 		double maxtheta = 0;
 		for (const auto& key : pickupMap) {
@@ -1062,10 +1115,10 @@ void cursePart::on_spaceSettingButton_clicked()
 					double dPosition[3] = { P.x,P.y,P.z };
 					double* dIntersetionpoint = nullptr;
 					int nArrsize = 1;
-					m_ptrKit->Part_get_ray_surface_intersetion(whSurfaceName, dPosition, mainVector.data(),
+					m_ptrKit->Part_get_ray_surface_intersetion(whSurfaceName, dPosition, spayVector.data(),
 						&dIntersetionpoint, &nArrsize);
 					if (dIntersetionpoint != nullptr && nArrsize >= 6) {
-						Eigen::Vector3d v1(mainVector[0], mainVector[1], mainVector[2]);
+						Eigen::Vector3d v1(spayVector[0], spayVector[1], spayVector[2]);
 						Eigen::Vector3d v2(dIntersetionpoint[3], dIntersetionpoint[4], dIntersetionpoint[5]);
 						Eigen::Vector3d v1_norm = v1.normalized();
 						Eigen::Vector3d v2_norm = v2.normalized();
@@ -1081,107 +1134,31 @@ void cursePart::on_spaceSettingButton_clicked()
 		maxtheta = maxtheta * 180 / M_PI;
 		ui->textBrowser_1->setPlainText(QString("%1").arg(maxtheta) + "°");
 
-		// 计算包围盒的长度、宽度和厚度
-		if (ABBPosition.size() == 24) {
-			// 计算包围盒的最小和最大坐标
-			double minX = std::numeric_limits<double>::max();
-			double maxX = std::numeric_limits<double>::lowest();
-			double minY = std::numeric_limits<double>::max();
-			double maxY = std::numeric_limits<double>::lowest();
-			double minZ = std::numeric_limits<double>::max();
-			double maxZ = std::numeric_limits<double>::lowest();
+		// 计算最小包围盒的长度、宽度和厚度
+		double length = 0;
+		double width = 0;
+		bool m_result = calculateDimensionsFromCorners(OBBPosition, mainVectorText, length, width, m_thickness);
 
-			// 遍历所有8个角点找出最大最小值
-			for (int i = 0; i < 24; i += 3) {
-				double x = ABBPosition[i];
-				double y = ABBPosition[i + 1];
-				double z = ABBPosition[i + 2];
+		double d_length = 0;
+		double d_width = 0;
+		bool ans = calculateDimensionsFromCorners(AABBPosition, mainDivisionDirectionText, d_length, d_width, d_thickness);
+		// 显示长度、宽度和厚度
+		ui->textBrowser_2->setPlainText(QString::number(length, 'f', 2)); // 长度
+		ui->textBrowser_3->setPlainText(QString::number(width, 'f', 2));  // 宽度
+		ui->textBrowser_4->setPlainText(QString::number(m_thickness, 'f', 2)); // 厚度
 
-				minX = std::min(minX, x);
-				maxX = std::max(maxX, x);
-				minY = std::min(minY, y);
-				maxY = std::max(maxY, y);
-				minZ = std::min(minZ, z);
-				maxZ = std::max(maxZ, z);
-			}
+		ui->textBrowser_5->setPlainText(QString::number(d_length, 'f', 2)); // 长度
+		ui->textBrowser_6->setPlainText(QString::number(d_width, 'f', 2));  // 宽度
+		ui->textBrowser_7->setPlainText(QString::number(d_thickness, 'f', 2)); // 厚度
 
-			// 计算三个方向的长度
-			double xLength = maxX - minX;
-			double yLength = maxY - minY;
-			double zLength = maxZ - minZ;
-
-			// 根据mainVectorText确定厚度方向和其他两个方向
-			double length = 0.0;  // 长度
-			double width = 0.0;   // 宽度
-			m_thickness = 0.0;    // 厚度
-
-			if (mainVectorText.contains("X", Qt::CaseInsensitive)) {
-				// X方向是厚度方向
-				m_thickness = xLength;
-
-				// Y和Z方向中较大的作为长度，较小的作为宽度
-				if (yLength >= zLength) {
-					length = yLength;
-					width = zLength;
-				}
-				else {
-					length = zLength;
-					width = yLength;
-				}
-			}
-			else if (mainVectorText.contains("Y", Qt::CaseInsensitive)) {
-				// Y方向是厚度方向
-				m_thickness = yLength;
-
-				// X和Z方向中较大的作为长度，较小的作为宽度
-				if (xLength >= zLength) {
-					length = xLength;
-					width = zLength;
-				}
-				else {
-					length = zLength;
-					width = xLength;
-				}
-			}
-			else {
-				// Z方向是厚度方向
-				m_thickness = zLength;
-
-				// X和Y方向中较大的作为长度，较小的作为宽度
-				if (xLength >= yLength) {
-					length = xLength;
-					width = yLength;
-				}
-				else {
-					length = yLength;
-					width = xLength;
-				}
-			}
-
-			// 显示长度、宽度和厚度
-			ui->textBrowser_2->setPlainText(QString::number(length, 'f', 2)); // 长度
-			ui->textBrowser_3->setPlainText(QString::number(width, 'f', 2));  // 宽度
-			ui->textBrowser_4->setPlainText(QString::number(m_thickness, 'f', 2)); // 厚度
-
-			qDebug() << "长度计算完成：" << length << "mm";
-			qDebug() << "宽度计算完成：" << width << "mm";
-			qDebug() << "厚度计算完成：" << m_thickness << "mm";
-		}
+		qDebug() << "长度计算完成：" << length << "mm";
+		qDebug() << "宽度计算完成：" << width << "mm";
+		qDebug() << "厚度计算完成：" << m_thickness << "mm";
 
 		// 赋值三个方向向量变量
-		mainDirction = mainVector;              // 主方向向量
-		divisionDirection = mainDivisionDirection; // 划分方向向量
-
-		// 通过叉积计算次要划分方向
-		if (mainVector.size() >= 3 && mainDivisionDirection.size() >= 3) {
-			// 计算叉积：mainVector × mainDivisionDirection
-			double cross_x = mainVector[1] * mainDivisionDirection[2] - mainVector[2] * mainDivisionDirection[1];
-			double cross_y = mainVector[2] * mainDivisionDirection[0] - mainVector[0] * mainDivisionDirection[2];
-			double cross_z = mainVector[0] * mainDivisionDirection[1] - mainVector[1] * mainDivisionDirection[0];
-
-			// 将叉积结果赋值给次要划分方向
-			otherDirection = { cross_x, cross_y, cross_z };
-		}
+		mainDirction = mainVector;					// 主方向向量
+		divisionDirection = mainDivisionDirection;  // 主划分方向向量
+		otherDirection = otherDivisionDirection;	// 次划分方向向量
 
 		// 输出调试信息
 		qDebug() << "主方向向量:" << mainDirction[0] << "," << mainDirction[1] << "," << mainDirction[2];
@@ -1192,7 +1169,6 @@ void cursePart::on_spaceSettingButton_clicked()
 		QMessageBox::warning(this, "Warning", "请输入有效的间距值");
 	}
 }
-
 
 void cursePart::on_deleteButton_clicked()
 {
@@ -1293,11 +1269,6 @@ void cursePart::on_pickupPoint_clicked()
 
 }
 
-void cursePart::on_comboBox_currentTextChanged(const QString& text)
-{
-	updateRailOptions(text, m_robotMap);
-}
-
 void cursePart::onDialogFinished(int result)
 {
 	Q_UNUSED(result)
@@ -1308,6 +1279,35 @@ void cursePart::onDialogFinished(int result)
 		}
 	isPickupActive = false;
 	isPreview = false;
+}
+
+void cursePart::onRobotSelectionChanged(const QString & currentRobotName)
+{
+	if (currentRobotName.isEmpty()) {
+		// 如果没有选中任何机器人，隐藏所有联动相关的复选框
+		ui->checkBox->setEnabled(false); // 假设这是控制联动的主复选框
+		ui->checkBox_3->setEnabled(false);
+		ui->checkBox_4->setEnabled(false);
+		ui->checkBox_5->setEnabled(false);
+		return;
+	}
+
+	// 将QString转换为std::string以便查找
+	std::string robotStdName = currentRobotName.toStdString();
+
+	// 在relationsMap中查找当前机器人
+	auto it = relationsMap.find(robotStdName);
+	bool hasBinding = false;
+	std::string railNameStr; // 临时存储rail名称的std::string
+	if (it != relationsMap.end()) {
+		// 检查rail是否不是"无" (注意：这里修正了逻辑错误)
+		if (it->second.first != "无" && !it->second.first.empty()) {
+			hasBinding = true;
+			railNameStr = it->second.first; // 先存为std::string
+		}
+	}
+
+	updateLinkedJointCheckBoxes(railNameStr);
 }
 
 QMap<ULONG, QString> cursePart::getObjectsByType(PQDataType objType)
@@ -1347,6 +1347,126 @@ QMap<ULONG, QString> cursePart::getObjectsByType(PQDataType objType)
 	qDebug() << "成功获取对象列表，类型:" << objType << "数量:" << objectMap.size();
 	return objectMap;
 }
+
+std::map<std::string, std::pair<std::string, std::string>> cursePart::loadRobotRelations(const std::string & filePath)
+{
+	std::map<std::string, std::pair<std::string, std::string>> relationsMap;
+	std::ifstream file(filePath);
+
+	// 1. 检查文件是否打开成功
+	if (!file.is_open()) {
+		qWarning() << "警告: 无法打开关系文件" << QString::fromStdString(filePath) << "，将使用默认值。";
+		return relationsMap; // 返回空地图
+	}
+
+	try {
+		json data;
+		file >> data;
+		file.close();
+
+		// 2. 确保根节点是数组
+		if (!data.is_array()) {
+			qWarning() << "警告: relations.json 根节点不是数组，解析跳过。";
+			return relationsMap;
+		}
+
+		// 3. 遍历数组
+		for (const auto& item : data) {
+			// 确保每一项也是数组，且至少有一个元素（机器人名称）
+			if (item.is_array() && item.size() >= 1) {
+				std::string robotName = item[0].get<std::string>();
+
+				std::string railName = "无";
+				std::string agvName = "无";
+
+				// 读取第二个元素 (导轨)，如果存在且不为空
+				if (item.size() > 1 && !item[1].get<std::string>().empty()) {
+					railName = item[1].get<std::string>();
+				}
+
+				// 读取第三个元素 (AGV)，如果存在且不为空
+				if (item.size() > 2 && !item[2].get<std::string>().empty()) {
+					agvName = item[2].get<std::string>();
+				}
+
+				// 存入 Map，方便后续通过机器人名称快速查找
+				relationsMap[robotName] = std::make_pair(railName, agvName);
+			}
+		}
+	}
+	catch (const std::exception& e) {
+		qCritical() << "解析 relations.json 失败:" << e.what();
+	}
+
+	return relationsMap;
+}
+
+void cursePart::updateLinkedJointCheckBoxes(const std::string & railNameStr)
+{
+	if (railNameStr.empty() || railNameStr == "无") {
+		// 如果 railName 为空或为 "无"，则禁用所有联动复选框
+		ui->checkBox_3->setEnabled(false);
+		ui->checkBox_4->setEnabled(false);
+		ui->checkBox_5->setEnabled(false);
+		return;
+	}
+
+	ULONG railID = 0;
+	// 获取railID，需要将std::string转换为std::wstring
+	GetObjIDByName(PQ_ROBOT, std::wstring(railNameStr.begin(), railNameStr.end()), railID);
+
+	if (railID != 0) { // 确保找到了railID
+		int railCount = 0;
+		double* railJoints = nullptr;
+		HRESULT hr = m_ptrKit->Doc_get_obj_joints(railID, &railCount, &railJoints);
+
+		if (ui->checkBox->isChecked()) { // 检查主联动复选框是否被勾选
+			// 根据 railCount 设置复选框的启用状态
+			switch (railCount) {
+			case 1:
+				ui->checkBox_3->setEnabled(true);
+				ui->checkBox_4->setEnabled(false);
+				ui->checkBox_5->setEnabled(false);
+				break;
+			case 2:
+				ui->checkBox_3->setEnabled(true);
+				ui->checkBox_4->setEnabled(true);
+				ui->checkBox_5->setEnabled(false);
+				break;
+			case 3:
+				ui->checkBox_3->setEnabled(true);
+				ui->checkBox_4->setEnabled(true);
+				ui->checkBox_5->setEnabled(true);
+				break;
+			default:
+				// 如果 railCount 不是 1, 2, 3 或者小于 0，禁用所有子复选框
+				ui->checkBox_3->setEnabled(false);
+				ui->checkBox_4->setEnabled(false);
+				ui->checkBox_5->setEnabled(false);
+				break;
+			}
+		}
+		else {
+			// 如果主联动复选框未勾选，则禁用所有联动复选框
+			ui->checkBox_3->setEnabled(false);
+			ui->checkBox_4->setEnabled(false);
+			ui->checkBox_5->setEnabled(false);
+		}
+
+		// 释放分配的内存
+		if (railJoints) {
+			m_ptrKit->PQAPIFreeArray((LONG_PTR*)railJoints);
+		}
+	}
+	else {
+		// 如果没有找到railID，禁用所有联动子复选框
+		ui->checkBox_3->setEnabled(false);
+		ui->checkBox_4->setEnabled(false);
+		ui->checkBox_5->setEnabled(false);
+		qWarning() << "未找到名为" << QString::fromStdString(railNameStr) << "的导轨对象。";
+	}
+}
+
 
 QStringList cursePart::extractStringArrayFromVariant(const VARIANT& variant)
 {
@@ -1529,102 +1649,404 @@ void cursePart::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG 
 	SafeArrayUnaccessData(vIDPara.parray);
 }
 
+std::vector<double> cursePart::convertToLocalEulerAngles(const std::vector<double>& point, const std::vector<double>& mainDirection, const std::vector<double>& otherDirection)
+{
+	// 验证输入向量维度
+	if (point.size() != 3 || mainDirection.size() != 3 || otherDirection.size() != 3) {
+		throw std::invalid_argument("所有输入向量必须是三维向量");
+	}
+
+	// 创建局部坐标系
+	std::vector<double> x_axis(mainDirection);
+	normalizeVector(x_axis);
+
+	// 计算Y轴方向（通过主方向和另一个方向的叉积）
+	std::vector<double> z_temp(otherDirection);
+	normalizeVector(z_temp);
+
+	std::vector<double> y_axis = crossProduct(x_axis, z_temp);
+	normalizeVector(y_axis);
+
+	// 重新计算Z轴以确保正交性
+	std::vector<double> z_axis = crossProduct(x_axis, y_axis);
+	normalizeVector(z_axis);
+
+	// 构建旋转矩阵
+	double R[3][3];
+	R[0][0] = x_axis[0]; R[0][1] = y_axis[0]; R[0][2] = z_axis[0];
+	R[1][0] = x_axis[1]; R[1][1] = y_axis[1]; R[1][2] = z_axis[1];
+	R[2][0] = x_axis[2]; R[2][1] = y_axis[2]; R[2][2] = z_axis[2];
+
+	// 将旋转矩阵转换为欧拉角 (XYZ顺序)
+	std::vector<double> euler_angles(6, 0.0);
+
+	// 位置信息 (前三个元素)
+	euler_angles[0] = point[0];  // X坐标
+	euler_angles[1] = point[1];  // Y坐标
+	euler_angles[2] = point[2];  // Z坐标
+
+	// 欧拉角 (后三个元素)
+	double sy = sqrt(R[0][0] * R[0][0] + R[1][0] * R[1][0]);
+
+	bool singular = sy < 1e-8;
+
+	if (!singular) {
+		euler_angles[3] = atan2(R[2][1], R[2][2]); // X rotation (roll)
+		euler_angles[4] = atan2(-R[2][0], sy);     // Y rotation (pitch)
+		euler_angles[5] = atan2(R[1][0], R[0][0]); // Z rotation (yaw)
+	}
+	else {
+		euler_angles[3] = atan2(-R[1][2], R[1][1]); // X rotation
+		euler_angles[4] = atan2(-R[2][0], sy);      // Y rotation
+		euler_angles[5] = 0;                        // Z rotation
+	}
+
+	return euler_angles;
+}
+
+std::vector<double> cursePart::transformPointToLocal(const std::vector<double>& worldPoint, const std::vector<double>& localCoordinateSystem)
+{
+	if (worldPoint.size() != 3 || localCoordinateSystem.size() != 6) {
+		throw std::invalid_argument("worldPoint必须是3维，localCoordinateSystem必须是6维 [origin_x, origin_y, origin_z, euler_x, euler_y, euler_z]");
+	}
+
+	// 提取局部坐标系参数
+	std::vector<double> localOrigin = {
+		localCoordinateSystem[0],
+		localCoordinateSystem[1],
+		localCoordinateSystem[2]
+	};
+
+	double alpha = localCoordinateSystem[3];  // 绕X轴旋转角度
+	double beta = localCoordinateSystem[4];   // 绕Y轴旋转角度
+	double gamma = localCoordinateSystem[5];  // 绕Z轴旋转角度
+
+	// 构建旋转矩阵 (XYZ旋转顺序)
+	double ca = cos(alpha), sa = sin(alpha);
+	double cb = cos(beta), sb = sin(beta);
+	double cg = cos(gamma), sg = sin(gamma);
+
+	// 旋转矩阵 R = Rz * Ry * Rx
+	double r11 = cb * cg;
+	double r12 = -cb * sg;
+	double r13 = sb;
+	double r21 = cg * sa * sb + ca * sg;
+	double r22 = ca * cg - sa * sb * sg;
+	double r23 = -cb * sa;
+	double r31 = -ca * cg * sb + sa * sg;
+	double r32 = cg * sa + ca * sb * sg;
+	double r33 = ca * cb;
+
+	// 构建旋转矩阵的列向量（局部坐标系的基向量）
+	std::vector<double> xAxis = { r11, r21, r31 };  // 局部X轴在世界坐标系中的方向
+	std::vector<double> yAxis = { r12, r22, r32 };  // 局部Y轴在世界坐标系中的方向
+	std::vector<double> zAxis = { r13, r23, r33 };  // 局部Z轴在世界坐标系中的方向
+
+	// 计算相对于局部原点的偏移
+	std::vector<double> offset(3);
+	offset[0] = worldPoint[0] - localOrigin[0];
+	offset[1] = worldPoint[1] - localOrigin[1];
+	offset[2] = worldPoint[2] - localOrigin[2];
+
+	// 转换到局部坐标系（通过与旋转矩阵的转置相乘，即逆旋转）
+	std::vector<double> localPoint(3);
+	localPoint[0] = offset[0] * r11 + offset[1] * r21 + offset[2] * r31;  // 局部X坐标
+	localPoint[1] = offset[0] * r12 + offset[1] * r22 + offset[2] * r32;  // 局部Y坐标
+	localPoint[2] = offset[0] * r13 + offset[1] * r23 + offset[2] * r33;  // 局部Z坐标
+
+	return localPoint;
+}
+
+std::vector<double> cursePart::transformPointToWorld(const std::vector<double>& localPoint, const std::vector<double>& localCoordinateSystem)
+{
+	if (localPoint.size() != 3 || localCoordinateSystem.size() != 6) {
+		throw std::invalid_argument("localPoint必须是3维，localCoordinateSystem必须是6维 [origin_x, origin_y, origin_z, euler_x, euler_y, euler_z]");
+	}
+
+	// 提取局部坐标系参数
+	std::vector<double> localOrigin = {
+		localCoordinateSystem[0],
+		localCoordinateSystem[1],
+		localCoordinateSystem[2]
+	};
+
+	double alpha = localCoordinateSystem[3];  // 绕X轴旋转角度
+	double beta = localCoordinateSystem[4];   // 绕Y轴旋转角度
+	double gamma = localCoordinateSystem[5];  // 绕Z轴旋转角度
+
+	// 构建旋转矩阵 (XYZ旋转顺序)
+	double ca = cos(alpha), sa = sin(alpha);
+	double cb = cos(beta), sb = sin(beta);
+	double cg = cos(gamma), sg = sin(gamma);
+
+	// 旋转矩阵 R = Rz * Ry * Rx
+	double r11 = cb * cg;
+	double r12 = -cb * sg;
+	double r13 = sb;
+	double r21 = cg * sa * sb + ca * sg;
+	double r22 = ca * cg - sa * sb * sg;
+	double r23 = -cb * sa;
+	double r31 = -ca * cg * sb + sa * sg;
+	double r32 = cg * sa + ca * sb * sg;
+	double r33 = ca * cb;
+
+	// 应用旋转并加偏移
+	std::vector<double> worldPoint(3);
+	worldPoint[0] = localPoint[0] * r11 + localPoint[1] * r12 + localPoint[2] * r13 + localOrigin[0];
+	worldPoint[1] = localPoint[0] * r21 + localPoint[1] * r22 + localPoint[2] * r23 + localOrigin[1];
+	worldPoint[2] = localPoint[0] * r31 + localPoint[1] * r32 + localPoint[2] * r33 + localOrigin[2];
+
+	return worldPoint;
+}
+
+std::vector<double> cursePart::transformMultiplePointsToLocal(const std::vector<double>& worldPoints, const std::vector<double>& localCoordinateSystem)
+{
+	if (localCoordinateSystem.size() != 6) {
+		throw std::invalid_argument("localCoordinateSystem必须是6维 [origin_x, origin_y, origin_z, euler_x, euler_y, euler_z]");
+	}
+
+	if (worldPoints.size() % 3 != 0) {
+		throw std::invalid_argument("worldPoints的大小必须是3的倍数（每个点需要3个坐标）");
+	}
+
+	// 提取局部坐标系参数
+	std::vector<double> localOrigin = {
+		localCoordinateSystem[0],
+		localCoordinateSystem[1],
+		localCoordinateSystem[2]
+	};
+
+	double alpha = localCoordinateSystem[3];  // 绕X轴旋转角度
+	double beta = localCoordinateSystem[4];   // 绕Y轴旋转角度
+	double gamma = localCoordinateSystem[5];  // 绕Z轴旋转角度
+
+	// 构建旋转矩阵 (XYZ旋转顺序)
+	double ca = cos(alpha), sa = sin(alpha);
+	double cb = cos(beta), sb = sin(beta);
+	double cg = cos(gamma), sg = sin(gamma);
+
+	// 旋转矩阵 R = Rz * Ry * Rx
+	double r11 = cb * cg;
+	double r12 = -cb * sg;
+	double r13 = sb;
+	double r21 = cg * sa * sb + ca * sg;
+	double r22 = ca * cg - sa * sb * sg;
+	double r23 = -cb * sa;
+	double r31 = -ca * cg * sb + sa * sg;
+	double r32 = cg * sa + ca * sb * sg;
+	double r33 = ca * cb;
+
+	// 预分配结果向量
+	std::vector<double> localPoints;
+	localPoints.reserve(worldPoints.size());
+
+	// 对每个点进行变换
+	for (size_t i = 0; i < worldPoints.size(); i += 3) {
+		if (i + 2 >= worldPoints.size()) break; // 确保有完整的三点
+
+		// 计算相对于局部原点的偏移
+		double offsetX = worldPoints[i] - localOrigin[0];
+		double offsetY = worldPoints[i + 1] - localOrigin[1];
+		double offsetZ = worldPoints[i + 2] - localOrigin[2];
+
+		// 转换到局部坐标系（通过与旋转矩阵的转置相乘，即逆旋转）
+		double localX = offsetX * r11 + offsetY * r21 + offsetZ * r31;  // 局部X坐标
+		double localY = offsetX * r12 + offsetY * r22 + offsetZ * r32;  // 局部Y坐标
+		double localZ = offsetX * r13 + offsetY * r23 + offsetZ * r33;  // 局部Z坐标
+
+		localPoints.push_back(localX);
+		localPoints.push_back(localY);
+		localPoints.push_back(localZ);
+	}
+
+	return localPoints;
+}
+
+std::vector<double> cursePart::transformMultiplePointsToWorld(const std::vector<double>& localPoints, const std::vector<double>& localCoordinateSystem)
+{
+	if (localCoordinateSystem.size() != 6) {
+		throw std::invalid_argument("localCoordinateSystem必须是6维 [origin_x, origin_y, origin_z, euler_x, euler_y, euler_z]");
+	}
+
+	if (localPoints.size() % 3 != 0) {
+		throw std::invalid_argument("localPoints的大小必须是3的倍数（每个点需要3个坐标）");
+	}
+
+	// 提取局部坐标系参数
+	std::vector<double> localOrigin = {
+		localCoordinateSystem[0],
+		localCoordinateSystem[1],
+		localCoordinateSystem[2]
+	};
+
+	double alpha = localCoordinateSystem[3];  // 绕X轴旋转角度
+	double beta = localCoordinateSystem[4];   // 绕Y轴旋转角度
+	double gamma = localCoordinateSystem[5];  // 绕Z轴旋转角度
+
+	// 构建旋转矩阵 (XYZ旋转顺序)
+	double ca = cos(alpha), sa = sin(alpha);
+	double cb = cos(beta), sb = sin(beta);
+	double cg = cos(gamma), sg = sin(gamma);
+
+	// 旋转矩阵 R = Rz * Ry * Rx
+	double r11 = cb * cg;
+	double r12 = -cb * sg;
+	double r13 = sb;
+	double r21 = cg * sa * sb + ca * sg;
+	double r22 = ca * cg - sa * sb * sg;
+	double r23 = -cb * sa;
+	double r31 = -ca * cg * sb + sa * sg;
+	double r32 = cg * sa + ca * sb * sg;
+	double r33 = ca * cb;
+
+	// 预分配结果向量
+	std::vector<double> worldPoints;
+	worldPoints.reserve(localPoints.size());
+
+	// 对每个点进行变换
+	for (size_t i = 0; i < localPoints.size(); i += 3) {
+		if (i + 2 >= localPoints.size()) break; // 确保有完整的三点
+
+		// 应用旋转
+		double rotatedX = localPoints[i] * r11 + localPoints[i + 1] * r12 + localPoints[i + 2] * r13;
+		double rotatedY = localPoints[i] * r21 + localPoints[i + 1] * r22 + localPoints[i + 2] * r23;
+		double rotatedZ = localPoints[i] * r31 + localPoints[i + 1] * r32 + localPoints[i + 2] * r33;
+
+		// 加上偏移得到世界坐标
+		worldPoints.push_back(rotatedX + localOrigin[0]);
+		worldPoints.push_back(rotatedY + localOrigin[1]);
+		worldPoints.push_back(rotatedZ + localOrigin[2]);
+	}
+
+	return worldPoints;
+}
+
+std::vector<double> cursePart::getThirdAxisVectorFromTwoAxes(const std::vector<std::vector<double>>& axisVector, const QString & firstAxisName, const QString & secondAxisName)
+{
+	if (axisVector.size() < 3) {
+		qDebug() << "错误: axisVector 必须包含至少3个轴向量";
+		return {};
+	}
+
+	// 获取第一个轴向量
+	std::vector<double> firstAxis = getAxisVector(axisVector, firstAxisName);
+	if (firstAxis.empty()) {
+		qDebug() << "错误: 无法获取第一个轴向量: " << firstAxisName;
+		return {};
+	}
+
+	// 获取第二个轴向量
+	std::vector<double> secondAxis = getAxisVector(axisVector, secondAxisName);
+	if (secondAxis.empty()) {
+		qDebug() << "错误: 无法获取第二个轴向量: " << secondAxisName;
+		return {};
+	}
+
+	// 计算叉积得到第三个轴向量 (firstAxis × secondAxis)
+	std::vector<double> thirdAxis(3);
+	thirdAxis[0] = firstAxis[1] * secondAxis[2] - firstAxis[2] * secondAxis[1];  // i分量
+	thirdAxis[1] = firstAxis[2] * secondAxis[0] - firstAxis[0] * secondAxis[2];  // j分量
+	thirdAxis[2] = firstAxis[0] * secondAxis[1] - firstAxis[1] * secondAxis[0];  // k分量
+
+	// 归一化向量
+	double length = sqrt(thirdAxis[0] * thirdAxis[0] + thirdAxis[1] * thirdAxis[1] + thirdAxis[2] * thirdAxis[2]);
+	if (length > 1e-9) {
+		thirdAxis[0] /= length;
+		thirdAxis[1] /= length;
+		thirdAxis[2] /= length;
+	}
+
+	return thirdAxis;
+}
+
+bool cursePart::calculateDimensionsFromCorners(const std::vector<double>& OBBPosition, const QString & mainVectorText, double & length, double & width, double & thickness)
+{
+	if (OBBPosition.size() != 24) {
+		return false; // 需要恰好24个值（8个角点，每个点3个坐标）
+	}
+
+	// 计算包围盒的最小和最大坐标
+	double minX = std::numeric_limits<double>::max();
+	double maxX = std::numeric_limits<double>::lowest();
+	double minY = std::numeric_limits<double>::max();
+	double maxY = std::numeric_limits<double>::lowest();
+	double minZ = std::numeric_limits<double>::max();
+	double maxZ = std::numeric_limits<double>::lowest();
+
+	// 遍历所有8个角点找出最大最小值
+	for (int i = 0; i < 24; i += 3) {
+		double x = OBBPosition[i];
+		double y = OBBPosition[i + 1];
+		double z = OBBPosition[i + 2];
+
+		minX = std::min(minX, x);
+		maxX = std::max(maxX, x);
+		minY = std::min(minY, y);
+		maxY = std::max(maxY, y);
+		minZ = std::min(minZ, z);
+		maxZ = std::max(maxZ, z);
+	}
+
+	// 计算三个方向的长度
+	double xLength = maxX - minX;
+	double yLength = maxY - minY;
+	double zLength = maxZ - minZ;
+
+	// 根据mainVectorText确定厚度方向和其他两个方向
+	length = 0.0;  // 长度
+	width = 0.0;   // 宽度
+	thickness = 0.0;    // 厚度
+
+	if (mainVectorText.contains("X", Qt::CaseInsensitive)) {
+		// X方向是厚度方向
+		thickness = xLength;
+
+		// Y和Z方向中较大的作为长度，较小的作为宽度
+		if (yLength >= zLength) {
+			length = yLength;
+			width = zLength;
+		}
+		else {
+			length = zLength;
+			width = yLength;
+		}
+	}
+	else if (mainVectorText.contains("Y", Qt::CaseInsensitive)) {
+		// Y方向是厚度方向
+		thickness = yLength;
+
+		// X和Z方向中较大的作为长度，较小的作为宽度
+		if (xLength >= zLength) {
+			length = xLength;
+			width = zLength;
+		}
+		else {
+			length = zLength;
+			width = xLength;
+		}
+	}
+	else {
+		// Z方向是厚度方向
+		thickness = zLength;
+
+		// X和Y方向中较大的作为长度，较小的作为宽度
+		if (xLength >= yLength) {
+			length = xLength;
+			width = yLength;
+		}
+		else {
+			length = yLength;
+			width = xLength;
+		}
+	}
+
+	return true;
+}
+
 
 std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<unsigned long,
 	std::vector<std::wstring>>&pickupMap)
 {
-	//// 将 ABBPosition 替换为 surfacePoints
-	//std::vector<double> surfacePoints;
-	//std::vector<double> resultPositions;
-
-	//// 遍历pickupMap中的每个部件
-	//for (const auto& pair : pickupMap) {
-	//	unsigned long key = pair.first;
-	//	const std::vector<std::wstring>& values = pair.second;
-
-	//	// 获取部件顶点数量
-	//	long lCount = 0;
-	//	m_ptrKit->PQAPIGetWorkPartVertexCount(key, &lCount);
-
-	//	if (lCount <= 0) {
-	//		continue;
-	//	}
-
-	//	// 获取部件顶点坐标
-	//	std::vector<double> dSrc(3 * lCount, 0);
-	//	double* dSrcPosition = dSrc.data();
-
-	//	CComBSTR bsName;
-	//	m_ptrKit->Doc_get_obj_name(key, &bsName);
-	//	std::wstring wstr(bsName, SysStringLen(bsName));
-	//	ULONG uCoordinate = 0;
-	//	GetObjIDByName(PQ_COORD, wstr, uCoordinate);
-	//	m_ptrKit->PQAPIGetWorkPartVertex(key, 0, lCount, dSrcPosition);
-
-	//	partPositions = dSrc;
-
-	//	// 检查每个表面上的点
-	//	for (const auto& value : values) {
-	//		for (long i = 0; i < lCount; i++) {
-	//			double dPosition[3] = {
-	//				dSrcPosition[3 * i],
-	//				dSrcPosition[3 * i + 1],
-	//				dSrcPosition[3 * i + 2]
-	//			};
-
-	//			double dTol = 10;
-	//			LONG bPointOnSurface = 0;
-
-	//			// 转换表面名称格式
-	//			std::vector<wchar_t> buffer(value.begin(), value.end());
-	//			buffer.push_back(L'\0');
-	//			LPWSTR name = buffer.data();
-
-	//			// 检查点是否在表面上
-	//			m_ptrKit->Part_cheak_point_on_surface(name, dPosition, dTol, &bPointOnSurface);
-
-	//			if (bPointOnSurface) {
-	//				surfacePoints.push_back(dPosition[0]);
-	//				surfacePoints.push_back(dPosition[1]);
-	//				surfacePoints.push_back(dPosition[2]);
-	//			}
-	//		}
-	//	}
-	//}
-
-	//// 计算AABB包围盒
-	//AABB box;
-
-	//if (surfacePoints.empty()) {
-	//	return resultPositions; // 返回空结果
-	//}
-
-	//box.minPoint = { surfacePoints[0], surfacePoints[1], surfacePoints[2] };
-	//box.maxPoint = { surfacePoints[0], surfacePoints[1], surfacePoints[2] };
-
-	//for (size_t i = 0; i < surfacePoints.size(); i += 3) {
-	//	if (i + 2 < surfacePoints.size()) {
-	//		box.minPoint.x = std::min(box.minPoint.x, surfacePoints[i]);
-	//		box.minPoint.y = std::min(box.minPoint.y, surfacePoints[i + 1]);
-	//		box.minPoint.z = std::min(box.minPoint.z, surfacePoints[i + 2]);
-
-	//		box.maxPoint.x = std::max(box.maxPoint.x, surfacePoints[i]);
-	//		box.maxPoint.y = std::max(box.maxPoint.y, surfacePoints[i + 1]);
-	//		box.maxPoint.z = std::max(box.maxPoint.z, surfacePoints[i + 2]);
-	//	}
-	//}
-
-	//// 计算AABB并获取8个角点
-	//std::vector<Point3D> boxCorners = box.getCorners();
-
-	//// 将角点坐标展平为连续数组
-	//for (const auto& corner : boxCorners) {
-	//	resultPositions.push_back(corner.x);
-	//	resultPositions.push_back(corner.y);
-	//	resultPositions.push_back(corner.z);
-	//}
-
-	//return resultPositions;
 
 	std::vector<double> resultPositions;
 
@@ -1642,11 +2064,6 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 			// 为每个表面获取包围盒
 			double dMin[3] = { 0.0 };
 			double dMax[3] = { 0.0 };
-
-			// 转换表面名称为LPWSTR格式
-			//std::vector<wchar_t> surfaceBuffer(surfaceName.begin(), surfaceName.end());
-			//surfaceBuffer.push_back(L'\0');
-			//LPWSTR surfaceNameWstr = surfaceBuffer.data();
 
 			CComBSTR bstrSurfaceName(surfaceName.c_str());
 
@@ -1701,6 +2118,164 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 
 	return resultPositions;
 }
+
+std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<unsigned long, std::vector<std::wstring>>& pickupMap)
+{
+    std::vector<double> resultPositions;
+    
+    // 收集所有表面的点
+    std::vector<Point3D> allPoints;
+
+    // 遍历pickupMap中的每个部件
+    for (const auto& pair : pickupMap) {
+        unsigned long key = pair.first;  // 零件ID
+        const std::vector<std::wstring>& surfaces = pair.second;  // 表面列表
+
+        // 遍历当前零件的所有表面
+        for (const auto& surfaceName : surfaces) {
+            // 为每个表面获取包围盒
+            double dMin[3] = { 0.0 };
+            double dMax[3] = { 0.0 };
+
+            CComBSTR bstrSurfaceName(surfaceName.c_str());
+
+            HRESULT hr = m_ptrKit->Part_get_face_bndbox(bstrSurfaceName, dMin, dMax);
+
+            // 调用Part_get_face_bndbox获取单个表面的包围盒
+            if (SUCCEEDED(hr)) {
+                // 将当前表面包围盒的8个角点添加到allPoints中
+                // 最小点
+                allPoints.push_back(Point3D(dMin[0], dMin[1], dMin[2])); // 角点0
+                allPoints.push_back(Point3D(dMax[0], dMin[1], dMin[2])); // 角点1
+                allPoints.push_back(Point3D(dMin[0], dMax[1], dMin[2])); // 角点2
+                allPoints.push_back(Point3D(dMin[0], dMin[1], dMax[2])); // 角点3
+                // 最大点
+                allPoints.push_back(Point3D(dMax[0], dMax[1], dMin[2])); // 角点4
+                allPoints.push_back(Point3D(dMax[0], dMin[1], dMax[2])); // 角点5
+                allPoints.push_back(Point3D(dMin[0], dMax[1], dMax[2])); // 角点6
+                allPoints.push_back(Point3D(dMax[0], dMax[1], dMax[2])); // 角点7
+            }
+            else {
+                qDebug() << "获取表面" << QString::fromStdWString(surfaceName).toLocal8Bit().constData()
+                    << "的包围盒失败";
+            }
+        }
+    }
+
+    if (allPoints.empty()) {
+        qDebug() << "没有找到有效的表面点";
+        return resultPositions;
+    }
+
+    // 计算点云的质心
+    Point3D centroid(0, 0, 0);
+    for (const auto& point : allPoints) {
+        centroid.x += point.x;
+        centroid.y += point.y;
+        centroid.z += point.z;
+    }
+    centroid.x /= allPoints.size();
+    centroid.y /= allPoints.size();
+    centroid.z /= allPoints.size();
+
+    // 计算协方差矩阵
+    double covXX = 0, covXY = 0, covXZ = 0, covYY = 0, covYZ = 0, covZZ = 0;
+    for (const auto& point : allPoints) {
+        double dx = point.x - centroid.x;
+        double dy = point.y - centroid.y;
+        double dz = point.z - centroid.z;
+
+        covXX += dx * dx;
+        covXY += dx * dy;
+        covXZ += dx * dz;
+        covYY += dy * dy;
+        covYZ += dy * dz;
+        covZZ += dz * dz;
+    }
+
+    // 构建协方差矩阵
+    Eigen::Matrix3d covarianceMatrix;
+    covarianceMatrix << covXX, covXY, covXZ,
+                      covXY, covYY, covYZ,
+                      covXZ, covYZ, covZZ;
+
+    // 计算特征值和特征向量
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigenSolver(covarianceMatrix);
+    Eigen::Matrix3d eigenVectors = eigenSolver.eigenvectors();
+    Eigen::Vector3d eigenValues = eigenSolver.eigenvalues();
+
+    // 确保特征向量形成右手坐标系
+    if (eigenVectors.determinant() < 0) {
+        eigenVectors.col(2) = eigenVectors.col(0).cross(eigenVectors.col(1));
+    }
+
+    // 创建OBB
+    OBB obb;
+    obb.center = centroid;
+    
+    // 设置轴向量
+    obb.axes[0] = Point3D(eigenVectors(0, 0), eigenVectors(1, 0), eigenVectors(2, 0));
+    obb.axes[1] = Point3D(eigenVectors(0, 1), eigenVectors(1, 1), eigenVectors(2, 1));
+    obb.axes[2] = Point3D(eigenVectors(0, 2), eigenVectors(1, 2), eigenVectors(2, 2));
+
+    // 计算各轴上的范围
+    double minX = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
+    double minY = std::numeric_limits<double>::max();
+    double maxY = std::numeric_limits<double>::lowest();
+    double minZ = std::numeric_limits<double>::max();
+    double maxZ = std::numeric_limits<double>::lowest();
+
+    for (const auto& point : allPoints) {
+        // 将点投影到OBB的局部坐标系
+        double dx = point.x - centroid.x;
+        double dy = point.y - centroid.y;
+        double dz = point.z - centroid.z;
+
+        // 投影到各个轴上
+        double projX = dx * obb.axes[0].x + dy * obb.axes[0].y + dz * obb.axes[0].z;
+        double projY = dx * obb.axes[1].x + dy * obb.axes[1].y + dz * obb.axes[1].z;
+        double projZ = dx * obb.axes[2].x + dy * obb.axes[2].y + dz * obb.axes[2].z;
+
+        minX = std::min(minX, projX);
+        maxX = std::max(maxX, projX);
+        minY = std::min(minY, projY);
+        maxY = std::max(maxY, projY);
+        minZ = std::min(minZ, projZ);
+        maxZ = std::max(maxZ, projZ);
+    }
+
+    // 设置半长宽高
+    obb.halfExtents.x = (maxX - minX) / 2.0;
+    obb.halfExtents.y = (maxY - minY) / 2.0;
+    obb.halfExtents.z = (maxZ - minZ) / 2.0;
+
+    // 调整中心点位置
+    obb.center.x += (minX + maxX) / 2.0 * obb.axes[0].x + (minY + maxY) / 2.0 * obb.axes[1].x + (minZ + maxZ) / 2.0 * obb.axes[2].x;
+    obb.center.y += (minX + maxX) / 2.0 * obb.axes[0].y + (minY + maxY) / 2.0 * obb.axes[1].y + (minZ + maxZ) / 2.0 * obb.axes[2].y;
+    obb.center.z += (minX + maxX) / 2.0 * obb.axes[0].z + (minY + maxY) / 2.0 * obb.axes[1].z + (minZ + maxZ) / 2.0 * obb.axes[2].z;
+
+    // 获取OBB的8个角点
+    std::vector<Point3D> corners = obb.getCorners();
+
+    // 将角点坐标展平为连续数组
+    resultPositions.reserve(corners.size() * 3);
+    for (const auto& corner : corners) {
+        resultPositions.push_back(corner.x);
+        resultPositions.push_back(corner.y);
+        resultPositions.push_back(corner.z);
+    }
+
+    qDebug() << "\n计算的OBB包围盒:";
+    qDebug() << "  中心点:" << obb.center.x << obb.center.y << obb.center.z;
+    qDebug() << "  轴向量1:" << obb.axes[0].x << obb.axes[0].y << obb.axes[0].z;
+    qDebug() << "  轴向量2:" << obb.axes[1].x << obb.axes[1].y << obb.axes[1].z;
+    qDebug() << "  轴向量3:" << obb.axes[2].x << obb.axes[2].y << obb.axes[2].z;
+    qDebug() << "  半长:" << obb.halfExtents.x << obb.halfExtents.y << obb.halfExtents.z;
+
+    return resultPositions;
+}
+
 
 std::vector<std::vector<double>> cursePart::getCoordinateAxesFromEuler(double * eulerAngles)
 {
@@ -1791,50 +2366,6 @@ std::vector<double> cursePart::getAxisVector(const std::vector<std::vector<doubl
 	return result;
 }
 
-void cursePart::updateRailOptions(const QString & robotName, const QMap<ULONG, QString>& robotMap)
-{
-	if (!this || robotName.isEmpty()) {
-		return;
-	}
-	// 获取轨道信息
-	ULONG uExternalID = 0;
-	QString railname = robotName + "_rail";
-	GetObjIDByName(PQ_ROBOT, railname.toStdWString(), uExternalID);
-
-	int railCount = 0;
-	HRESULT hr = m_ptrKit->Doc_get_obj_joint_count(uExternalID, &railCount);
-
-	QStringList rail;
-	if (SUCCEEDED(hr) && railCount > 0) {
-		for (int i = 0; i < railCount; i++) {
-			QString railName = "J" + QString::number(i + 1);
-			rail.append(railName);
-		}
-	}
-	else {
-		// 如果轨道数量为0或调用失败，确保rail为空列表
-		rail.clear();
-	}
-
-	// 更新对话框中的轨道选项
-	//ui->comboBox_2->clear();
-	//ui->comboBox_2->addItems(rail);
-	//if (!rail.isEmpty()) {
-	//	ui->comboBox_2->setCurrentIndex(0);
-	//}
-}
-
-
-void cursePart::CreateBoundingBox()
-{
-	double start[6] = { 0.0 };
-	double dEnd[6] = { 100,100,100,200,200,200 };
-	double dRGB[3] = { 255, 0, 0 };
-	ULONG i_uCoordinateID = 0;
-	ULONG o_uCylinderID = 0;
-	m_ptrKit->Doc_draw_cylinder(start, 6, dEnd, 6, 16,
-		dRGB, 3, i_uCoordinateID, &o_uCylinderID, false);
-}
 
 void cursePart::OnDraw()
 {
@@ -1969,138 +2500,4 @@ void cursePart::saveWorkspaceData() {
 	m_workspaceHandler->writeRobotWorkspaceBoundary(boundary);
 }
 
-
-std::vector<double> cursePart::calculateOBBCoordinateSystemFromCorners(
-	const std::vector<double>& corners) {
-
-	if (corners.size() != 24) { // 8个点 * 3个坐标 = 24
-		throw std::invalid_argument("角点数量必须为24（8个点，每个点3个坐标）");
-	}
-
-	// 将输入的角点数据转换为Point3D数组
-	std::vector<Point3D> points(8);
-	for (int i = 0; i < 8; i++) {
-		points[i] = Point3D(corners[i * 3], corners[i * 3 + 1], corners[i * 3 + 2]);
-	}
-
-	// 步骤1: 计算包围盒的中心点
-	Point3D center(0, 0, 0);
-	for (const auto& pt : points) {
-		center = center + pt;
-	}
-	center.x /= 8.0;
-	center.y /= 8.0;
-	center.z /= 8.0;
-
-	// 步骤2: 识别OBB的三个轴向量
-	// OBB的8个角点中，相对的两个顶点连线会穿过中心点
-	// 我们可以通过计算所有边的中点，找到穿过中心的边对来识别轴
-	std::vector<Point3D> edges; // 存储所有12条边的向量
-
-	// 定义OBB的标准连接方式（假设角点按特定顺序排列）
-	int edgeConnections[][2] = {
-		{0, 1}, {1, 3}, {3, 2}, {2, 0}, // 底面边
-		{4, 5}, {5, 7}, {7, 6}, {6, 4}, // 顶面边
-		{0, 4}, {1, 5}, {2, 6}, {3, 7}  // 垂直边
-	};
-
-	for (int i = 0; i < 12; i++) {
-		Point3D p1 = points[edgeConnections[i][0]];
-		Point3D p2 = points[edgeConnections[i][1]];
-		Point3D edgeVec = p2 - p1;
-		edges.push_back(edgeVec);
-	}
-
-	// 步骤3: 找出三个主要轴向量（具有相同长度的边对应同一轴）
-	std::vector<double> edgeLengths;
-	std::vector<Point3D> normalizedEdges;
-
-	for (const auto& edge : edges) {
-		double length = edge.magnitude();
-		edgeLengths.push_back(length);
-		normalizedEdges.push_back(edge.normalize());
-	}
-
-	// 找出三种不同的边长（对应OBB的三个维度）
-	std::vector<double> uniqueLengths;
-	for (double len : edgeLengths) {
-		bool found = false;
-		for (double existingLen : uniqueLengths) {
-			if (std::abs(len - existingLen) < 1e-6) {
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			uniqueLengths.push_back(len);
-		}
-	}
-
-	// 排序边长（从小到大）
-	std::sort(uniqueLengths.begin(), uniqueLengths.end());
-
-	// 步骤4: 识别三个轴向量
-	std::vector<Point3D> axes(3);
-	std::vector<double> axisLengths(3);
-
-	for (int i = 0; i < 3; i++) {
-		Point3D avgAxis(0, 0, 0);
-		int count = 0;
-
-		for (int j = 0; j < 12; j++) {
-			if (std::abs(edgeLengths[j] - uniqueLengths[i]) < 1e-6) {
-				avgAxis = avgAxis + normalizedEdges[j];
-				count++;
-			}
-		}
-
-		if (count > 0) {
-			avgAxis = avgAxis * (1.0 / count);
-			axes[i] = avgAxis.normalize();
-			axisLengths[i] = uniqueLengths[i];
-		}
-	}
-
-	// 确保轴向量形成右手坐标系
-	Point3D crossProduct = axes[0].cross(axes[1]);
-	if (crossProduct.dot(axes[2]) < 0) {
-		axes[2] = Point3D(-axes[2].x, -axes[2].y, -axes[2].z);
-	}
-
-	// 步骤5: 将轴向量转换为旋转矩阵
-	Eigen::Matrix3d rotationMatrix;
-	rotationMatrix << axes[2].x, axes[1].x, axes[0].x,
-		axes[2].y, axes[1].y, axes[0].y,
-		axes[2].z, axes[1].z, axes[0].z;
-
-
-	// 步骤6: 从旋转矩阵计算XYZ欧拉角
-	double alpha, beta, gamma; // 分别对应绕X、Y、Z轴的旋转角度
-
-	// 从旋转矩阵提取XYZ欧拉角
-	beta = asin(rotationMatrix(2, 0)); // 绕Y轴的旋转
-
-	if (cos(beta) > 1e-6) { // 避免除零
-		alpha = atan2(-rotationMatrix(2, 1), rotationMatrix(2, 2)); // 绕X轴的旋转
-		gamma = atan2(-rotationMatrix(1, 0), rotationMatrix(0, 0)); // 绕Z轴的旋转
-	}
-	else {
-		// 万向锁情况
-		alpha = 0.0;
-		gamma = atan2(rotationMatrix(0, 1), rotationMatrix(1, 1));
-	}
-
-
-	// 步骤7: 构建EULERANGLEXYZ格式的输出
-	std::vector<double> result(6);
-	result[0] = center.x;  // X坐标
-	result[1] = center.y;  // Y坐标
-	result[2] = center.z;  // Z坐标
-	result[3] = alpha;     // alpha (绕X轴旋转)
-	result[4] = beta;      // beta (绕Y轴旋转)
-	result[5] = gamma;     // gamma (绕Z轴旋转)
-
-
-	return result;
-}
 
