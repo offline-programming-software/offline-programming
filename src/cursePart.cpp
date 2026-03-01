@@ -2119,161 +2119,156 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 	return resultPositions;
 }
 
-std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<unsigned long, std::vector<std::wstring>>& pickupMap)
+std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<unsigned long,
+	std::vector<std::wstring>>& pickupMap, std::vector<double> direction)
 {
-    std::vector<double> resultPositions;
-    
-    // 收集所有表面的点
-    std::vector<Point3D> allPoints;
+	std::vector<double> resultPositions;
 
-    // 遍历pickupMap中的每个部件
-    for (const auto& pair : pickupMap) {
-        unsigned long key = pair.first;  // 零件ID
-        const std::vector<std::wstring>& surfaces = pair.second;  // 表面列表
+	if (direction.size() < 3) {
+		direction = { 0.0, 0.0, 1.0 };
+	}
 
-        // 遍历当前零件的所有表面
-        for (const auto& surfaceName : surfaces) {
-            // 为每个表面获取包围盒
-            double dMin[3] = { 0.0 };
-            double dMax[3] = { 0.0 };
+	normalizeVector(direction);
+	if (std::abs(direction[0]) < 1e-9 && std::abs(direction[1]) < 1e-9 && std::abs(direction[2]) < 1e-9) {
+		direction = { 0.0, 0.0, 1.0 };
+	}
 
-            CComBSTR bstrSurfaceName(surfaceName.c_str());
+	Point3D rayDirection(direction[0], direction[1], direction[2]);
 
-            HRESULT hr = m_ptrKit->Part_get_face_bndbox(bstrSurfaceName, dMin, dMax);
+	AABB mergedBox;
+	bool hasValidBox = false;
+	std::vector<Point3D> faceAABBCorners;
 
-            // 调用Part_get_face_bndbox获取单个表面的包围盒
-            if (SUCCEEDED(hr)) {
-                // 将当前表面包围盒的8个角点添加到allPoints中
-                // 最小点
-                allPoints.push_back(Point3D(dMin[0], dMin[1], dMin[2])); // 角点0
-                allPoints.push_back(Point3D(dMax[0], dMin[1], dMin[2])); // 角点1
-                allPoints.push_back(Point3D(dMin[0], dMax[1], dMin[2])); // 角点2
-                allPoints.push_back(Point3D(dMin[0], dMin[1], dMax[2])); // 角点3
-                // 最大点
-                allPoints.push_back(Point3D(dMax[0], dMax[1], dMin[2])); // 角点4
-                allPoints.push_back(Point3D(dMax[0], dMin[1], dMax[2])); // 角点5
-                allPoints.push_back(Point3D(dMin[0], dMax[1], dMax[2])); // 角点6
-                allPoints.push_back(Point3D(dMax[0], dMax[1], dMax[2])); // 角点7
-            }
-            else {
-                qDebug() << "获取表面" << QString::fromStdWString(surfaceName).toLocal8Bit().constData()
-                    << "的包围盒失败";
-            }
-        }
-    }
+	auto addUniquePoint = [](std::vector<Point3D>& points, const Point3D& candidate, double tolerance) {
+		for (const auto& p : points) {
+			if (p.distance(candidate) <= tolerance) {
+				return;
+			}
+		}
+		points.push_back(candidate);
+	};
 
-    if (allPoints.empty()) {
-        qDebug() << "没有找到有效的表面点";
-        return resultPositions;
-    }
+	// 1) 计算选中曲面的合并AABB
+	for (const auto& pair : pickupMap) {
+		const std::vector<std::wstring>& surfaces = pair.second;
+		for (const auto& surfaceName : surfaces) {
+			double dMin[3] = { 0.0 };
+			double dMax[3] = { 0.0 };
+			CComBSTR bstrSurfaceName(surfaceName.c_str());
 
-    // 计算点云的质心
-    Point3D centroid(0, 0, 0);
-    for (const auto& point : allPoints) {
-        centroid.x += point.x;
-        centroid.y += point.y;
-        centroid.z += point.z;
-    }
-    centroid.x /= allPoints.size();
-    centroid.y /= allPoints.size();
-    centroid.z /= allPoints.size();
+			HRESULT hr = m_ptrKit->Part_get_face_bndbox(bstrSurfaceName, dMin, dMax);
+			if (SUCCEEDED(hr)) {
+				AABB currentBox;
+				currentBox.minPoint = Point3D(dMin[0], dMin[1], dMin[2]);
+				currentBox.maxPoint = Point3D(dMax[0], dMax[1], dMax[2]);
 
-    // 计算协方差矩阵
-    double covXX = 0, covXY = 0, covXZ = 0, covYY = 0, covYZ = 0, covZZ = 0;
-    for (const auto& point : allPoints) {
-        double dx = point.x - centroid.x;
-        double dy = point.y - centroid.y;
-        double dz = point.z - centroid.z;
+				if (!hasValidBox) {
+					mergedBox = currentBox;
+					hasValidBox = true;
+				}
+				else {
+					mergedBox.merge(currentBox);
+				}
 
-        covXX += dx * dx;
-        covXY += dx * dy;
-        covXZ += dx * dz;
-        covYY += dy * dy;
-        covYZ += dy * dz;
-        covZZ += dz * dz;
-    }
+				std::vector<Point3D> corners = currentBox.getCorners();
+				faceAABBCorners.insert(faceAABBCorners.end(), corners.begin(), corners.end());
+			}
+		}
+	}
 
-    // 构建协方差矩阵
-    Eigen::Matrix3d covarianceMatrix;
-    covarianceMatrix << covXX, covXY, covXZ,
-                      covXY, covYY, covYZ,
-                      covXZ, covYZ, covZZ;
+	if (!hasValidBox) {
+		qDebug() << "calculateOBBCornersFromPickupMap: 未获取到有效AABB";
+		return resultPositions;
+	}
 
-    // 计算特征值和特征向量
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigenSolver(covarianceMatrix);
-    Eigen::Matrix3d eigenVectors = eigenSolver.eigenvectors();
-    Eigen::Vector3d eigenValues = eigenSolver.eigenvalues();
+	double boxX = mergedBox.maxPoint.x - mergedBox.minPoint.x;
+	double boxY = mergedBox.maxPoint.y - mergedBox.minPoint.y;
+	double boxZ = mergedBox.maxPoint.z - mergedBox.minPoint.z;
+	double minBoxDim = std::min(std::min(std::abs(boxX), std::abs(boxY)), std::abs(boxZ));
+	double pointTolerance = std::max(1e-4, minBoxDim * 1e-4);
 
-    // 确保特征向量形成右手坐标系
-    if (eigenVectors.determinant() < 0) {
-        eigenVectors.col(2) = eigenVectors.col(0).cross(eigenVectors.col(1));
-    }
+	// 2) 根据direction在AABB最接近的表面均匀取点
+	double rectLength = std::max(1e-3, std::max(std::abs(boxX), std::abs(boxY)) / 10.0);
+	double rectWidth = std::max(1e-3, std::max(std::abs(boxY), std::abs(boxZ)) / 10.0);
+	std::vector<Point3D> samplePoints = mergedBox.createGridOnClosestSurface(rectLength, rectWidth, rayDirection, true);
+	if (samplePoints.empty()) {
+		samplePoints = mergedBox.getCorners();
+	}
 
-    // 创建OBB
-    OBB obb;
-    obb.center = centroid;
-    
-    // 设置轴向量
-    obb.axes[0] = Point3D(eigenVectors(0, 0), eigenVectors(1, 0), eigenVectors(2, 0));
-    obb.axes[1] = Point3D(eigenVectors(0, 1), eigenVectors(1, 1), eigenVectors(2, 1));
-    obb.axes[2] = Point3D(eigenVectors(0, 2), eigenVectors(1, 2), eigenVectors(2, 2));
+	// 3) 用direction与均匀点做射线，获取与选中曲面的交点
+	std::vector<Point3D> rayIntersectionPoints;
+	auto collectIntersections = [&](const std::vector<double>& rayVec) {
+		for (const auto& pair : pickupMap) {
+			const std::vector<std::wstring>& surfaces = pair.second;
+			for (const auto& surfaceName : surfaces) {
+				CComBSTR bstrSurfaceName(surfaceName.c_str());
+				for (const auto& sample : samplePoints) {
+					double dPosition[3] = { sample.x, sample.y, sample.z };
+					double* dIntersectionPoint = nullptr;
+					int nArrsize = 0;
 
-    // 计算各轴上的范围
-    double minX = std::numeric_limits<double>::max();
-    double maxX = std::numeric_limits<double>::lowest();
-    double minY = std::numeric_limits<double>::max();
-    double maxY = std::numeric_limits<double>::lowest();
-    double minZ = std::numeric_limits<double>::max();
-    double maxZ = std::numeric_limits<double>::lowest();
+					HRESULT hr = m_ptrKit->Part_get_ray_surface_intersetion(
+						bstrSurfaceName, dPosition, const_cast<double*>(rayVec.data()),
+						&dIntersectionPoint, &nArrsize);
 
-    for (const auto& point : allPoints) {
-        // 将点投影到OBB的局部坐标系
-        double dx = point.x - centroid.x;
-        double dy = point.y - centroid.y;
-        double dz = point.z - centroid.z;
+					if (SUCCEEDED(hr) && dIntersectionPoint != nullptr && nArrsize >= 3) {
+						int stride = (nArrsize % 6 == 0) ? 6 : 3;
+						for (int idx = 0; idx + 2 < nArrsize; idx += stride) {
+							Point3D hit(dIntersectionPoint[idx], dIntersectionPoint[idx + 1], dIntersectionPoint[idx + 2]);
+							addUniquePoint(rayIntersectionPoints, hit, pointTolerance);
+						}
+					}
 
-        // 投影到各个轴上
-        double projX = dx * obb.axes[0].x + dy * obb.axes[0].y + dz * obb.axes[0].z;
-        double projY = dx * obb.axes[1].x + dy * obb.axes[1].y + dz * obb.axes[1].z;
-        double projZ = dx * obb.axes[2].x + dy * obb.axes[2].y + dz * obb.axes[2].z;
+					if (dIntersectionPoint != nullptr) {
+						m_ptrKit->PQAPIFree((LONG_PTR*)dIntersectionPoint);
+					}
+				}
+			}
+		}
+	};
 
-        minX = std::min(minX, projX);
-        maxX = std::max(maxX, projX);
-        minY = std::min(minY, projY);
-        maxY = std::max(maxY, projY);
-        minZ = std::min(minZ, projZ);
-        maxZ = std::max(maxZ, projZ);
-    }
+	collectIntersections(direction);
+	std::vector<double> reverseDirection = { -direction[0], -direction[1], -direction[2] };
+	collectIntersections(reverseDirection);
 
-    // 设置半长宽高
-    obb.halfExtents.x = (maxX - minX) / 2.0;
-    obb.halfExtents.y = (maxY - minY) / 2.0;
-    obb.halfExtents.z = (maxZ - minZ) / 2.0;
+	// 4) 获取选中曲面顶点（基于射线交点 + 曲面AABB角点构造顶点候选）
+	std::vector<Point3D> selectedSurfaceVertices;
+	for (const auto& p : rayIntersectionPoints) {
+		addUniquePoint(selectedSurfaceVertices, p, pointTolerance);
+	}
+	for (const auto& p : faceAABBCorners) {
+		addUniquePoint(selectedSurfaceVertices, p, pointTolerance);
+	}
 
-    // 调整中心点位置
-    obb.center.x += (minX + maxX) / 2.0 * obb.axes[0].x + (minY + maxY) / 2.0 * obb.axes[1].x + (minZ + maxZ) / 2.0 * obb.axes[2].x;
-    obb.center.y += (minX + maxX) / 2.0 * obb.axes[0].y + (minY + maxY) / 2.0 * obb.axes[1].y + (minZ + maxZ) / 2.0 * obb.axes[2].y;
-    obb.center.z += (minX + maxX) / 2.0 * obb.axes[0].z + (minY + maxY) / 2.0 * obb.axes[1].z + (minZ + maxZ) / 2.0 * obb.axes[2].z;
+	if (selectedSurfaceVertices.size() < 3) {
+		std::vector<Point3D> mergedCorners = mergedBox.getCorners();
+		for (const auto& p : mergedCorners) {
+			addUniquePoint(selectedSurfaceVertices, p, pointTolerance);
+		}
+	}
 
-    // 获取OBB的8个角点
-    std::vector<Point3D> corners = obb.getCorners();
+	if (selectedSurfaceVertices.size() < 3) {
+		qDebug() << "calculateOBBCornersFromPickupMap: 顶点候选不足，无法构建OBB";
+		return resultPositions;
+	}
 
-    // 将角点坐标展平为连续数组
-    resultPositions.reserve(corners.size() * 3);
-    for (const auto& corner : corners) {
-        resultPositions.push_back(corner.x);
-        resultPositions.push_back(corner.y);
-        resultPositions.push_back(corner.z);
-    }
+	// 5) 使用所有角点候选创建OBB并输出8个角点
+	OBB obb = OBB::calculateOBB(selectedSurfaceVertices);
+	std::vector<Point3D> obbCorners = obb.getCorners();
 
-    qDebug() << "\n计算的OBB包围盒:";
-    qDebug() << "  中心点:" << obb.center.x << obb.center.y << obb.center.z;
-    qDebug() << "  轴向量1:" << obb.axes[0].x << obb.axes[0].y << obb.axes[0].z;
-    qDebug() << "  轴向量2:" << obb.axes[1].x << obb.axes[1].y << obb.axes[1].z;
-    qDebug() << "  轴向量3:" << obb.axes[2].x << obb.axes[2].y << obb.axes[2].z;
-    qDebug() << "  半长:" << obb.halfExtents.x << obb.halfExtents.y << obb.halfExtents.z;
+	resultPositions.reserve(obbCorners.size() * 3);
+	for (const auto& corner : obbCorners) {
+		resultPositions.push_back(corner.x);
+		resultPositions.push_back(corner.y);
+		resultPositions.push_back(corner.z);
+	}
 
-    return resultPositions;
+	qDebug() << "calculateOBBCornersFromPickupMap: 采样点=" << samplePoints.size()
+		<< "交点=" << rayIntersectionPoints.size()
+		<< "顶点候选=" << selectedSurfaceVertices.size()
+		<< "输出角点=" << obbCorners.size();
+
+	return resultPositions;
 }
 
 
