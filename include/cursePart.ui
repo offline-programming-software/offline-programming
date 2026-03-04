@@ -656,17 +656,17 @@
              <widget class="QComboBox" name="comboBox_5">
               <item>
                <property name="text">
+                <string>最小包围盒坐标系</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
                 <string>世界坐标系</string>
                </property>
               </item>
               <item>
                <property name="text">
                 <string>机器人坐标系</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>最小包围盒坐标系</string>
                </property>
               </item>
              </widget>

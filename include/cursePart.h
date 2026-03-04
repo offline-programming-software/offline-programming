@@ -73,19 +73,19 @@ private slots:
 	void on_next_page_clicked();  // 下一页
 	void on_prev_page_clicked();  // 上一页
 	void on_cancel_clicked();     // 取消
-	void on_pickUpButton_clicked();    // 信号1
-	void on_finishButton_clicked();  // 关闭信号
-	void on_deleteButton_clicked();  // 删除选中项
+	void on_pickUpButton_clicked(); // 信号1
+	void on_finishButton_clicked();	// 关闭信号
+	void on_deleteButton_clicked(); // 删除选中项
 	void on_pickupPoint_clicked(); //拾取点
 	void on_previewButton_clicked();  // 预览按钮
-	void on_spaceSettingButton_clicked();  // 文本确认按钮
-	void on_horizontalSlider_valueChanged(int value);//修改划分起点的长度方向位置
-	void on_verticalSlider_valueChanged(int value);//修改划分起点的宽度方向位置
+	void on_spaceSettingButton_clicked();  // 计算包围盒尺寸以及偏差角度
+	void on_horizontalSlider_valueChanged(int value); //修改划分起点的长度方向位置
+	void on_verticalSlider_valueChanged(int value); //修改划分起点的宽度方向位置
 	void on_coordanateTextChanged(); //选择主划分方向 - 移除参数
 	void on_confirm_clicked(); //最后确认按钮
 	void on_calculate_workspace();//获取机器人工作空间
-	void OnDraw();
-	void onRobotSelectionChanged(const QString& currentRobotName);
+	void OnDraw(); //绘制划分曲线
+	void onRobotSelectionChanged(const QString& currentRobotName); //机器人选择变化
 	void OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
 		double i_dPointX, double i_dPointY, double i_dPointZ);
 
@@ -107,8 +107,8 @@ private:
 
 	std::vector<double> OBBPosition;  //最小包围盒八个角点
 	std::vector<double> AABBPosition; //划分包围盒八个角点
-	std::vector<double> points;      //划分区域角点
-	std::vector<double> partPositions; //
+	std::vector<double> points;       //划分区域角点
+	std::vector<double> partPositions;//
 
 	//方向读取
 	std::vector<double> mainDirction;//主方向
@@ -186,9 +186,11 @@ private:
 		const QString& firstAxisName,
 		const QString& secondAxisName);
 
-	//计算得到包围盒长宽厚
-	bool calculateDimensionsFromCorners(const std::vector<double>& OBBPosition,
+	// 计算AABB包围盒长宽厚
+	bool calculateAABBDimensionsFromCorners(const std::vector<double>& AABBPosition,
 		const QString& mainVectorText, double& length, double& width, double& thickness);
+	bool calculateOBBDimensionsFromCorners(const std::vector<double>& OBBPosition,
+		double& length, double& width, double& thickness);
 
 	// 新增：保存工作空间数据的方法
 	void saveWorkspaceData();
