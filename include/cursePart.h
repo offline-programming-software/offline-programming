@@ -99,6 +99,8 @@ private:
 	bool isPickupActive = false;       // 使用成员变量而不是局部变量
 	bool isPreview = false;
 	bool isPoint = false;			   //拾取点
+	bool istest = false;               //测试点
+
 
 	//包围盒
 	AABB divideBox; //划分包围盒
@@ -109,6 +111,9 @@ private:
 	std::vector<double> AABBPosition; //划分包围盒八个角点
 	std::vector<double> points;       //划分区域角点
 	std::vector<double> partPositions;//
+	std::vector<double> aabbPosition;
+	std::vector<double> jiaodians;
+
 
 	//方向读取
 	std::vector<double> mainDirction;//主方向

@@ -598,6 +598,13 @@ void cursePart::on_confirm_clicked()
 
 void cursePart::on_calculate_workspace()
 {
+
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+	if (SUCCEEDED(hr)) {
+		istest = true;
+	}
+
 	QString robotName = ui->comboBox_1->currentText();
 	ULONG robotID = 0;
 
@@ -1059,7 +1066,9 @@ void cursePart::on_spaceSettingButton_clicked()
 			preOtherDivisionDirection = mainVector;
 		}
 
+
 		OBBPosition = calculateOBBCornersFromPickupMap(pickupMap, preOtherDivisionDirection);//计算出包围盒子
+
 
 		std::vector<Point3D> OBBPositions;
 		for (int i = 0; i < OBBPosition.size() / 3; i++) {
@@ -2234,14 +2243,76 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 	// 2) 根据direction在AABB最接近的表面均匀取点
 	double rectLength = std::max(1e-3, std::max(std::abs(boxX), std::abs(boxY)) / 10.0);
 	double rectWidth = std::max(1e-3, std::max(std::abs(boxY), std::abs(boxZ)) / 10.0);
-	std::vector<Point3D> samplePoints = mergedBox.createGridOnClosestSurface(rectLength, rectWidth, rayDirection, true);
+	
+	std::vector<Point3D> samplePoints;
+	Point3D reverseRayDirection(-rayDirection.x, -rayDirection.y, -rayDirection.z);
+	std::vector<Point3D> forwardGrid = mergedBox.createGridOnClosestSurface(rectLength, rectWidth, rayDirection, true);
+	//std::vector<Point3D> reverseGrid = mergedBox.createGridOnClosestSurface(rectLength, rectWidth, reverseRayDirection, true);
+	for (const auto& p : forwardGrid) {
+		addUniquePoint(samplePoints, p, pointTolerance);
+	}
+
+	for (int i = 0; i < samplePoints.size();i++) {
+		aabbPosition.push_back(samplePoints[i].x);
+		aabbPosition.push_back(samplePoints[i].y);
+		aabbPosition.push_back(samplePoints[i].z);
+	}
+
 	if (samplePoints.empty()) {
 		samplePoints = mergedBox.getCorners();
 	}
 
 	// 3) 用direction与均匀点做射线，获取与选中曲面的交点
 	std::vector<Point3D> rayIntersectionPoints;
-	std::vector<double> currentRayVec;
+	Point3D boxCenter(
+		(mergedBox.minPoint.x + mergedBox.maxPoint.x) / 2.0,
+		(mergedBox.minPoint.y + mergedBox.maxPoint.y) / 2.0,
+		(mergedBox.minPoint.z + mergedBox.maxPoint.z) / 2.0);
+
+	auto getAxisDirTowardCenter = [&](const Point3D& sample) {
+		Point3D toCenter(boxCenter.x - sample.x, boxCenter.y - sample.y, boxCenter.z - sample.z);
+		double len = std::sqrt(toCenter.x * toCenter.x + toCenter.y * toCenter.y + toCenter.z * toCenter.z);
+		if (len < 1e-9) {
+			return std::vector<double>{ direction[0], direction[1], direction[2] };
+		}
+
+		// Choose the axis direction closest to rayDirection, then orient toward the center.
+		std::vector<double> rayDir = { rayDirection.x, rayDirection.y, rayDirection.z };
+		normalizeVector(rayDir);
+		if (std::abs(rayDir[0]) < 1e-9 && std::abs(rayDir[1]) < 1e-9 && std::abs(rayDir[2]) < 1e-9) {
+			rayDir = { direction[0], direction[1], direction[2] };
+			normalizeVector(rayDir);
+		}
+
+		std::array<std::vector<double>, 6> axisDirs = {
+			std::vector<double>{ 1.0, 0.0, 0.0 },
+			std::vector<double>{ -1.0, 0.0, 0.0 },
+			std::vector<double>{ 0.0, 1.0, 0.0 },
+			std::vector<double>{ 0.0, -1.0, 0.0 },
+			std::vector<double>{ 0.0, 0.0, 1.0 },
+			std::vector<double>{ 0.0, 0.0, -1.0 }
+		};
+
+		double bestDot = -1.0;
+		std::vector<double> bestAxis = axisDirs[0];
+		for (const auto& axis : axisDirs) {
+			double dot = rayDir[0] * axis[0] + rayDir[1] * axis[1] + rayDir[2] * axis[2];
+			if (dot > bestDot) {
+				bestDot = dot;
+				bestAxis = axis;
+			}
+		}
+
+		double towardCenterDot = bestAxis[0] * toCenter.x + bestAxis[1] * toCenter.y + bestAxis[2] * toCenter.z;
+		if (towardCenterDot < 0.0) {
+			bestAxis[0] = -bestAxis[0];
+			bestAxis[1] = -bestAxis[1];
+			bestAxis[2] = -bestAxis[2];
+		}
+
+		return bestAxis;
+	};
+
 	auto collectIntersections = [&]() {
 		for (const auto& pair : pickupMap) {
 			const std::vector<std::wstring>& surfaces = pair.second;
@@ -2249,17 +2320,17 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 				CComBSTR bstrSurfaceName(surfaceName.c_str());
 				for (const auto& sample : samplePoints) {
 					double dPosition[3] = { sample.x, sample.y, sample.z };
+					std::vector<double> rayVec = getAxisDirTowardCenter(sample);
 					double* dIntersectionPoint = nullptr;
 					int nArrsize = 0;
 
 					HRESULT hr = m_ptrKit->Part_get_ray_surface_intersetion(
-						bstrSurfaceName, dPosition, const_cast<double*>(currentRayVec.data()),
+						bstrSurfaceName, dPosition, const_cast<double*>(rayVec.data()),
 						&dIntersectionPoint, &nArrsize);
 
-					if (SUCCEEDED(hr) && dIntersectionPoint != nullptr && nArrsize >= 3) {
-						int stride = (nArrsize % 6 == 0) ? 6 : 3;
-						for (int idx = 0; idx + 2 < nArrsize; idx += stride) {
-							Point3D hit(dIntersectionPoint[idx], dIntersectionPoint[idx + 1], dIntersectionPoint[idx + 2]);
+					if (SUCCEEDED(hr) && dIntersectionPoint != nullptr && nArrsize >= 1) {
+						for (int idx = 0; idx < nArrsize/6; idx ++) {
+							Point3D hit(dIntersectionPoint[6 * idx], dIntersectionPoint[6 * idx + 1], dIntersectionPoint[6 * idx + 2]);
 							addUniquePoint(rayIntersectionPoints, hit, pointTolerance);
 						}
 					}
@@ -2271,11 +2342,6 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 			}
 		}
 	};
-
-	currentRayVec = direction;
-	collectIntersections();
-	std::vector<double> reverseDirection = { -direction[0], -direction[1], -direction[2] };
-	currentRayVec = reverseDirection;
 	collectIntersections();
 
 	// 4) 获取选中曲面顶点：先取工件所有顶点，再用Part_cheak_point_on_surface筛选
@@ -2331,22 +2397,15 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 		dWorkPartVertex = nullptr;
 	}
 
-	if (selectedSurfaceVertices.size() < 8) {
-		for (const auto& p : aabbCorners) {
-			addUniquePoint(selectedSurfaceVertices, p, pointTolerance);
-		}
-	}
-
-	if (selectedSurfaceVertices.size() < 8) {
-		std::vector<Point3D> mergedCorners = mergedBox.getCorners();
-		for (const auto& p : mergedCorners) {
-			addUniquePoint(selectedSurfaceVertices, p, pointTolerance);
-		}
-	}
-
 	if (selectedSurfaceVertices.size() < 3) {
 		qDebug() << "calculateOBBCornersFromPickupMap: 顶点候选不足，无法构建OBB";
 		return resultPositions;
+	}
+
+	for (int i = 0; i < selectedSurfaceVertices.size(); i++) {
+		jiaodians.push_back(selectedSurfaceVertices[i].x);
+		jiaodians.push_back(selectedSurfaceVertices[i].y);
+		jiaodians.push_back(selectedSurfaceVertices[i].z);
 	}
 
 	// 5) 使用所有角点候选创建OBB并输出8个角点
@@ -2461,6 +2520,51 @@ std::vector<double> cursePart::getAxisVector(const std::vector<std::vector<doubl
 
 void cursePart::OnDraw()
 {
+
+	if (istest) {
+
+		CComBSTR strText1 = "aabb point";
+		double dPos1[3] = { 0.0 };
+		int counter1 = 0;
+		for (size_t i = 0; i < aabbPosition.size(); i++)
+		{
+			dPos1[counter1++] = aabbPosition[i];
+			if ((counter1 % 3) == 0)
+			{
+				m_ptrKit->View_draw_point(dPos1, 0, 3, RGB(10, 40, 200), strText1, RGB(20, 40, 20));
+				counter1 = 0;
+			}
+
+		}
+
+		/*CComBSTR strText2 = "jiaodian point";
+		double dPos2[3] = { 0.0 };
+		int counter2 = 0;
+		for (size_t i = 0; i < jiaodians.size(); i++)
+		{
+			dPos2[counter2++] = jiaodians[i];
+			if ((counter2 % 3) == 0)
+			{
+				m_ptrKit->View_draw_point(dPos2, 0, 3, RGB(10, 60, 200), strText2, RGB(20, 60, 20));
+				counter2 = 0;
+			}
+
+		}*/
+
+		/*CComBSTR strText = "point";
+		double dPos[3] = { 0.0 };
+		int counter = 0;
+		for (size_t i = 0; i < OBBPosition.size(); i++)
+		{
+			dPos[counter++] = OBBPosition[i];
+			if ((counter % 3) == 0)
+			{
+				m_ptrKit->View_draw_point(dPos, 0, 3, RGB(10, 100, 200), strText, RGB(20, 200, 20));
+				counter = 0;
+			}
+
+		}*/
+	}
 
 	if (isPreview) {
 		std::map<int, std::array<double, 3>> pointMap;
