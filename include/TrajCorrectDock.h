@@ -12,7 +12,7 @@
 #include"PickSpinBox.h"
 #include<Eigen/Core>
 #include<Eigen/Dense>
-#include"robxFileIO.h"
+#include"model/CorrectionModel.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class DockContent; };
 QT_END_NAMESPACE
@@ -22,7 +22,7 @@ class QScrollArea;
 namespace 
 {
 	struct CorrectionDataModel
-			{
+	{
 		QString name;
 		QString fittingType;
 		QString beamDir;
@@ -37,8 +37,11 @@ class TrajCorrectDock : public QDockWidget
 	Q_OBJECT
 
 public:
-	explicit TrajCorrectDock(CComPtr<IPQPlatformComponent> ptrKit, CPQKitCallback *ptrKitCallback, QWidget *parent = nullptr);
+	explicit TrajCorrectDock(CComPtr<IPQPlatformComponent> ptrKit, CPQKitCallback* ptrKitCallback,CorrectionModel* model,  QWidget* parent = nullptr) ;
+
 	~TrajCorrectDock();
+	
+
 
 	enum class PickSource {
 		None,
@@ -69,7 +72,7 @@ private:
     Ui::DockContent *ui;
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback *m_ptrKitCallback2;
-	RobxIO* m_io;
+	CorrectionModel* m_model;
 
 	/*-----------------------自定义控件-----------------------------*/
 	pickWidget *listFlagPoints;    //拾取点

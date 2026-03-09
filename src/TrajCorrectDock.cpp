@@ -17,12 +17,15 @@
 TrajCorrectDock::TrajCorrectDock(
     CComPtr<IPQPlatformComponent> ptrKit, 
 	CPQKitCallback *ptrKitCallback, 
-	QWidget *parent
-)
+	CorrectionModel* model,
+    QWidget *parent)
+
 	: QDockWidget(u8"变形修正设置",parent), 
 	  m_ptrKit(ptrKit),
 	  m_ptrKitCallback2(ptrKitCallback), 
-	  ui(new Ui::DockContent())
+	  ui(new Ui::DockContent()),
+	m_model(model)
+
 {
 	//初始化布局
 	QVBoxLayout *layoutForScroll = new QVBoxLayout();
@@ -56,8 +59,7 @@ TrajCorrectDock::TrajCorrectDock(
 	ui->spnMaxDeflection->setDisabled(true);
 	
 	//从json读入数据，初始化数据列表, 初始化变形列表控件
-	m_io = new RobxIO();
-	m_io->updateData(m_correctionList, "correctionList.json");
+	m_correctionList = m_model->corrections();
 	for (const Correction& corr : m_correctionList)
 	{
 		QListWidgetItem* item = new QListWidgetItem(corr.name());
@@ -1028,7 +1030,7 @@ void TrajCorrectDock::on_btnDeleteCorrection_clicked()
 
 void TrajCorrectDock::on_btnSave_clicked()
 {
-	m_io->writeData(m_correctionList, "correctionList.json");
+	m_model->setCorrections(m_correctionList);
 	this->close();
 }
 

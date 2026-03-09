@@ -28,6 +28,8 @@ public:
 
 	QVector<Correction> corrections() const { return m_items; }
 
+	QVector<Correction> getCorrectionCopy() { return m_items; }
+
 private:
 	QVector<Correction> m_items;
 };

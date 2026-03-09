@@ -75,7 +75,6 @@ private:
 
 	//数据模型
 	CorrectionModel* m_correctionModel;
-	QVector<Correction> m_corList;
 	RobxFileIOManagerWidget* m_robxIOMgr = nullptr;//robx文件读写管理界面指针
 
 private:

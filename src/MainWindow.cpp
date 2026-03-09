@@ -209,12 +209,12 @@ void MainWindow::OnOpenRobx()
 
 
 
-	//#临时：
-	RobxIO* io = new RobxIO();
-	io->updateData(m_corList, "correctionList.json");
-	delete io;
+	//#文件打开时，将json文件中的修正数据注入到模型中
+	RobxIO io;
+	QVector<Correction> myCorList;
+	io.updateData(myCorList, "correctionList.json");
 	m_correctionModel = new CorrectionModel(this);
-	m_correctionModel->setCorrections(m_corList);
+	m_correctionModel->setCorrections(myCorList);
 
 }
 
@@ -224,6 +224,10 @@ void MainWindow::OnSaveRobx()
 	CComBSTR bsParam = "";
 	CComBSTR bsCmd = "RO_CMD_FILE_SAVE";
 	m_ptrKit->pq_RunCommand(bsCmd, NULL, NULL, bsParam, CComVariant(), lResult);
+	//保存数据到json文件
+	QVector<Correction> corList = m_correctionModel->corrections();
+	RobxIO io;
+	io.writeData(corList, "correctionList.json");
 	RobxFileIO::updateRobxData(RobxFileIO::GlobalPath());
 }
 
@@ -1497,7 +1501,7 @@ void MainWindow::on_trajCorrectdock_open()
 		QMessageBox::information(this, "提示", "请先打开robx文件！");
 		return;
 	}
-	TrajCorrectDock* dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback);
+	TrajCorrectDock* dock = new TrajCorrectDock(m_ptrKit, m_ptrKitCallback, m_correctionModel);
 	addDockWidget(Qt::LeftDockWidgetArea, dock);
 }
 
@@ -1984,14 +1988,16 @@ void MainWindow::closeEvent(QCloseEvent* event)   //清除原版，副本更名
 
 		m_ptrKit->pq_CloseComponent();
 	}
-
+	//无打开的robx文档，直接关闭窗口
 	if (robxName == L"设计") {
 		event->accept();
 	}
 	else
 	{
 		m_ptrKit->pq_CloseDocument(robxName);
-
+		QVector<Correction> myCorrections = m_correctionModel->getCorrectionCopy();
+		RobxIO io;
+		io.writeData(myCorrections, "correctionList.json");
 		RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
 	}
 }
