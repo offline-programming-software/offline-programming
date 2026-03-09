@@ -1991,7 +1991,6 @@ void MainWindow::closeEvent(QCloseEvent* event)   //清除原版，副本更名
 	else
 	{
 		m_ptrKit->pq_CloseDocument(robxName);
-		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
 		RobxFileIO::uploadJson(RobxFileIO::GlobalPath());
 	}

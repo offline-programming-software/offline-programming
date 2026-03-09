@@ -69,7 +69,19 @@ void BendingManager::getAllPointInfo()
 
 void BendingManager::allocatePointsToCorrectionModels()
 {
-
+	for(auto i: m_correctionModel->getItems())
+	{
+		std::vector<ULONG> trajPointIDsToCorrect;
+		for (int j = 0; j < m_vAllPointInfo.size(); j++)
+		{
+			if (m_vAllPointInfo[j].x >= i.rang(0) && m_vAllPointInfo[j].x <= i.rang(1) &&
+				m_vAllPointInfo[j].y >= i.rang(2) && m_vAllPointInfo[j].y <= i.rang(3) &&
+				m_vAllPointInfo[j].z >= i.rang(4) && m_vAllPointInfo[j].z <= i.rang(5))
+			{
+				trajPointIDsToCorrect.push_back(m_vAllPointInfo[j].id);
+			}
+		}
+	}
 }
 
 void BendingManager::applyOffsets()

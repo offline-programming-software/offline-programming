@@ -88,16 +88,6 @@
     <string>取消</string>
    </property>
   </widget>
-  <widget class="QListView" name="listCorrections">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>40</y>
-     <width>461</width>
-     <height>211</height>
-    </rect>
-   </property>
-  </widget>
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
@@ -110,6 +100,21 @@
    <property name="text">
     <string>修正列表</string>
    </property>
+  </widget>
+  <widget class="QTreeWidget" name="treeCorrection">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>40</y>
+     <width>461</width>
+     <height>211</height>
+    </rect>
+   </property>
+   <column>
+    <property name="text">
+     <string notr="true">1</string>
+    </property>
+   </column>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>

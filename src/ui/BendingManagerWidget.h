@@ -41,18 +41,19 @@ private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
 	CorrectionModel* m_model;
-	BendingManager* m_bendingManager;
 	int m_currentDrawRow = -1;
 
-	void initTree();
-	void initStyle();
 	void setConnections();
 	void OnDraw();
 	void closeEvent(QCloseEvent* event) override;
+	void initTreeWidget();
 
 private slots:
-	void testSlots();
-	void on_listCorrections_clicked(const QModelIndex& index);
 	void on_btnOK_clicked();
+	//修改对应修正对象的isApply属性, 同时如果他有父对象，也把父对象的isApply属性修改为true，并且ui同步
+
+	void on_treeCorrection_itemChanged(QTreeWidgetItem* item, int column);
+	//
+	void on_treeCorrection_currentItemChanded(QTreeWidgetItem* current, QTreeWidgetItem* previous);
 
 };

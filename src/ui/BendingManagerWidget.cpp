@@ -6,6 +6,7 @@
 #include"RobxFileIO.h"
 #include<qlayout.h>
 #include<qlabel.h>
+#include<qmap.h>
 #include<core\BendingManager.h>
 
 class CorrectionModel;
@@ -21,16 +22,20 @@ BendingManagerWidget::BendingManagerWidget(CComPtr<IPQPlatformComponent> ptrKit,
 	, ui(new Ui::BendingManagerWidgetClass())
 {
 	ui->setupUi(this);
-	connect(ui->testBtn1,&QPushButton::clicked,this,&BendingManagerWidget::testSlots);
-	//initTree();
-	//initStyle();
 	setWindowTitle(QString::fromLocal8Bit("对象变形修正"));
 	setWindowFlags(Qt::Window
 		| Qt::WindowContextHelpButtonHint   // 问号
 		| Qt::WindowCloseButtonHint);       // 关闭
-	ui->listCorrections->setModel(m_model);
 
 	setConnections();
+
+	//test 将一个修正对象假装成子对象
+	auto& items = m_model->getItems();
+	items[1].m_parentCorrection = &items[0];
+	ui->treeCorrection->blockSignals(false);
+	initTreeWidget();
+	ui->treeCorrection->blockSignals(false);
+
 }
 
 BendingManagerWidget::~BendingManagerWidget()
@@ -38,69 +43,6 @@ BendingManagerWidget::~BendingManagerWidget()
 	delete ui;
 }
 
-
-void BendingManagerWidget::initTree()
-{
-	ui->treeWidget->setColumnCount(3);
-	BSTR sName;
-	BSTR sIDs;
-	QStringList trajList;
-	m_ptrKit->pq_GetAllDataObjectsByType(PQ_PATH, &sName, &sIDs);
-	trajList = utils::BSTR2QStringList(sName);
-	int trajCount = 0;
-	trajCount = trajList.count();
-	QList<QTreeWidgetItem*> trajItemList;
-	QList<QCheckBox*> chkList;
-	QTreeWidgetItem *group = new QTreeWidgetItem(ui->treeWidget);
-	group->setText(0, "group");
-	QWidget *groupCheck = new QWidget(ui->treeWidget);
-	QHBoxLayout *layout1 = new QHBoxLayout(groupCheck);
-	QCheckBox *chk0 = new QCheckBox(ui->treeWidget);
-	layout1->addWidget(chk0);
-	layout1->setAlignment(Qt::AlignCenter);
-	groupCheck->setLayout(layout1);
-	ui->treeWidget->setItemWidget(group, 2, groupCheck);
-	
-
-	for (int i = 0; i < trajCount; i++)
-	{
-		QTreeWidgetItem *trajItem = new QTreeWidgetItem(group);
-		QCheckBox *chkBox = new QCheckBox(ui->treeWidget);
-		trajItem->setIcon(0, QIcon(":/Images/getpathpoint.png"));
-		trajItem->setText(0, trajList.at(i));
-		trajItemList.append(trajItem);
-		chkList.append(chkBox);
-
-		QWidget *widget = new QWidget(ui->treeWidget);
-		QHBoxLayout *layout = new QHBoxLayout(widget);
-		layout->addWidget(chkBox);
-		layout->setAlignment(Qt::AlignCenter);     // 居中对齐（水平 + 垂直）
-		layout->setContentsMargins(0, 0, 0, 0);    // 去除边距
-		widget->setLayout(layout);
-		ui->treeWidget->setItemWidget(trajItem, 2, widget);
-	}
-	ui->treeWidget->setIconSize(QSize(16, 16));
-	QLabel *label = new QLabel();
-	label->setText(QString::fromLocal8Bit("  correction1"));
-	QLabel *label2 = new QLabel();
-	label2->setText(QString::fromLocal8Bit("  correction1,correction2"));
-	ui->treeWidget->setItemWidget(trajItemList[0], 1, label);
-	ui->treeWidget->setItemWidget(trajItemList[1], 1, label2);
-
-	QList<QString> heads;
-	heads <<QString::fromLocal8Bit("轨迹") << QString::fromLocal8Bit("修正函数") << QString::fromLocal8Bit("是否修正");
-	ui->treeWidget->setHeaderLabels(heads);
-	ui->treeWidget->header()->setDefaultAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-	
-}
-
-void BendingManagerWidget::initStyle()
-{
-	ui->treeWidget->setColumnWidth(0, 100); 
-	ui->treeWidget->setColumnWidth(1, 250); 
-	ui->treeWidget->setColumnWidth(2, 100);
-	ui->treeWidget->setIndentation(8); //子节点缩进
-}
 
 
 void BendingManagerWidget::setConnections()
@@ -219,28 +161,118 @@ void BendingManagerWidget::closeEvent(QCloseEvent* event)
 	m_ptrKit->Doc_end_module(cmd);
 }
 
-void BendingManagerWidget::testSlots() {
-	qDebug() << "test";
-	QLabel *label = new QLabel();
-	label->setText(QString::fromLocal8Bit("correction1"));
-	QLabel *label2 = new QLabel();
-	label2->setText(QString::fromLocal8Bit("correction1,correction2"));
-}
-
-void BendingManagerWidget::on_listCorrections_clicked(const QModelIndex& index)
+void BendingManagerWidget::initTreeWidget()
 {
-	//当打开item被点击时：
-	//获取当前选中的变形的range
-	//在3D视图中高亮显示该范围内的点
-	qDebug() << "clicked item row:" << index.row();
+	ui->treeCorrection->clear();
+	ui->treeCorrection->setHeaderLabel(QString::fromLocal8Bit("修正名称"));
 
-	// ? 保存当前选中行到成员变量
-	m_currentDrawRow = index.row();
+	if (!m_model || m_model->rowCount() == 0)
+		return;
 
-	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-	m_ptrKit->Doc_end_module(cmd);
-	m_ptrKit->Doc_start_module(cmd);
+	QVector<Correction>& items = m_model->getItems();
+
+	// 建立 Correction* -> QTreeWidgetItem* 的映射，用于挂载子节点
+	QMap<Correction*, QTreeWidgetItem*> itemMap;
+
+	// 第一遍：创建所有顶层节点（parentCorrection == nullptr）
+	for (int i = 0; i < items.size(); ++i)
+	{
+		Correction& cor = items[i];
+		//顶层节点
+		if (cor.m_parentCorrection == nullptr)
+		{
+			QTreeWidgetItem* treeItem = new QTreeWidgetItem(ui->treeCorrection);
+			ui->treeCorrection->blockSignals(true);
+			treeItem->setText(0, cor.name());
+			treeItem->setCheckState(0, cor.isApplied() ? Qt::Checked : Qt::Unchecked);
+			treeItem->setData(0, Qt::UserRole, i); // 存储模型行索引
+			ui->treeCorrection->blockSignals(true);
+			itemMap.insert(&cor, treeItem);
+		}
+	}
+
+	// 第二遍：创建所有子节点（parentCorrection != nullptr）
+	for (int i = 0; i < items.size(); ++i)
+	{
+		Correction& cor = items[i];
+		if (cor.m_parentCorrection != nullptr)
+		{
+			QTreeWidgetItem* parentItem = itemMap.value(cor.m_parentCorrection, nullptr);
+			QTreeWidgetItem* treeItem = nullptr;
+			if (parentItem)
+			{
+				treeItem = new QTreeWidgetItem(parentItem);
+			}
+			else
+			{
+				// 找不到父节点时作为顶层节点
+				treeItem = new QTreeWidgetItem(ui->treeCorrection);
+			}
+			ui->treeCorrection->blockSignals(true);
+			treeItem->setText(0, cor.name());
+			treeItem->setCheckState(0, cor.isApplied() ? Qt::Checked : Qt::Unchecked);
+			treeItem->setData(0, Qt::UserRole, i);
+			ui->treeCorrection->blockSignals(true);
+			itemMap.insert(&cor, treeItem);
+		}
+	}
+
+	ui->treeCorrection->expandAll();
+
+	//设置逻辑：父节点未选中子节点不能被选中，子节点选中父节点自动选中。
 }
+
+void BendingManagerWidget::on_treeCorrection_itemChanged(QTreeWidgetItem* item, int column)
+{
+	if (column != 0 || !m_model)
+		return;
+
+	int row = item->data(0, Qt::UserRole).toInt();
+	QVector<Correction>& items = m_model->getItems();
+	if (row < 0 || row >= items.size())
+		return;
+
+	bool checked = (item->checkState(0) == Qt::Checked);
+	items[row].setIsApply(checked);
+
+	ui->treeCorrection->blockSignals(true);
+
+	if (checked)
+	{
+		// 子节点选中时，自动选中父节点
+		QTreeWidgetItem* parentItem = item->parent();
+		if (parentItem)
+		{
+			int parentRow = parentItem->data(0, Qt::UserRole).toInt();
+			if (parentRow >= 0 && parentRow < items.size())
+			{
+				items[parentRow].setIsApply(true);
+				parentItem->setCheckState(0, Qt::Checked);
+			}
+		}
+	}
+	else
+	{
+		// 父节点取消选中时，取消所有子节点
+		for (int i = 0; i < item->childCount(); ++i)
+		{
+			QTreeWidgetItem* child = item->child(i);
+			int childRow = child->data(0, Qt::UserRole).toInt();
+			if (childRow >= 0 && childRow < items.size())
+			{
+				items[childRow].setIsApply(false);
+				child->setCheckState(0, Qt::Unchecked);
+			}
+		}
+	}
+
+	ui->treeCorrection->blockSignals(false);
+}
+
+void BendingManagerWidget::on_treeCorrection_currentItemChanded(QTreeWidgetItem* current, QTreeWidgetItem* previous)
+{
+}
+
 
 void BendingManagerWidget::on_btnOK_clicked()
 {

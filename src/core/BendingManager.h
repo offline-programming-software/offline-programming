@@ -8,7 +8,13 @@
 #include "model\CorrectionModel.h"
 #include <QVector>	
 
-
+/**
+ * @class BendingManager.
+ *
+ * @brief 服务于BendingManagerWidget负责管理所有的轨迹点信息，计算偏移量，并将偏移量应用到轨迹点上。
+ * 
+ * @relates BendingManagerWidget CorrectionModel Correction
+ */
 class BendingManager
 {
 public:
@@ -24,25 +30,27 @@ public:
 public:
 	/**
 	 * @fn getAllPointInfo
+	 *
+	 * @brief 填充m_vAllPointInfo
 	 * 
 	 */
 	void getAllPointInfo();
-	
+	/**
+	 * \fn allocatePointsToCorrectionModels.
+	 * 
+	 * \biref 将轨迹点分配给不同的Correction对象，填充Correction对象的m_trajPointsToCorrect成员
+	 */
 	void allocatePointsToCorrectionModels();
-	/**
-	 * @fn calAllOffsets.
-	 * 
-	 * 为model中所有的轨迹点计算偏移量
-	 */
 	void applyOffsets();
-	/**
-	 * @fn correctPoints.
-	 * 
-	 * 批量修改轨迹点
-	 */
-
-	
 	void applyPosture(const std::vector<trajPoint>& Points);
+	/**
+	 * \fn getID.
+	 * 
+	 * \brief 按对象类型获取ID
+	 *
+	 * \param[out] listID
+	 * \param[in] PQDAtatype
+	 */
 	void getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDAtatype);
 	
 private:
@@ -52,10 +60,9 @@ private:
 	std::vector<ULONG> m_vAllPathIDs;/**所有路径的ID*/
 
 	std::vector<trajPoint> m_vAllPointInfo;
+	CorrectionModel* m_correctionModel;
 	
 
-	CorrectionModel* m_correctionModel;
-	std::vector<ULONG> m_listPath;
 
 };
 
