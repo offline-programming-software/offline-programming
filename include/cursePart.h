@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <qDebug>
 #include <QTimer>
+#include <array>
 #include "boundBox.h"
 #include "ui_cursePart.h"
 #include "PQKitCallback.h"
@@ -150,12 +151,13 @@ private:
 	std::vector<double> calculateAABBCornersFromPickupMap(const std::map<unsigned long,
 		std::vector<std::wstring>>&pickupMap);//设置工作空间八个角点
 	std::vector<double> calculateOBBCornersFromPickupMap(
-		const std::map<unsigned long, std::vector<std::wstring>>& pickupMap, std::vector<double> direction);
+		const std::map<unsigned long, std::vector<std::wstring>>& pickupMap);
 	std::vector<double> getAxisVector(const std::vector<std::vector<double>>& axis, const QString& name);//获取坐标系某个轴的方向向量
 	std::vector<std::vector<double>> getCoordinateAxesFromEuler(double* eulerAngles);//通过坐标系ID获取坐标系位置
 	QMap<ULONG, QString> getObjectsByType(PQDataType objType);//通过数据类型获取ID和名称
 	std::map<std::string, std::pair<std::string, std::string>> loadRobotRelations(const std::string& filePath = "relations.json");
 	void updateLinkedJointCheckBoxes(const std::string& railNameStr);
+	void updateSpraySpeedInputState();
 	QStringList extractStringArrayFromVariant(const VARIANT& variant);//将variant转化为QStringList
 	QList<long> extractLongArrayFromVariant(const VARIANT& variant);//将variant转化为QList
 	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);//获取喷涂机器人列表

@@ -1030,9 +1030,10 @@ void cursePart::on_spaceSettingButton_clicked()
 		std::vector<double> preOtherDivisionDirection;
 		QMap<int, std::vector<double>> preDivisionCoordinateMap;
 
+		//计算出最小包围盒坐标系
 		int preDivisionCoorIndx = ui->comboBox_5->currentIndex();
 		if (preDivisionCoorIndx == 0) {
-			std::vector<double> tempOBBPosition = calculateOBBCornersFromPickupMap(pickupMap, mainVector);
+			std::vector<double> tempOBBPosition = calculateOBBCornersFromPickupMap(pickupMap);
 			if (!tempOBBPosition.empty()) {
 				std::vector<Point3D> tempOBBPositions;
 				for (int i = 0; i < tempOBBPosition.size() / 3; i++) {
@@ -1047,12 +1048,14 @@ void cursePart::on_spaceSettingButton_clicked()
 				preDivisionCoordinateMap.insert(0, tempOBBCoor);
 			}
 		}
-
-		preDivisionCoordinateMap.insert(0, { 0, 0, 0, 0, 0, 0 });
+		//计算出世界坐标系
+		preDivisionCoordinateMap.insert(1, { 0, 0, 0, 0, 0, 0 });
+		//计算出机器人基坐标系
 		std::vector<double> preRobotCoor(6);
 		std::copy(robotCoordinate, robotCoordinate + 6, preRobotCoor.begin());
 		preDivisionCoordinateMap.insert(2, preRobotCoor);
 
+		//计算出划分坐标系
 		auto preDivisionCoorIt = preDivisionCoordinateMap.find(preDivisionCoorIndx);
 		if (preDivisionCoorIt != preDivisionCoordinateMap.end()) {
 			std::vector<double>& preDivisionCoor = preDivisionCoorIt.value();
@@ -1067,8 +1070,7 @@ void cursePart::on_spaceSettingButton_clicked()
 		}
 
 
-		OBBPosition = calculateOBBCornersFromPickupMap(pickupMap, preOtherDivisionDirection);//计算出包围盒子
-
+		OBBPosition = calculateOBBCornersFromPickupMap(pickupMap);//计算出包围盒子
 
 		std::vector<Point3D> OBBPositions;
 		for (int i = 0; i < OBBPosition.size() / 3; i++) {
@@ -1114,11 +1116,12 @@ void cursePart::on_spaceSettingButton_clicked()
 		auto divisionCoorIt = divisionCoordinateMap.find(divisionCoorIndx);
 
 		std::vector<std::vector<double>> divisionCoorVector;
+		std::vector<double> divideCoor;
 		std::vector<double> mainDivisionDirection;
 		std::vector<double> otherDivisionDirection;
 		if (divisionCoorIt != divisionCoordinateMap.end()) {
 			std::vector<double>& divisionCoor = divisionCoorIt.value();
-
+			divideCoor = divisionCoor;
 			// 确保有6个元素
 			if (divisionCoor.size() >= 6) {
 				// 传递指针给函数
@@ -1135,7 +1138,7 @@ void cursePart::on_spaceSettingButton_clicked()
 		}
 
 		//创建划分坐标系
-		std::vector<double> divideCoor = convertToLocalEulerAngles(origin, mainDivisionDirection, otherDivisionDirection);
+		//std::vector<double> divideCoor = convertToLocalEulerAngles(origin, mainDivisionDirection, otherDivisionDirection);
 
 		AABBPosition = transformMultiplePointsToLocal(OBBPosition, divideCoor);
 		std::vector<Point3D> AABBPositions;
@@ -1150,7 +1153,6 @@ void cursePart::on_spaceSettingButton_clicked()
 			mainDivisionDirectionText, otherDivisionDirectionText);
 
 		// 计算最大角度
-		/*Point3D viewDirection(mainVector[0], mainVector[1], mainVector[2]);*/
 		Point3D viewDirection(spayVector[0], spayVector[1], spayVector[2]);
 
 		std::vector<Point3D> result = divideBox.createGridOnClosestSurface(spacing, spacing, viewDirection, true);
@@ -1471,6 +1473,7 @@ void cursePart::updateLinkedJointCheckBoxes(const std::string & railNameStr)
 
 		if (ui->checkBox->isChecked()) { // 检查主联动复选框是否被勾选
 			// 根据 railCount 设置复选框的启用状态
+			ui->textEdit_9->setEnabled(true);
 			switch (railCount) {
 			case 1:
 				ui->checkBox_3->setEnabled(true);
@@ -1500,6 +1503,8 @@ void cursePart::updateLinkedJointCheckBoxes(const std::string & railNameStr)
 			ui->checkBox_3->setEnabled(false);
 			ui->checkBox_4->setEnabled(false);
 			ui->checkBox_5->setEnabled(false);
+			ui->textEdit_9->setEnabled(false);
+			ui->textEdit_9->clear();
 		}
 
 		// 释放分配的内存
@@ -2196,20 +2201,9 @@ std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<
 }
 
 std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<unsigned long,
-	std::vector<std::wstring>>& pickupMap, std::vector<double> direction)
+	std::vector<std::wstring>>&pickupMap)
 {
 	std::vector<double> resultPositions;
-
-	if (direction.size() < 3) {
-		direction = { 0.0, 0.0, 1.0 };
-	}
-
-	normalizeVector(direction);
-	if (std::abs(direction[0]) < 1e-9 && std::abs(direction[1]) < 1e-9 && std::abs(direction[2]) < 1e-9) {
-		direction = { 0.0, 0.0, 1.0 };
-	}
-
-	Point3D rayDirection(direction[0], direction[1], direction[2]);
 
 	std::vector<double> aabbCornerValues = calculateAABBCornersFromPickupMap(pickupMap);
 	if (aabbCornerValues.size() < 24) {
@@ -2240,19 +2234,33 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 	double minBoxDim = std::min(std::min(std::abs(boxX), std::abs(boxY)), std::abs(boxZ));
 	double pointTolerance = std::max(1e-4, minBoxDim * 1e-4);
 
+	// 1) 以AABB最小轴作为direction，不使用曲面顶点
+	std::vector<double> direction = { 1.0, 0.0, 0.0 };
+	if (std::abs(boxY) <= std::abs(boxX) && std::abs(boxY) <= std::abs(boxZ)) {
+		direction = { 0.0, 1.0, 0.0 };
+	}
+	else if (std::abs(boxZ) <= std::abs(boxX) && std::abs(boxZ) <= std::abs(boxY)) {
+		direction = { 0.0, 0.0, 1.0 };
+	}
+
+	normalizeVector(direction);
+	if (std::abs(direction[0]) < 1e-9 && std::abs(direction[1]) < 1e-9 && std::abs(direction[2]) < 1e-9) {
+		direction = { 0.0, 0.0, 1.0 };
+	}
+
+	Point3D rayDirection(direction[0], direction[1], direction[2]);
+
 	// 2) 根据direction在AABB最接近的表面均匀取点
 	double rectLength = std::max(1e-3, std::max(std::abs(boxX), std::abs(boxY)) / 10.0);
 	double rectWidth = std::max(1e-3, std::max(std::abs(boxY), std::abs(boxZ)) / 10.0);
-	
+
 	std::vector<Point3D> samplePoints;
-	Point3D reverseRayDirection(-rayDirection.x, -rayDirection.y, -rayDirection.z);
 	std::vector<Point3D> forwardGrid = mergedBox.createGridOnClosestSurface(rectLength, rectWidth, rayDirection, true);
-	//std::vector<Point3D> reverseGrid = mergedBox.createGridOnClosestSurface(rectLength, rectWidth, reverseRayDirection, true);
 	for (const auto& p : forwardGrid) {
 		addUniquePoint(samplePoints, p, pointTolerance);
 	}
 
-	for (int i = 0; i < samplePoints.size();i++) {
+	for (int i = 0; i < samplePoints.size(); i++) {
 		aabbPosition.push_back(samplePoints[i].x);
 		aabbPosition.push_back(samplePoints[i].y);
 		aabbPosition.push_back(samplePoints[i].z);
@@ -2329,10 +2337,9 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 						&dIntersectionPoint, &nArrsize);
 
 					if (SUCCEEDED(hr) && dIntersectionPoint != nullptr && nArrsize >= 1) {
-						for (int idx = 0; idx < nArrsize/6; idx ++) {
-							Point3D hit(dIntersectionPoint[6 * idx], dIntersectionPoint[6 * idx + 1], dIntersectionPoint[6 * idx + 2]);
-							addUniquePoint(rayIntersectionPoints, hit, pointTolerance);
-						}
+						Point3D hit(dIntersectionPoint[0], dIntersectionPoint[1], dIntersectionPoint[2]);
+						addUniquePoint(rayIntersectionPoints, hit, pointTolerance);
+
 					}
 
 					if (dIntersectionPoint != nullptr) {
@@ -2344,57 +2351,10 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 	};
 	collectIntersections();
 
-	// 4) 获取选中曲面顶点：先取工件所有顶点，再用Part_cheak_point_on_surface筛选
+	// 4) 仅使用射线交点作为OBB候选点
 	std::vector<Point3D> selectedSurfaceVertices;
 	for (const auto& p : rayIntersectionPoints) {
 		addUniquePoint(selectedSurfaceVertices, p, pointTolerance);
-	}
-
-	for (const auto& pair : pickupMap) {
-		ULONG ulPartID = static_cast<ULONG>(pair.first);
-		const std::vector<std::wstring>& surfaces = pair.second;
-		if (surfaces.empty()) {
-			continue;
-		}
-
-		LONG lCount = 0;
-		HRESULT hrCount = m_ptrKit->PQAPIGetWorkPartVertexCount(ulPartID, &lCount);
-		if (FAILED(hrCount) || lCount <= 0) {
-			continue;
-		}
-
-		double* dWorkPartVertex = new double[static_cast<size_t>(lCount) * 3];
-		HRESULT hrVertex = m_ptrKit->PQAPIGetWorkPartVertex(ulPartID, 0, lCount, dWorkPartVertex);
-		if (SUCCEEDED(hrVertex)) {
-			for (LONG idx = 0; idx < lCount; ++idx) {
-				double pointPos[3] = {
-					dWorkPartVertex[idx * 3],
-					dWorkPartVertex[idx * 3 + 1],
-					dWorkPartVertex[idx * 3 + 2]
-				};
-
-				bool onSelectedSurface = false;
-				for (const auto& surfaceName : surfaces) {
-					CComBSTR whSurfaceName(surfaceName.c_str());
-					double dTol = 2.3;
-					LONG bPointOnSurface = 0;
-					HRESULT hrCheck = m_ptrKit->Part_cheak_point_on_surface(
-						whSurfaceName, pointPos, dTol, &bPointOnSurface);
-					if (SUCCEEDED(hrCheck) && bPointOnSurface != 0) {
-						onSelectedSurface = true;
-						break;
-					}
-				}
-
-				if (onSelectedSurface) {
-					addUniquePoint(selectedSurfaceVertices,
-						Point3D(pointPos[0], pointPos[1], pointPos[2]), pointTolerance);
-				}
-			}
-		}
-
-		delete[] dWorkPartVertex;
-		dWorkPartVertex = nullptr;
 	}
 
 	if (selectedSurfaceVertices.size() < 3) {
@@ -2523,7 +2483,7 @@ void cursePart::OnDraw()
 
 	if (istest) {
 
-		CComBSTR strText1 = "aabb point";
+		/*CComBSTR strText1 = "aabb point";
 		double dPos1[3] = { 0.0 };
 		int counter1 = 0;
 		for (size_t i = 0; i < aabbPosition.size(); i++)
@@ -2531,13 +2491,13 @@ void cursePart::OnDraw()
 			dPos1[counter1++] = aabbPosition[i];
 			if ((counter1 % 3) == 0)
 			{
-				m_ptrKit->View_draw_point(dPos1, 0, 3, RGB(10, 40, 200), strText1, RGB(20, 40, 20));
+				m_ptrKit->View_draw_point(dPos1, 0, 3, RGB(255, 0, 0), strText1, RGB(255, 0, 0));
 				counter1 = 0;
 			}
 
 		}
 
-		/*CComBSTR strText2 = "jiaodian point";
+		CComBSTR strText2 = "jiaodian point";
 		double dPos2[3] = { 0.0 };
 		int counter2 = 0;
 		for (size_t i = 0; i < jiaodians.size(); i++)
