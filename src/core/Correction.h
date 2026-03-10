@@ -128,7 +128,6 @@ public:
 	std::vector<double> measurePoints() const { return m_measurePoints; }
 	bool isApplied() const { return m_isApply; }
 	// 在 getter-----------  部分添加
-	std::vector<ULONG> getTrajPointIDsToCorrect() const { return m_vTrajPointIDsToCorrect; }
 	//------getter-----------
 
 	//------setter-----------
@@ -141,45 +140,39 @@ public:
 	void setIsPosCorrect(bool flag) { m_isPosCorrect = flag; }
 	void setFlagPoints(const std::vector<double> flagPoints) { m_flagPoints = flagPoints; }
 	void setMeasurePoints(const std::vector<double> measurePoints) { m_measurePoints = measurePoints; }
-	void set_m_v2dTrajPointsToCorrect(const std::vector<std::array<double,7>> trajPoint2Correct) { m_v2dTrajPointsToCorrect = trajPoint2Correct; }
 	void setIsApply(bool isChecked) { m_isApply = isChecked; }
 	void setBeamDir(const std::vector<double> &dir) { vBeamDirection = dir; }
 	void setBeamOrigin(const std::vector<double>& orig) { vBeamOrigin = orig; }
 	void setBendingDeg(double deg) { m_bendingDeg = deg; }
 	//------setter-----------
 public:	
-	QString m_name = "null";/**修正名称*/
+	QString m_name = "null";/**修正名称 - json*/
 	//选项
-	interpolationType m_interType = interpolationType::Liner;/**默认插值类型*/
-	bool m_isApply = false;/**是否应用*/
-	bool m_isPosCorrect = false; /**是否修正姿态*/
+	interpolationType m_interType = interpolationType::Liner;/**默认插值类型 -json*/
+	bool m_isApply = false;/**是否应用json*/
+	bool m_isPosCorrect = false; /**是否修正姿态-json*/
 
 	//待修正轨迹点
-	std::vector<std::array<double,7>> m_v2dTrajPointsToCorrect; /**待修正轨迹点*/
-	std::vector<trajPoint> m_trajPointsToCorrect; /**待修正轨迹点*/
-	std::vector<trajPoint> m_originTrajPoints; /**原始轨迹点*/
+	std::vector<trajPoint> m_trajPointsToCorrect; /**待修正轨迹点-cal*/
+	std::vector<trajPoint> m_originTrajPoints; /**原始轨迹点-cal*/
 	//作用域
-	std::array<double, 6> m_range = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; /**作用域*/
+	std::array<double, 6> m_range = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; /**作用域-json*/
 
 	//约束点&弯曲量输入
-	double m_bendingDeg = 0.0;
-	std::vector<double> m_flagPoints; /**标志点*/
-	std::vector<double> m_measurePoints;/**测量点*/
+	double m_bendingDeg = 0.0;/**为方便定义，输入的弯曲量角度-json*/
+	std::vector<double> m_flagPoints; /**标志点-json*/
+	std::vector<double> m_measurePoints;/**测量点-json*/
 
 	//beamFream
-	Eigen::Vector3d beamOrigin; /**梁的原点位置*/
-	Eigen::Vector3d beamDirection; /**梁的方向*/
-	std::vector<double> vBeamOrigin = {0.0,0.0,0.0}; /**用于json存储的梁原点位置*/
-	std::vector<double> vBeamDirection = { 1.0,0.0,0.0 };
+	Eigen::Vector3d beamOrigin; /**梁的原点位置-json*/
+	Eigen::Vector3d beamDirection; /**梁的方向-json*/
+	std::vector<double> vBeamOrigin = {0.0,0.0,0.0}; /**用于json存储的梁原点位置-json*/
+	std::vector<double> vBeamDirection = { 1.0,0.0,0.0 };/**用于json存储的梁方向-json*/ 
 	Eigen::Matrix4d m_TBO; /**梁坐标系到机器人基坐标系的变换矩阵*/
-	Eigen::MatrixX3d DeltaXYZ;
 
 	//计算结果	
-	coeffs m_coeffs; /**修正函数系数*/
+	coeffs m_coeffs; /**修正函数系数-json*/
 	std::vector<std::array<double,7>> m_v2dOffSets; /**修正量*/
-	std::vector<ULONG> m_vTrajPointIDsToCorrect; /**待修正轨迹点ID列表*/
-
-	//父类修正对象
 	Correction* m_parentCorrection = nullptr;
 private:
 

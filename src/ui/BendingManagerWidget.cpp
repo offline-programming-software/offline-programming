@@ -278,14 +278,5 @@ void BendingManagerWidget::on_btnOK_clicked()
 {
 	BendingManager manager(m_ptrKit, m_model);
 	std::vector<ULONG> listID;
-	manager.getAllPointInfo();
-	/**
-	 *     **执行弯曲变形应用**
-	 * 1. √ 获取全部轨迹点（PQ接口）  
-	 * 2. √ 将轨迹点分配给各个启用的变形修正函数（CorrectionModel）
-	 * 3. √ 计算每个轨迹点的变形量
-	 * 4. 将变形量应用到轨迹点上（PQ接口）
-	 * m_bendingManager-> allocatePoints(index);
-	 */
 	this->close();
 }

@@ -5,7 +5,7 @@
 #include "PQKitInitThread.h"
 #include "PQKitCallback.h"
 #include "model\CorrectionModel.h"
-
+#include "utils\utils.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class BendingManagerClass; };
 QT_END_NAMESPACE

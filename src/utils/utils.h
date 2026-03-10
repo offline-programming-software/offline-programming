@@ -4,6 +4,11 @@
 #include<qstringlist.h>
 #include<Eigen/dense>
 #include<vector>
+#include "PQKitInitThread.h"
+#include "core/Correction.h"
+#include "PQKitCallback.h"
+#include "core/Correction.h"
+#include <comdef.h>
 
 namespace utils {
 	/** @brief 井号分割的BSTR如"轨迹1#轨迹2#轨迹3#..."转换为QStringlist */
@@ -17,3 +22,40 @@ namespace utils {
 //  * @param[in] viewDir 视线投影的方向，单位向量
 
 }
+
+class PQUtils
+{
+public:
+	PQUtils(CComPtr<IPQPlatformComponent>pqkit);
+	~PQUtils();
+public:
+	/**
+	 * \brief 设置轨迹点的姿态.
+	 * 
+	 * \param[in] pointID 轨迹点ID
+	 * \param[in] posture 轨迹点位姿，注意顺序为x,y,z,w,x,y,z
+	 *
+	 * \note 测试通过
+	 */
+	void setTrajPointPosture(ULONG pointID, const std::array<double, 7>& posture);
+	/**
+	 * \brief 获取所有轨迹点的位姿信息
+	 * 
+	 * \return 包含所有轨迹点信息的vector
+	 * 
+	 * \note 测试通过
+	 */
+	std::vector<trajPoint> getAllTrajPointPosture();
+	/**
+	 * \brief 获取PQ对象ID.
+	 * 
+	 * \param[out] listID 返回的ID列表
+	 * \param[in] PQDAtatype 要获取的对象类型，如PQ_PATH、PQ_POINT等，详见PQ说明文档
+	 * 
+	 * \note 测试通过
+	 */
+	void getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDAtatype);
+private:
+	CComPtr<IPQPlatformComponent> m_ptrKit;
+};
+

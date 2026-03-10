@@ -15,57 +15,6 @@ BendingManager::~BendingManager()
 
 }
 
-void BendingManager::getAllPointInfo()
-{
-	INT count;
-	ULONG* pointID;
-	//获取所有路径信息
-	getID(m_vAllPathIDs, PQ_PATH);
-	//获取轨迹点信息
-	for (int i = 0 ; i < m_vAllPathIDs.size(); i++)
-	{
-		//当前路径轨迹点个数	
-		m_ptrKit->Path_get_point_count(m_vAllPathIDs[i], &count);
-		//获取轨迹点id
-		m_ptrKit->Path_get_point_id(m_vAllPathIDs[i], &count, &pointID);
-		for (int j = 0; j < count; j++)
-			m_vAllTrajPointIDs.push_back(pointID[j]);
-		m_ptrKit->PQAPIFreeArray((LONG_PTR*)pointID);
-		//获取轨迹点位姿
-		int nPostureSize = 0;
-		double* dPosture = nullptr;
-		m_ptrKit->Point_get_posture_batch(m_vAllPathIDs[i],0,count,QUATERNION,0,&nPostureSize,&dPosture);
-		std::vector<double> pos;
-		int nCount = 0;
-		for (int i = 0; i < nPostureSize; i++)
-		{
-			pos.push_back(dPosture[i]);
-			if ((i+1) % 7 == 0)
-			{
-				trajPoint point;
-				m_vAllPointInfo.push_back(point);
-				m_vAllPointInfo[nCount].x = pos[0];
-				m_vAllPointInfo[nCount].y= pos[1];
-				m_vAllPointInfo[nCount].z = pos[2];
-				m_vAllPointInfo[nCount].q1 = pos[3];
-				m_vAllPointInfo[nCount].q2 = pos[4];
-				m_vAllPointInfo[nCount].q3 = pos[5];
-				m_vAllPointInfo[nCount].q4 = pos[6];
-				pos.clear();
-				nCount++;
-			}
-
-		}
-		m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
-
-	}
-	for (int i = 0; i < m_vAllTrajPointIDs.size(); i++)
-	{
-		m_vAllPointInfo[i].id = m_vAllTrajPointIDs[i];
-	}
-
-}
-
 
 void BendingManager::allocatePointsToCorrectionModels()
 {
@@ -106,28 +55,4 @@ void BendingManager::applyPosture(const std::vector<trajPoint>& Points)
 		dPos[6] = p.q4;
 	}
 }
-
-void BendingManager::getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDAtatype)
-{
-	CComBSTR IDs = nullptr;
-	CComBSTR names = nullptr;
-	m_ptrKit->pq_GetAllDataObjectsByType(PQDAtatype, &names, &IDs);
-	std::wstring wStrID(IDs, IDs.Length());
-
-
-	
-	listID.clear();
-	std::wstringstream wss(wStrID);
-	std::wstring token;
-	while (std::getline(wss, token, L'#'))
-	{
-		if (!token.empty())
-		{
-			ULONG id = std::stoul(token);
-			listID.push_back(id);
-		}
-	}
-}
-
-
 

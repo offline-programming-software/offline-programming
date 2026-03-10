@@ -28,18 +28,6 @@ public:
 
 
 public:
-	/**
-	 * @fn getAllPointInfo
-	 *
-	 * @brief 填充m_vAllPointInfo
-	 * 
-	 */
-	void getAllPointInfo();
-	/**
-	 * \fn allocatePointsToCorrectionModels.
-	 * 
-	 * \biref 将轨迹点分配给不同的Correction对象，填充Correction对象的m_trajPointsToCorrect成员
-	 */
 	void allocatePointsToCorrectionModels();
 	void applyOffsets();
 	void applyPosture(const std::vector<trajPoint>& Points);
@@ -51,18 +39,13 @@ public:
 	 * \param[out] listID
 	 * \param[in] PQDAtatype
 	 */
-	void getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDAtatype);
-	
-private:
-	CComPtr<IPQPlatformComponent> m_ptrKit;
-
 	std::vector<ULONG> m_vAllTrajPointIDs/**所有轨迹点的ID*/;
 	std::vector<ULONG> m_vAllPathIDs;/**所有路径的ID*/
-
 	std::vector<trajPoint> m_vAllPointInfo;
 	CorrectionModel* m_correctionModel;
 	
-
+private:
+	CComPtr<IPQPlatformComponent> m_ptrKit;
 
 };
 
