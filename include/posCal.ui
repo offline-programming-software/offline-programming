@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>344</width>
-    <height>409</height>
+    <width>340</width>
+    <height>273</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,115 +18,198 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="4,6">
+    <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>机器人选取</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="comboBox_1"/>
-     </item>
-    </layout>
-   </item>
-   <item row="1" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="4,6">
-     <item>
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>轨迹组名称</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="comboBox_2"/>
-     </item>
-    </layout>
-   </item>
-   <item row="2" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="4,6">
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>轨迹段名称</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="comboBox_3"/>
-     </item>
-    </layout>
-   </item>
-   <item row="3" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="4,6">
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>机器人是否搭载AGV</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="comboBox_4">
+      <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="4,6">
        <item>
-        <property name="text">
-         <string>否</string>
-        </property>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>机器人选取：</string>
+         </property>
+        </widget>
        </item>
        <item>
-        <property name="text">
-         <string>是</string>
-        </property>
+        <widget class="QComboBox" name="comboBox_1">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+        </widget>
        </item>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="4" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="4,6">
-     <item>
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>站位选取</string>
-       </property>
-      </widget>
+      </layout>
      </item>
      <item>
-      <widget class="QComboBox" name="comboBox_5"/>
+      <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="4,6">
+       <item>
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>AGV名称：</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextBrowser" name="textBrowser">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>30</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
-    </layout>
-   </item>
-   <item row="5" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="pushButton_1">
-       <property name="text">
-        <string>计算</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="4,6">
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>轨迹组名称：</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="comboBox_2">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_2">
-       <property name="text">
-        <string>预览</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="4,6">
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>轨迹段名称：</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="comboBox_3">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>30</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_3">
-       <property name="text">
-        <string>确定</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="4,6">
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>是否需要移动AGV</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="comboBox_4">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>30</height>
+          </size>
+         </property>
+         <item>
+          <property name="text">
+           <string>否</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>是</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_4">
-       <property name="text">
-        <string>取消</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="4,6">
+       <item>
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>站位点名称：</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="textEdit">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>30</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QPushButton" name="pushButton_1">
+         <property name="text">
+          <string>计算</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_2">
+         <property name="text">
+          <string>预览</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_3">
+         <property name="text">
+          <string>确定</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_4">
+         <property name="text">
+          <string>取消</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
