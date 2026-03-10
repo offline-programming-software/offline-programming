@@ -157,7 +157,6 @@ private:
 	QMap<ULONG, QString> getObjectsByType(PQDataType objType);//通过数据类型获取ID和名称
 	std::map<std::string, std::pair<std::string, std::string>> loadRobotRelations(const std::string& filePath = "relations.json");
 	void updateLinkedJointCheckBoxes(const std::string& railNameStr);
-	void updateSpraySpeedInputState();
 	QStringList extractStringArrayFromVariant(const VARIANT& variant);//将variant转化为QStringList
 	QList<long> extractLongArrayFromVariant(const VARIANT& variant);//将variant转化为QList
 	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);//获取喷涂机器人列表

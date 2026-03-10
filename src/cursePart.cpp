@@ -191,18 +191,67 @@ std::vector<double> RobotWorkspaceHandler::processRobotWorkspaceQuery(
 	const QString& directionName,
 	double theta,
 	double thickness) {
+	Q_UNUSED(robotName);
 
 	// 首先查找匹配的记录
 	auto matchingPoints = findMatchingPoints(
 		robotID, coordinateName, directionName, theta, thickness
 	);
 
-	if (matchingPoints.empty()) {
-		return matchingPoints; // 返回空向量
+	if (!matchingPoints.empty()) {
+		// 直接返回匹配到的points，不再进行向上取整
+		return matchingPoints;
 	}
 
-	// 直接返回匹配到的points，不再进行向上取整
-	return matchingPoints;
+	// 没有匹配值时，回退到同条件下“最大厚度、最大角度”的工作空间
+	parseJSON queryHelper(jsonFileName);
+	std::map<std::string, json> conditions;
+	conditions["robotID"] = robotID;
+	conditions["CoordinateName"] = coordinateName.toStdString();
+	conditions["DirectionName"] = directionName.toStdString();
+
+	auto results = queryHelper.findObjectsByMultipleKeys(conditions);
+	if (results.empty()) {
+		return {};
+	}
+
+	double bestThickness = std::numeric_limits<double>::lowest();
+	double bestTheta = std::numeric_limits<double>::lowest();
+	std::vector<double> fallbackPoints;
+
+	for (const auto& result : results) {
+		double currentThickness = result.value("thickness", std::numeric_limits<double>::lowest());
+		double currentTheta = result.value("theta", std::numeric_limits<double>::lowest());
+
+		bool isBetter = false;
+		if (currentThickness > bestThickness) {
+			isBetter = true;
+		}
+		else if (std::abs(currentThickness - bestThickness) < 1e-9 && currentTheta > bestTheta) {
+			isBetter = true;
+		}
+
+		if (!isBetter) {
+			continue;
+		}
+
+		if (result.contains("points") && result["points"].is_array()) {
+			std::vector<double> pointsCandidate;
+			for (const auto& point : result["points"]) {
+				if (point.is_number()) {
+					pointsCandidate.push_back(point.get<double>());
+				}
+			}
+
+			if (!pointsCandidate.empty()) {
+				bestThickness = currentThickness;
+				bestTheta = currentTheta;
+				fallbackPoints = std::move(pointsCandidate);
+			}
+		}
+	}
+
+	return fallbackPoints;
 }
 
 cursePart::cursePart(QWidget *parent,
@@ -320,22 +369,6 @@ void cursePart::init() {
 		ui->comboBox_1->setCurrentIndex(0);
 	}
 
-
-	//// 设置坐标系
-	//PQDataType CoodernateType = PQ_COORD;
-	//CoodernateMap = getObjectsByType(CoodernateType);
-
-	//// 创建一个新的QMap，先插入"世界坐标系"，再插入原有的数据
-	//QMap<ULONG, QString> newCoodernateMap;
-	//newCoodernateMap.insert(0, "世界坐标系");  // 先插入首位
-
-	//// 将原有数据插入到后面（键值从1开始）
-	//for (auto it = CoodernateMap.begin(); it != CoodernateMap.end(); ++it) {
-	//	newCoodernateMap.insert(it.key(), it.value());
-	//}
-
-	//CoodernateMap = newCoodernateMap;  // 替换原来的map
-	////QStringList CoodernateNames = CoodernateMap.values();
 	QStringList CoodernateNames;
 	CoodernateNames.push_back("机器人基座标系");
 
@@ -598,16 +631,14 @@ void cursePart::on_confirm_clicked()
 
 void cursePart::on_calculate_workspace()
 {
-
-	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
-	if (SUCCEEDED(hr)) {
-		istest = true;
-	}
+	//1、通过计算出划分坐标系
+	//2、根据选择机器人联动轴计算联动后的工作空间
+	//3、根据划分块的长度和宽度进行对于AABB包围盒划分
 
 	QString robotName = ui->comboBox_1->currentText();
 	ULONG robotID = 0;
 
+	//获取筛选机器人工作空间
 	QString coordinateName = ui->comboBox_3->currentText();
 	QString directionName = ui->comboBox_4->currentText();
 	QString divisionDirName = ui->comboBox_7->currentText();
@@ -634,34 +665,36 @@ void cursePart::on_calculate_workspace()
 		}
 	}
 
-	// 创建划分坐标系
+	// 创建划分坐标系（索引顺序：0包围盒、1世界、2机器人）
 	QMap<int, std::vector<double>> divisionCoordinateMap;
-
-	// 添加世界坐标系
-	std::vector<double> worldCoor = { 0, 0, 0, 0, 0, 0 };
-	divisionCoordinateMap.insert(0, worldCoor);
-
-	// 添加机器人坐标系
-	std::vector<double> robotCoor(6);
-	std::copy(robotCoordinate, robotCoordinate + 6, robotCoor.begin());
-	divisionCoordinateMap.insert(1, robotCoor);
 
 	// 计算包围盒坐标系
 	std::vector<double> OBBCoor = minBox.calculateCoordinateSystemFromCorners(OBBPosition);
 	if (OBBCoor.size() != 6) {
 		OBBCoor.resize(6, 0.0);
 	}
-	divisionCoordinateMap.insert(2, OBBCoor);
+	divisionCoordinateMap.insert(0, OBBCoor);
+
+	// 添加世界坐标系
+	std::vector<double> worldCoor = { 0, 0, 0, 0, 0, 0 };
+	divisionCoordinateMap.insert(1, worldCoor);
+
+	// 添加机器人坐标系
+	std::vector<double> robotCoor(6);
+	std::copy(robotCoordinate, robotCoordinate + 6, robotCoor.begin());
+	divisionCoordinateMap.insert(2, robotCoor);
 
 	// 获取划分坐标系
 	int divisionCoorIndx = ui->comboBox_5->currentIndex();
 	auto divisionCoorIt = divisionCoordinateMap.find(divisionCoorIndx);
 
 	std::vector<std::vector<double>> divisionCoorVector;
+	std::vector<double> divideCoor;
 	std::vector<double> mainDivisionDirection;
 	std::vector<double> otherDivisionDirection;
 	if (divisionCoorIt != divisionCoordinateMap.end()) {
 		std::vector<double>& divisionCoor = divisionCoorIt.value();
+		divideCoor = divisionCoor;
 
 		// 确保有6个元素
 		if (divisionCoor.size() >= 6) {
@@ -698,6 +731,170 @@ void cursePart::on_calculate_workspace()
 		robotName, robotID, coordinateName, directionName, theta, thickness
 	);
 
+	if (ui->checkBox->isChecked()) {
+		//说明存在联动，需要将通过calculateMultiRailRobotWorkspace来扩展机器人工作空间
+		//通过checkBox3、4、5来获取哪些轴参数与联动
+		bool axis_1 = ui->checkBox_3->isChecked();
+		bool axis_2 = ui->checkBox_4->isChecked();
+		bool axis_3 = ui->checkBox_5->isChecked();
+
+		std::vector<int> selectedAxes;
+		if (axis_1) selectedAxes.push_back(0);
+		if (axis_2) selectedAxes.push_back(1);
+		if (axis_3) selectedAxes.push_back(2);
+
+		// calculateMultiRailRobotWorkspace 要求输入8个角点
+		if (!selectedAxes.empty() && foundPoints.size() >= 24) {
+			// 获取当前机器人绑定导轨ID
+			ULONG railID = 0;
+			auto relationIt = relationsMap.find(robotName.toStdString());
+			if (relationIt != relationsMap.end() &&
+				relationIt->second.first != "无" &&
+				!relationIt->second.first.empty()) {
+				GetObjIDByName(PQ_ROBOT,
+					std::wstring(relationIt->second.first.begin(), relationIt->second.first.end()),
+					railID);
+			}
+
+			if (railID != 0) {
+				// 将 foundPoints 前8个点转换为角点输入
+				std::vector<spacePoint> inputCorners;
+				inputCorners.reserve(8);
+				for (int i = 0; i < 24; i += 3) {
+					inputCorners.emplace_back(foundPoints[i], foundPoints[i + 1], foundPoints[i + 2]);
+				}
+
+				// 读取导轨当前关节值
+				int jointCount = 0;
+				double* currentJointsRaw = nullptr;
+				HRESULT jointsHr = m_ptrKit->Doc_get_obj_joints(railID, &jointCount, &currentJointsRaw);
+
+				// 读取导轨关节限位（用于得到每轴行程）
+				int linkCount = 0;
+				double* linksRaw = nullptr;
+				HRESULT linksHr = m_ptrKit->Doc_get_obj_links(railID, &linkCount, &linksRaw);
+
+				if (SUCCEEDED(jointsHr) && currentJointsRaw != nullptr && jointCount > 0 &&
+					SUCCEEDED(linksHr) && linksRaw != nullptr && linkCount >= jointCount * 2) {
+					std::vector<double> currentJoints(currentJointsRaw, currentJointsRaw + jointCount);
+					m_ptrKit->PQAPIFreeArray((LONG_PTR*)currentJointsRaw);
+					currentJointsRaw = nullptr;
+
+					std::vector<std::vector<double>> railDirections;
+					std::vector<double> spraySpeeds;
+					std::vector<double> railSpeeds;
+
+					const double delta = 0.001;
+					double safeThickness = thickness > 1e-6 ? thickness : 1.0;
+
+					for (int axisIndex : selectedAxes) {
+						if (axisIndex < 0 || axisIndex >= jointCount) {
+							continue;
+						}
+
+						std::vector<double> positiveJoints = currentJoints;
+						std::vector<double> negativeJoints = currentJoints;
+						positiveJoints[axisIndex] += delta;
+						negativeJoints[axisIndex] -= delta;
+
+						INT posSize = 0;
+						DOUBLE* posPosture = nullptr;
+						m_ptrKit->Robot_get_forward_kinematics(railID, positiveJoints.data(), jointCount,
+							QUATERNION, 0, 1, &posSize, &posPosture);
+
+						INT negSize = 0;
+						DOUBLE* negPosture = nullptr;
+						m_ptrKit->Robot_get_forward_kinematics(railID, negativeJoints.data(), jointCount,
+							QUATERNION, 0, 1, &negSize, &negPosture);
+
+						if (posPosture != nullptr && negPosture != nullptr && posSize >= 3 && negSize >= 3) {
+							std::vector<double> dir(3, 0.0);
+							double mag = 0.0;
+							for (int c = 0; c < 3; ++c) {
+								double d = (posPosture[c] - negPosture[c]) / (2 * delta);
+								dir[c] = d;
+								mag += d * d;
+							}
+
+							if (mag > 1e-12) {
+								mag = std::sqrt(mag);
+								for (double& v : dir) {
+									v /= mag;
+								}
+
+								// 用导轨轴行程作为扩展距离：extension = (spray/rail) * thickness
+								// 这里设置 spray = stroke / thickness, rail = 1，则 extension = stroke。
+								double stroke = std::abs(linksRaw[2 * axisIndex + 1] - linksRaw[2 * axisIndex]);
+								if (stroke > 1e-9) {
+									railDirections.push_back(dir);
+									spraySpeeds.push_back(stroke / safeThickness);
+									railSpeeds.push_back(1.0);
+								}
+							}
+						}
+
+						if (posPosture) {
+							m_ptrKit->PQAPIFree((LONG_PTR*)posPosture);
+						}
+						if (negPosture) {
+							m_ptrKit->PQAPIFree((LONG_PTR*)negPosture);
+						}
+					}
+
+					if (!railDirections.empty()) {
+						spacePoint initialCenter(0, 0, 0);
+						for (const auto& p : inputCorners) {
+							initialCenter.x += p.x;
+							initialCenter.y += p.y;
+							initialCenter.z += p.z;
+						}
+						initialCenter.x /= inputCorners.size();
+						initialCenter.y /= inputCorners.size();
+						initialCenter.z /= inputCorners.size();
+
+						Workspace ws(initialCenter, spacePoint(1, 1, 1), m_ptrKit, m_ptrKitCallback, mainDirction);
+						Workspace expandedWs = ws.calculateMultiRailRobotWorkspace(
+							robotID,
+							inputCorners,
+							railDirections,
+							spraySpeeds,
+							railSpeeds,
+							initialCenter,
+							safeThickness,
+							theta,
+							mainDirction,
+							5,
+							1.0);
+
+						spacePoint c = expandedWs.getCenter();
+						spacePoint s = expandedWs.getSize();
+						double hx = s.x / 2.0;
+						double hy = s.y / 2.0;
+						double hz = s.z / 2.0;
+
+						foundPoints.clear();
+						foundPoints.reserve(24);
+						for (int sx : { -1, 1 }) {
+							for (int sy : { -1, 1 }) {
+								for (int sz : { -1, 1 }) {
+									foundPoints.push_back(c.x + sx * hx);
+									foundPoints.push_back(c.y + sy * hy);
+									foundPoints.push_back(c.z + sz * hz);
+								}
+							}
+						}
+					}
+				}
+
+				if (currentJointsRaw) {
+					m_ptrKit->PQAPIFreeArray((LONG_PTR*)currentJointsRaw);
+				}
+				if (linksRaw) {
+					m_ptrKit->PQAPIFreeArray((LONG_PTR*)linksRaw);
+				}
+			}
+		}
+	}
 
 	//查询划分区域的长和宽
 	if (!foundPoints.empty()) {
@@ -790,6 +987,8 @@ void cursePart::on_calculate_workspace()
 			}
 
 			// 将计算出的长和宽设置到textEdit_1和textEdit_2
+			// 需要通过选择机器人是否联动重新计算划分长和宽
+
 			ui->textEdit_1->setPlainText(QString::number(length, 'f', 2));
 			ui->textEdit_2->setPlainText(QString::number(width, 'f', 2));
 		}
@@ -848,15 +1047,114 @@ void cursePart::on_calculate_workspace()
 	int width = ui->textEdit_2->toPlainText().toDouble();
 
 	Point3D direction(mainDirction[0], mainDirction[1], mainDirction[2]);
-	// 使用之前计算的包围盒信息生成点阵
-
-	std::vector<Point3D> corners;
-	for (int i = 0; i < OBBPosition.size() / 3; i++) {
-		Point3D ans(OBBPosition[3 * i], OBBPosition[3 * i + 1], OBBPosition[3 * i + 2]);
-		corners.push_back(ans);
+	// 按流程：曲面最小包围盒(世界) -> 划分坐标系下AABB -> 转回世界坐标后再划分
+	std::vector<double> surfaceObbWorldCorners = OBBPosition;
+	if (surfaceObbWorldCorners.size() != 24) {
+		surfaceObbWorldCorners = calculateOBBCornersFromPickupMap(pickupMap);
 	}
-	minBox = minBox.calculateOBB(corners);
-	auto grid = minBox.createGridOnClosestSurface(length, width, direction, true);
+
+	std::vector<Point3D> surfaceObbPoints;
+	for (int i = 0; i < surfaceObbWorldCorners.size() / 3; ++i) {
+		surfaceObbPoints.emplace_back(
+			surfaceObbWorldCorners[3 * i],
+			surfaceObbWorldCorners[3 * i + 1],
+			surfaceObbWorldCorners[3 * i + 2]);
+	}
+	if (!surfaceObbPoints.empty()) {
+		minBox = OBB::calculateOBB(surfaceObbPoints);
+		OBBPosition = surfaceObbWorldCorners;
+	}
+
+	std::vector<double> localAabbCornersFlat;
+	if (divideCoor.size() >= 6 && surfaceObbWorldCorners.size() % 3 == 0 && !surfaceObbWorldCorners.empty()) {
+		try {
+			std::vector<double> localObbCorners = transformMultiplePointsToLocal(surfaceObbWorldCorners, divideCoor);
+			std::vector<Point3D> localObbPoints;
+			for (int i = 0; i < localObbCorners.size() / 3; ++i) {
+				localObbPoints.emplace_back(localObbCorners[3 * i], localObbCorners[3 * i + 1], localObbCorners[3 * i + 2]);
+			}
+
+			AABB localAabbBox = AABB::calculateAABB(localObbPoints);
+			std::vector<Point3D> localAabbCorners = localAabbBox.getCorners();
+			localAabbCornersFlat.reserve(localAabbCorners.size() * 3);
+			for (const auto& p : localAabbCorners) {
+				localAabbCornersFlat.push_back(p.x);
+				localAabbCornersFlat.push_back(p.y);
+				localAabbCornersFlat.push_back(p.z);
+			}
+		}
+		catch (const std::exception& ex) {
+			qWarning() << "在划分坐标系中计算AABB失败:" << ex.what();
+		}
+	}
+
+	if (!localAabbCornersFlat.empty()) {
+		AABBPosition = localAabbCornersFlat;
+	}
+
+	std::vector<double> aabbWorldPosition = surfaceObbWorldCorners;
+	if (divideCoor.size() >= 6 && AABBPosition.size() % 3 == 0 && !AABBPosition.empty()) {
+		try {
+			aabbWorldPosition = transformMultiplePointsToWorld(AABBPosition, divideCoor);
+		}
+		catch (const std::exception& ex) {
+			qWarning() << "AABBPosition从划分坐标系转换到世界坐标失败:" << ex.what();
+		}
+	}
+
+	std::vector<Point3D> aabbWorldPoints;
+	for (int i = 0; i < aabbWorldPosition.size() / 3; ++i) {
+		aabbWorldPoints.emplace_back(
+			aabbWorldPosition[3 * i],
+			aabbWorldPosition[3 * i + 1],
+			aabbWorldPosition[3 * i + 2]);
+	}
+	if (aabbWorldPoints.empty()) {
+		qWarning() << "AABB角点为空，无法进行划分";
+		return;
+	}
+
+	AABB worldAabbBox = AABB::calculateAABB(aabbWorldPoints);
+	auto grid = worldAabbBox.createGridOnClosestSurface(length, width, direction, true);
+
+	// 从 textEdit_6/7/8 获取平面过点，并由主/次划分方向构建平面后投影 grid
+	bool okX = false;
+	bool okY = false;
+	bool okZ = false;
+	double planeX = ui->textEdit_6->toPlainText().trimmed().toDouble(&okX);
+	double planeY = ui->textEdit_7->toPlainText().trimmed().toDouble(&okY);
+	double planeZ = ui->textEdit_8->toPlainText().trimmed().toDouble(&okZ);
+
+	if (okX && okY && okZ && mainDivisionDirection.size() >= 3 && otherDivisionDirection.size() >= 3) {
+		std::vector<double> planeNormal = crossProduct(mainDivisionDirection, otherDivisionDirection);
+		double normalLen = std::sqrt(
+			planeNormal[0] * planeNormal[0] +
+			planeNormal[1] * planeNormal[1] +
+			planeNormal[2] * planeNormal[2]);
+
+		if (normalLen > 1e-9) {
+			for (double& v : planeNormal) {
+				v /= normalLen;
+			}
+
+			for (auto& p : grid) {
+				double vx = p.x - planeX;
+				double vy = p.y - planeY;
+				double vz = p.z - planeZ;
+				double signedDistance = vx * planeNormal[0] + vy * planeNormal[1] + vz * planeNormal[2];
+
+				p.x -= signedDistance * planeNormal[0];
+				p.y -= signedDistance * planeNormal[1];
+				p.z -= signedDistance * planeNormal[2];
+			}
+		}
+		else {
+			qWarning() << "主划分方向与次要划分方向近似平行，无法构建投影平面";
+		}
+	}
+	else {
+		qWarning() << "平面点坐标或划分方向无效，跳过 grid 投影";
+	}
 
 	points.clear(); // 清空之前的点数据
 	for (auto p : grid) {
@@ -1092,24 +1390,24 @@ void cursePart::on_spaceSettingButton_clicked()
 		origin.push_back(originY.toDouble());
 		origin.push_back(originZ.toDouble());
 
-		// 创建划分坐标系
+		// 创建划分坐标系（索引顺序：0包围盒、1世界、2机器人）
 		QMap<int, std::vector<double>> divisionCoordinateMap;
-
-		// 添加世界坐标系
-		std::vector<double> worldCoor = { 0, 0, 0, 0, 0, 0 };
-		divisionCoordinateMap.insert(0, worldCoor);
-
-		// 添加机器人坐标系
-		std::vector<double> robotCoor(6);
-		std::copy(robotCoordinate, robotCoordinate + 6, robotCoor.begin());
-		divisionCoordinateMap.insert(1, robotCoor);
 
 		// 计算包围盒坐标系
 		std::vector<double> OBBCoor = minBox.calculateCoordinateSystemFromCorners(OBBPosition);
 		if (OBBCoor.size() != 6) {
 			OBBCoor.resize(6, 0.0);
 		}
-		divisionCoordinateMap.insert(2, OBBCoor);
+		divisionCoordinateMap.insert(0, OBBCoor);
+
+		// 添加世界坐标系
+		std::vector<double> worldCoor = { 0, 0, 0, 0, 0, 0 };
+		divisionCoordinateMap.insert(1, worldCoor);
+
+		// 添加机器人坐标系
+		std::vector<double> robotCoor(6);
+		std::copy(robotCoordinate, robotCoordinate + 6, robotCoor.begin());
+		divisionCoordinateMap.insert(2, robotCoor);
 
 		// 获取划分坐标系
 		int divisionCoorIndx = ui->comboBox_5->currentIndex();
@@ -1144,6 +1442,7 @@ void cursePart::on_spaceSettingButton_clicked()
 		std::vector<Point3D> AABBPositions;
 		for (int i = 0; i < AABBPosition.size() / 3; i++) {
 			Point3D ans(AABBPosition[3 * i], AABBPosition[3 * i + 1], AABBPosition[3 * i + 2]);
+			AABBPositions.push_back(ans);
 		}
 		//划分包围盒
 		divideBox = AABB::calculateAABB(AABBPositions);
@@ -1207,7 +1506,7 @@ void cursePart::on_spaceSettingButton_clicked()
 		qDebug() << "厚度计算完成：" << m_thickness << "mm";
 
 		// 赋值三个方向向量变量
-		mainDirction = mainVector;					// 主方向向量
+		mainDirction = crossProduct(mainDivisionDirection, otherDivisionDirection);	// 主方向向量（主/次划分方向叉乘）
 		divisionDirection = mainDivisionDirection;  // 主划分方向向量
 		otherDirection = otherDivisionDirection;	// 次划分方向向量
 
