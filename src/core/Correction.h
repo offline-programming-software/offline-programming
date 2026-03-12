@@ -174,6 +174,7 @@ public:
 	coeffs m_coeffs; /**修正函数系数-json*/
 	std::vector<std::array<double,7>> m_v2dOffSets; /**修正量*/
 	Correction* m_parentCorrection = nullptr;
+	std::vector<Correction*> m_childCorrections;
 private:
 
 

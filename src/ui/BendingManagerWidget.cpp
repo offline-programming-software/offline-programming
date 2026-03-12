@@ -29,18 +29,24 @@ BendingManagerWidget::BendingManagerWidget(CComPtr<IPQPlatformComponent> ptrKit,
 
 	setConnections();
 
-	//test 将一个修正对象假装成子对象
+
+	//test 将一个修正对象假装成子对象 mockmockmockmock
 	auto& items = m_model->getItems();
 	items[1].m_parentCorrection = &items[0];
+	items[2].m_parentCorrection = &items[0];
+	items[0].m_childCorrections.push_back(&items[1]);
+	items[0].m_childCorrections.push_back(&items[2]);
 	ui->treeCorrection->blockSignals(false);
 	initTreeWidget();
 	ui->treeCorrection->blockSignals(false);
+	m_manager = new BendingManager(m_ptrKit, m_model);
 
 }
 
 BendingManagerWidget::~BendingManagerWidget()
 {
 	delete ui;
+	delete m_manager;
 }
 
 
@@ -48,6 +54,7 @@ BendingManagerWidget::~BendingManagerWidget()
 void BendingManagerWidget::setConnections()
 {
 	connect(m_ptrKitCallback, &CPQKitCallback::signalDraw, this, &BendingManagerWidget::OnDraw);
+	connect(this, &BendingManagerWidget::correctionApplyStateChanged, this, &BendingManagerWidget::applyBendingCorrection);
 }
 
 void BendingManagerWidget::OnDraw()
@@ -233,11 +240,12 @@ void BendingManagerWidget::on_treeCorrection_itemChanged(QTreeWidgetItem* item, 
 		return;
 
 	bool checked = (item->checkState(0) == Qt::Checked);
-	items[row].setIsApply(checked);
-
+	//items[row].setIsApply(checked);	
+	//emit correctionApplyStateChanged(items[row]);
 	ui->treeCorrection->blockSignals(true);
 
-	if (checked)
+	
+	if (checked)//检查父节点
 	{
 		// 子节点选中时，自动选中父节点
 		QTreeWidgetItem* parentItem = item->parent();
@@ -246,12 +254,19 @@ void BendingManagerWidget::on_treeCorrection_itemChanged(QTreeWidgetItem* item, 
 			int parentRow = parentItem->data(0, Qt::UserRole).toInt();
 			if (parentRow >= 0 && parentRow < items.size())
 			{
-				items[parentRow].setIsApply(true);
-				parentItem->setCheckState(0, Qt::Checked);
+				if(!items[parentRow].isApplied())
+				{
+					items[parentRow].setIsApply(true);
+					emit correctionApplyStateChanged(items[parentRow]);
+					parentItem->setCheckState(0, Qt::Checked);
+				}
 			}
 		}
+		//再勾选本节点
+		items[row].setIsApply(true);
+		emit correctionApplyStateChanged(items[row]);
 	}
-	else
+	else//取消勾选，检查子节点
 	{
 		// 父节点取消选中时，取消所有子节点
 		for (int i = 0; i < item->childCount(); ++i)
@@ -260,18 +275,30 @@ void BendingManagerWidget::on_treeCorrection_itemChanged(QTreeWidgetItem* item, 
 			int childRow = child->data(0, Qt::UserRole).toInt();
 			if (childRow >= 0 && childRow < items.size())
 			{
-				items[childRow].setIsApply(false);
-				child->setCheckState(0, Qt::Unchecked);
+				if (items[childRow].isApplied())
+				{
+					items[childRow].setIsApply(false);
+					emit correctionApplyStateChanged(items[childRow]);
+					child->setCheckState(0, Qt::Unchecked);
+				}
 			}
 		}
+		items[row].setIsApply(false);
+		emit correctionApplyStateChanged(items[row]);
 	}
 
 	ui->treeCorrection->blockSignals(false);
 }
 
-void BendingManagerWidget::on_treeCorrection_currentItemChanded(QTreeWidgetItem* current, QTreeWidgetItem* previous)
+void BendingManagerWidget::on_treeCorrection_currentItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous)
 {
 }
+
+void BendingManagerWidget::applyBendingCorrection(Correction& cor)
+{
+	
+}
+
 
 
 void BendingManagerWidget::on_btnOK_clicked()

@@ -1508,7 +1508,7 @@ void MainWindow::on_trajCorrectdock_open()
 
 void MainWindow::on_bendingManagerWidget_open()
 {
-	BendingManagerWidget* widget = new BendingManagerWidget(m_ptrKit, m_ptrKitCallback, m_correctionModel);
+	BendingManagerWidget* widget = new BendingManagerWidget(m_ptrKit, m_ptrKitCallback, m_correctionModel,this);
 	widget->show();
 }
 

@@ -41,6 +41,7 @@ private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
 	CorrectionModel* m_model;
+	BendingManager* m_manager;
 	int m_currentDrawRow = -1;
 
 	void setConnections();
@@ -52,8 +53,19 @@ private slots:
 	void on_btnOK_clicked();
 	//修改对应修正对象的isApply属性, 同时如果他有父对象，也把父对象的isApply属性修改为true，并且ui同步
 
+	/**
+	 * \brief 当树形视图中的某个修正对象被选中或取消选中时：
+	 * 0. 勾选时，检查该对象是否有父对象，取消勾选时，检查该对象是否有子对象
+	 * 1. 更新对应修正对象的isApply属性
+	 * 2. 发送信号，调用对应接口通知bendingmanager和对应correction执行更新
+	 * 
+	 */
 	void on_treeCorrection_itemChanged(QTreeWidgetItem* item, int column);
-	//
-	void on_treeCorrection_currentItemChanded(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+	void on_treeCorrection_currentItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+	void applyBendingCorrection(Correction& cor);
+
+signals:
+	void correctionApplyStateChanged(Correction& cor);
+	
 
 };

@@ -61,6 +61,7 @@ public:
 	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);//获取机构名称
 	QMap<ULONG, QString> getObjectsByType(PQDataType objType);//获取机构ID和机构名称
 	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);//机器人ID和机构名称
+	CComPtr<IPQPlatformComponent> getPQKit() { return m_ptrKit; }
 
 private:
 	Ui::MainWindow *ui;
