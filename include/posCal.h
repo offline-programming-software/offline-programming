@@ -52,9 +52,13 @@ private:
 	Ui::posCalClass *ui;
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
+	std::map<std::string, std::pair<std::string, std::string>> relationsMap;//存储关系
 
 	// 初始化函数
 	void init();
+
+	
+	std::map<std::string, std::pair<std::string, std::string>> loadRobotRelations(const std::string& filePath = "relations.json");
 
 	// 根据类型获取对象列表
 	QMap<ULONG, QString> getObjectsByType(PQDataType objType);

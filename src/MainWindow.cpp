@@ -428,7 +428,8 @@ void MainWindow::on_create_path()
 	//wchar_t whMoudle[256] = L"RO_CMD_GENERATE_PATH";
 	//m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
 
-	wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
+	//wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
+	wchar_t whMoudle[] = L"RO_CMD_GENERATE_PATH";
 	m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
 }
 
@@ -949,7 +950,8 @@ void MainWindow::on_insert_path()
 
 	//默认取第一个机器人
 	ULONG uRobotID = 0;
-	GetObjIDByName(PQ_ROBOT, _T(""), uRobotID);
+	/*GetObjIDByName(PQ_ROBOT, _T(""), uRobotID);*/
+	GetObjIDByName(PQ_ROBOT, L"", uRobotID);
 
 	//
 	int nType = 1;
@@ -961,8 +963,10 @@ void MainWindow::on_insert_path()
 	double dVel[1] = { 200.0 };
 	double dSpeedP[1] = { 100.0 };
 	int nApproach[1] = { -1 };
-	wchar_t whPathName[] = _T("Test_Path");
-	wchar_t whPathGroupName[] = _T("Test_Group");
+	/*wchar_t whPathName[] = _T("Test_Path");
+	wchar_t whPathGroupName[] = _T("Test_Group");*/
+	wchar_t whPathName[] = L"Test_Path";
+	wchar_t whPathGroupName[] = L"Test_Group";
 
 	ULONG uPathID = 0;
 	m_ptrKit->Path_insert_from_point(uRobotID, 1, dPosition, eType, nInstruction, dVel, dSpeedP, nApproach, whPathName, whPathGroupName, 0, FALSE, &uPathID, TRUE);

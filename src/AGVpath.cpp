@@ -100,7 +100,7 @@ void AGVpath::init()
 	}
 
 	ui->comboBox_1->addItems(AGVNames);
-	ui->comboBox_5->addItems(AGVNames);
+	//ui->comboBox_5->addItems(AGVNames);
 
 	QString AGVName = ui->comboBox_1->currentText();
 
