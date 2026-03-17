@@ -24,6 +24,9 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class cursePartClass; };
 QT_END_NAMESPACE
 
+static constexpr double kSliderRange = 500.0;
+constexpr double kDefaultSliderRange = 500.0;
+
 // 机器人工作空间处理器类
 class RobotWorkspaceHandler {
 private:
@@ -121,6 +124,10 @@ private:
 	std::vector<double> divisionDirection;//划分方向
 	std::vector<double> otherDirection;//次要划分方向
 
+	std::vector<double> m_divideCoordinateSystem;
+	std::vector<double> m_localGridPoints;
+	int m_leftBottomIndex = -1;
+
 	//实现曲面的选取
 	std::map<ULONG, std::vector<std::wstring>> pickupMap;//用于记录选取的曲面
 	int indx = 0;
@@ -147,6 +154,14 @@ private:
 	void setupGraphicsScenes(); // 初始化图形场景
 	void setStepsExplanation();// 设置每个界面的功能介绍
 	void init(); //初始化界面
+
+	bool updateGridLocalCache(const std::vector<double>& divideCoor);
+	int findLeftBottomIndex(const std::vector<double>& localPoints) const;
+	void updateLeftBottomTextsFromLocal(bool updateBase);
+	void applyLocalGridTranslation(double deltaMain, double deltaOther);
+	bool canUseLocalGridControls() const;
+	bool handleSliderInLocal(int sliderValue, bool isMainAxis);
+
 	void addItemToListView(const QString& item);//在曲面控件中添加曲面
 	std::vector<double> calculateAABBCornersFromPickupMap(const std::map<unsigned long,
 		std::vector<std::wstring>>&pickupMap);//设置工作空间八个角点
@@ -197,6 +212,12 @@ private:
 		const QString& mainVectorText, double& length, double& width, double& thickness);
 	bool calculateOBBDimensionsFromCorners(const std::vector<double>& OBBPosition,
 		double& length, double& width, double& thickness);
+
+	double getSliderRange(bool isMainAxis) const;
+	int axisIndexFromDirection(const QString& directionText) const;
+	double getAxisBaseValue(int axisIndex) const;
+	void updateAxisTextByIndex(int axisIndex, double value);
+	void applyAreaPositionOffset();
 
 	// 新增：保存工作空间数据的方法
 	void saveWorkspaceData();

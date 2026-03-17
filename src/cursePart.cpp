@@ -24,6 +24,107 @@ static std::vector<double> crossProduct(const std::vector<double>& a, const std:
 	return result;
 }
 
+static std::vector<std::vector<double>> normalizeAxesCopy(const std::vector<std::vector<double>>& axes)
+{
+	std::vector<std::vector<double>> normalized = axes;
+	for (auto& axis : normalized) {
+		if (axis.size() == 3) {
+			normalizeVector(axis);
+		}
+	}
+	return normalized;
+}
+
+static double computeExtentAlongAxis(const std::vector<double>& points, const std::vector<double>& axis)
+{
+	if (points.size() < 3 || axis.size() != 3) {
+		return 0.0;
+	}
+
+	double minProj = std::numeric_limits<double>::max();
+	double maxProj = std::numeric_limits<double>::lowest();
+
+	for (size_t i = 0; i + 2 < points.size(); i += 3) {
+		const double projection =
+			points[i] * axis[0] +
+			points[i + 1] * axis[1] +
+			points[i + 2] * axis[2];
+
+		minProj = std::min(minProj, projection);
+		maxProj = std::max(maxProj, projection);
+	}
+
+	return maxProj - minProj;
+}
+
+static bool extractAxisExtents(
+	const std::vector<double>& points,
+	const std::vector<std::vector<double>>& normalizedAxes,
+	std::array<double, 3>& extents)
+{
+	if (points.size() < 3 || normalizedAxes.size() < 3) {
+		return false;
+	}
+
+	for (int i = 0; i < 3; ++i) {
+		if (normalizedAxes[i].size() != 3) {
+			return false;
+		}
+		extents[i] = computeExtentAlongAxis(points, normalizedAxes[i]);
+	}
+
+	return true;
+}
+
+static std::array<int, 3> matchAxesByDotProduct(
+	const std::vector<std::vector<double>>& sourceAxes,
+	const std::vector<std::vector<double>>& targetAxes)
+{
+	std::array<int, 3> mapping{ -1, -1, -1 };
+	if (sourceAxes.size() < 3 || targetAxes.size() < 3) {
+		return mapping;
+	}
+
+	std::array<bool, 3> usedTargets{ false, false, false };
+	for (int i = 0; i < 3; ++i) {
+		double bestDot = -1.0;
+		int bestIndex = -1;
+		for (int j = 0; j < 3; ++j) {
+			if (usedTargets[j]) {
+				continue;
+			}
+			double dot =
+				sourceAxes[i][0] * targetAxes[j][0] +
+				sourceAxes[i][1] * targetAxes[j][1] +
+				sourceAxes[i][2] * targetAxes[j][2];
+			dot = std::fabs(dot);
+			if (dot > bestDot) {
+				bestDot = dot;
+				bestIndex = j;
+			}
+		}
+
+		if (bestIndex != -1) {
+			mapping[i] = bestIndex;
+			usedTargets[bestIndex] = true;
+		}
+	}
+
+	for (int i = 0; i < 3; ++i) {
+		if (mapping[i] == -1) {
+			for (int j = 0; j < 3; ++j) {
+				if (!usedTargets[j]) {
+					mapping[i] = j;
+					usedTargets[j] = true;
+					break;
+				}
+			}
+		}
+	}
+
+	return mapping;
+}
+
 // RobotWorkspaceHandler 类实现
 void RobotWorkspaceHandler::writeRobotWorkspaceBoundary(const RobotWorkspaceBoundary& boundary) {
 	json jsonData;
@@ -416,6 +517,158 @@ void cursePart::init() {
 	pickupMap.clear();
 }
 
+bool cursePart::handleSliderInLocal(int sliderValue, bool isMainAxis)
+{
+	if (!canUseLocalGridControls() || m_leftBottomIndex < 0) {
+		return false;
+	}
+
+	const double percentage = sliderValue / 100.0;
+	const double baseValue = isMainAxis ? x_value : y_value;
+	const double targetValue = baseValue + kSliderRange * percentage;
+
+	const size_t base = static_cast<size_t>(m_leftBottomIndex) * 3;
+	if (base + 2 >= m_localGridPoints.size()) {
+		return false;
+	}
+
+	const double currentValue = m_localGridPoints[base + (isMainAxis ? 0 : 1)];
+	const double delta = targetValue - currentValue;
+
+	if (std::abs(delta) < 1e-6) {
+		updateLeftBottomTextsFromLocal(false);
+		return true;
+	}
+
+	if (isMainAxis) {
+		applyLocalGridTranslation(delta, 0.0);
+	}
+	else {
+		applyLocalGridTranslation(0.0, delta);
+	}
+
+	return true;
+}
+
+bool cursePart::updateGridLocalCache(const std::vector<double>& divideCoor)
+{
+	m_divideCoordinateSystem = divideCoor;
+	m_localGridPoints.clear();
+	m_leftBottomIndex = -1;
+
+	if (points.empty() || divideCoor.size() < 6) {
+		return false;
+	}
+
+	try {
+		m_localGridPoints = transformMultiplePointsToLocal(points, divideCoor);
+	}
+	catch (const std::exception& ex) {
+		qWarning() << "划分平面转局部坐标失败:" << ex.what();
+		return false;
+	}
+
+	m_leftBottomIndex = findLeftBottomIndex(m_localGridPoints);
+	if (m_leftBottomIndex < 0) {
+		return false;
+	}
+
+	updateLeftBottomTextsFromLocal(true);
+	return true;
+}
+
+int cursePart::findLeftBottomIndex(const std::vector<double>& localPoints) const
+{
+	if (localPoints.size() < 3) {
+		return -1;
+	}
+
+	const double kEps = 1e-6;
+	double bestX = std::numeric_limits<double>::max();
+	double bestY = std::numeric_limits<double>::max();
+	int bestIndex = -1;
+
+	for (size_t i = 0; i + 2 < localPoints.size(); i += 3) {
+		const double localX = localPoints[i];
+		const double localY = localPoints[i + 1];
+
+		if (localX < bestX - kEps ||
+			(std::abs(localX - bestX) <= kEps && localY < bestY - kEps)) {
+			bestX = localX;
+			bestY = localY;
+			bestIndex = static_cast<int>(i / 3);
+		}
+	}
+
+	return bestIndex;
+}
+
+void cursePart::updateLeftBottomTextsFromLocal(bool updateBase)
+{
+	if (m_leftBottomIndex < 0) {
+		return;
+	}
+
+	const size_t base = static_cast<size_t>(m_leftBottomIndex) * 3;
+	if (base + 2 >= m_localGridPoints.size()) {
+		return;
+	}
+
+	const double localX = m_localGridPoints[base];
+	const double localY = m_localGridPoints[base + 1];
+	const double localZ = m_localGridPoints[base + 2];
+
+	if (updateBase) {
+		x_value = localX;
+		y_value = localY;
+		z_value = localZ;
+	}
+
+	ui->textEdit_3->setPlainText(QString::number(localX, 'f', 2));
+	ui->textEdit_4->setPlainText(QString::number(localY, 'f', 2));
+	ui->textEdit_5->setPlainText(QString::number(localZ, 'f', 2));
+}
+
+void cursePart::applyLocalGridTranslation(double deltaMain, double deltaOther)
+{
+	if (!canUseLocalGridControls() ||
+		(std::abs(deltaMain) < 1e-6 && std::abs(deltaOther) < 1e-6)) {
+		return;
+	}
+
+	for (size_t i = 0; i < m_localGridPoints.size(); i += 3) {
+		m_localGridPoints[i] += deltaMain;
+		m_localGridPoints[i + 1] += deltaOther;
+	}
+
+	std::array<double, 3> offset{ 0.0, 0.0, 0.0 };
+	if (divisionDirection.size() >= 3) {
+		offset[0] += divisionDirection[0] * deltaMain;
+		offset[1] += divisionDirection[1] * deltaMain;
+		offset[2] += divisionDirection[2] * deltaMain;
+	}
+	if (otherDirection.size() >= 3) {
+		offset[0] += otherDirection[0] * deltaOther;
+		offset[1] += otherDirection[1] * deltaOther;
+		offset[2] += otherDirection[2] * deltaOther;
+	}
+
+	for (size_t i = 0; i < points.size(); i += 3) {
+		points[i] += offset[0];
+		points[i + 1] += offset[1];
+		points[i + 2] += offset[2];
+	}
+
+	updateLeftBottomTextsFromLocal(false);
+}
+
+bool cursePart::canUseLocalGridControls() const
+{
+	return !m_localGridPoints.empty() &&
+		m_leftBottomIndex >= 0 &&
+		divisionDirection.size() >= 3 &&
+		otherDirection.size() >= 3;
+}
 
 void cursePart::setupGraphicsScenes()
 {
@@ -515,76 +768,36 @@ void cursePart::addItemToListView(const QString& item)
 
 void cursePart::on_horizontalSlider_valueChanged(int value)
 {
-	// 计算百分比变化：value范围是-50到50，对应-50%到+50%
-	double percentage = value / 100.0; // 转换为小数形式
-
-	// 计算新值：500 + 500 * 百分比
-	double newValue = x_value + 500 * percentage;
-
-	// 更新textEdit_3的显示
-	ui->textEdit_3->setPlainText(QString::number(newValue, 'f', 2));
-
-	// 实现onAreaPosition()功能
-	std::vector<double> areaPosition;
-	areaPosition = [this]() {
-		std::vector<double> result;
-		double x_value = ui->textEdit_3->toPlainText().toDouble();
-		double y_value = ui->textEdit_4->toPlainText().toDouble();
-		double z_value = ui->textEdit_5->toPlainText().toDouble();
-
-		result.push_back(x_value);
-		result.push_back(y_value);
-		result.push_back(z_value);
-		return result;
-	}();
-	std::vector<double> difference;
-	for (int i = 0; i < areaPosition.size(); i++) {
-		double diff = areaPosition[i] - points[i];
-		difference.push_back(diff);
+	const int defaultAxis = 0;
+	int axisIndex = axisIndexFromDirection(ui->comboBox_6->currentText());
+	if (axisIndex == -1) {
+		axisIndex = defaultAxis;
 	}
 
-	for (int i = 0; i < points.size(); i += 3) {
-		points[i] = points[i] + difference[0];
-		points[i + 1] = points[i + 1] + difference[1];
-		points[i + 2] = points[i + 2] + difference[2];
-	}
+	const double percentage = value / 100.0;
+	const double sliderRange = getSliderRange(true);
+	const double baseValue = getAxisBaseValue(axisIndex);
+	const double newValue = baseValue + sliderRange * percentage;
+
+	updateAxisTextByIndex(axisIndex, newValue);
+	applyAreaPositionOffset();
 }
 
 void cursePart::on_verticalSlider_valueChanged(int value)
 {
-	// 计算百分比变化：value范围是-50到50，对应-50%到+50%
-	double percentage = value / 100.0; // 转换为小数形式
-
-	// 计算新值：500 + 500 * 百分比
-	double newValue = z_value + 500 * percentage;
-
-	// 更新textEdit_5的显示
-	ui->textEdit_5->setPlainText(QString::number(newValue, 'f', 2));
-
-	// 实现onAreaPosition()功能
-	std::vector<double> areaPosition;
-	areaPosition = [this]() {
-		std::vector<double> result;
-		double x_value = ui->textEdit_3->toPlainText().toDouble();
-		double y_value = ui->textEdit_4->toPlainText().toDouble();
-		double z_value = ui->textEdit_5->toPlainText().toDouble();
-
-		result.push_back(x_value);
-		result.push_back(y_value);
-		result.push_back(z_value);
-		return result;
-	}();
-	std::vector<double> difference;
-	for (int i = 0; i < areaPosition.size(); i++) {
-		double diff = areaPosition[i] - points[i];
-		difference.push_back(diff);
+	const int defaultAxis = 1;
+	int axisIndex = axisIndexFromDirection(ui->comboBox_7->currentText());
+	if (axisIndex == -1) {
+		axisIndex = defaultAxis;
 	}
 
-	for (int i = 0; i < points.size(); i += 3) {
-		points[i] = points[i] + difference[0];
-		points[i + 1] = points[i + 1] + difference[1];
-		points[i + 2] = points[i + 2] + difference[2];
-	}
+	const double percentage = value / 100.0;
+	const double sliderRange = getSliderRange(false);
+	const double baseValue = getAxisBaseValue(axisIndex);
+	const double newValue = baseValue + sliderRange * percentage;
+
+	updateAxisTextByIndex(axisIndex, newValue);
+	applyAreaPositionOffset();
 }
 
 void cursePart::on_coordanateTextChanged()
@@ -910,11 +1123,91 @@ void cursePart::on_calculate_workspace()
 		}
 
 		// 更新x_value和z_value
-		if (foundPoints.size() >= 1) x_value = foundPoints[0];
-		if (foundPoints.size() >= 3) z_value = foundPoints[2];
+		if (foundPoints.size() >= 1) {
+			x_value = foundPoints[0];
+		}
+		if (foundPoints.size() >= 2) {
+			y_value = foundPoints[1];
+		}
+		if (foundPoints.size() >= 3) {
+			z_value = foundPoints[2];
+		}
 
 		// 更新points数组
 		points = foundPoints;
+
+		const auto selectLengthWidthByCombo = [&](double xLength, double yLength, double zLength) -> std::pair<double, double> {
+			if (mainDivisionDirection.size() < 3 || otherDivisionDirection.size() < 3) {
+				return { 0.0, 0.0 };
+			}
+
+			std::array<double, 3> workspaceExtents{ xLength, yLength, zLength };
+			std::array<bool, 3> axisUsed{ false, false, false };
+
+			auto assignExtent = [&](const std::vector<double>& targetDir) -> double {
+				if (targetDir.size() < 3) {
+					return 0.0;
+				}
+
+				std::vector<double> normalizedDir = targetDir;
+				normalizeVector(normalizedDir);
+
+				double bestDot = -1.0;
+				int bestAxisIndex = -1;
+				for (int axis = 0; axis < 3; ++axis) {
+					if (axisUsed[axis]) {
+						continue;
+					}
+
+					double component = 0.0;
+					if (axis == 0) {
+						component = std::abs(normalizedDir[0]);
+					}
+					else if (axis == 1) {
+						component = std::abs(normalizedDir[1]);
+					}
+					else {
+						component = std::abs(normalizedDir[2]);
+					}
+
+					if (component > bestDot) {
+						bestDot = component;
+						bestAxisIndex = axis;
+					}
+				}
+
+				if (bestAxisIndex != -1) {
+					axisUsed[bestAxisIndex] = true;
+					return workspaceExtents[bestAxisIndex];
+				}
+
+				return 0.0;
+				};
+
+			double length = assignExtent(mainDivisionDirection);
+			double width = assignExtent(otherDivisionDirection);
+			return { length, width };
+		};
+
+		const auto fallbackLengthWidthByThickness = [&](double xLength, double yLength, double zLength) -> std::pair<double, double> {
+			double fallbackLength = 0.0;
+			double fallbackWidth = 0.0;
+
+			if (directionName.contains("X", Qt::CaseInsensitive)) {
+				fallbackLength = yLength;
+				fallbackWidth = zLength;
+			}
+			else if (directionName.contains("Y", Qt::CaseInsensitive)) {
+				fallbackLength = xLength;
+				fallbackWidth = zLength;
+			}
+			else {
+				fallbackLength = xLength;
+				fallbackWidth = yLength;
+			}
+
+			return std::make_pair(fallbackLength, fallbackWidth);
+			};
 
 		// 从查询到的点中计算工作空间的长和宽
 		if (foundPoints.size() == 24) { // 包围盒的8个角点，每个点3个坐标，共24个值
@@ -949,48 +1242,14 @@ void cursePart::on_calculate_workspace()
 			double length = 0.0;  // 主要划分方向的长度
 			double width = 0.0;   // 次要划分方向的宽度
 
-			if (divisionDirName.contains("X", Qt::CaseInsensitive)) {
-				// X方向是主要划分方向
-				length = xLength;
-
-				// 从Y和Z中选择较小者作为次要划分方向
-				if (directionName.contains("Y", Qt::CaseInsensitive)) {
-					width = zLength;
-				}
-				else {
-					width = yLength;
-				}
-			}
-			else if (divisionDirName.contains("Y", Qt::CaseInsensitive)) {
-				// Y方向是主要划分方向
-				length = yLength;
-
-				// 从Y和Z中选择较小者作为次要划分方向
-				if (directionName.contains("X", Qt::CaseInsensitive)) {
-					width = xLength;
-				}
-				else {
-					width = zLength;
-				}
-			}
-			else {
-				// Z方向是主要划分方向
-				length = zLength;
-
-				// 从Y和Z中选择较小者作为次要划分方向
-				if (directionName.contains("X", Qt::CaseInsensitive)) {
-					width = xLength;
-				}
-				else {
-					width = yLength;
-				}
+			auto lengthWidth = selectLengthWidthByCombo(xLength, yLength, zLength);
+			if (lengthWidth.first <= 0.0 || lengthWidth.second <= 0.0) {
+				qWarning() << QStringLiteral("comboBox方向选择无效，退回厚度方向推导长度/宽度。");
+				lengthWidth = fallbackLengthWidthByThickness(xLength, yLength, zLength);
 			}
 
-			// 将计算出的长和宽设置到textEdit_1和textEdit_2
-			// 需要通过选择机器人是否联动重新计算划分长和宽
-
-			ui->textEdit_1->setPlainText(QString::number(length, 'f', 2));
-			ui->textEdit_2->setPlainText(QString::number(width, 'f', 2));
+			ui->textEdit_1->setPlainText(QString::number(lengthWidth.first, 'f', 2));
+			ui->textEdit_2->setPlainText(QString::number(lengthWidth.second, 'f', 2));
 		}
 		else if (foundPoints.size() >= 6) { // 确保有足够的点来计算包围盒
 			double minX = foundPoints[0], maxX = foundPoints[0];
@@ -1009,172 +1268,179 @@ void cursePart::on_calculate_workspace()
 				}
 			}
 
-			// 计算长和宽（除了厚度方向）
-			double length, width;
+			double xLength = maxX - minX;
+			double yLength = maxY - minY;
+			double zLength = maxZ - minZ;
 
-			// 根据directionName判断哪个是厚度方向，其他两个是长宽
-			if (directionName.contains("X", Qt::CaseInsensitive) ||
-				directionName.contains("x", Qt::CaseInsensitive)) {
-				// X方向是厚度方向
-				length = maxY - minY; // Y方向长度
-				width = maxZ - minZ;  // Z方向宽度
+			auto lengthWidth = selectLengthWidthByCombo(xLength, yLength, zLength);
+			if (lengthWidth.first <= 0.0 || lengthWidth.second <= 0.0) {
+				qWarning() << QStringLiteral("comboBox方向选择无效，退回厚度方向推导长度/宽度。");
+				lengthWidth = fallbackLengthWidthByThickness(xLength, yLength, zLength);
 			}
-			else if (directionName.contains("Y", Qt::CaseInsensitive) ||
-				directionName.contains("y", Qt::CaseInsensitive)) {
-				// Y方向是厚度方向
-				length = maxX - minX; // X方向长度
-				width = maxZ - minZ;  // Z方向宽度
+
+			ui->textEdit_1->setPlainText(QString::number(lengthWidth.first, 'f', 2));
+			ui->textEdit_2->setPlainText(QString::number(lengthWidth.second, 'f', 2));
+		}
+		else {
+			// 如果没有找到匹配项，继续执行原始逻辑
+
+			ui->textEdit_1->setPlainText("500");
+			ui->textEdit_2->setPlainText("500");
+		}
+
+		int length = ui->textEdit_1->toPlainText().toDouble();
+		int width = ui->textEdit_2->toPlainText().toDouble();
+
+		Point3D direction(mainDirction[0], mainDirction[1], mainDirction[2]);
+		// 按流程：曲面最小包围盒(世界) -> 划分坐标系下AABB -> 转回世界坐标后再划分
+		std::vector<double> surfaceObbWorldCorners = OBBPosition;
+		if (surfaceObbWorldCorners.size() != 24) {
+			surfaceObbWorldCorners = calculateOBBCornersFromPickupMap(pickupMap);
+		}
+
+		std::vector<Point3D> surfaceObbPoints;
+		for (int i = 0; i < surfaceObbWorldCorners.size() / 3; ++i) {
+			surfaceObbPoints.emplace_back(
+				surfaceObbWorldCorners[3 * i],
+				surfaceObbWorldCorners[3 * i + 1],
+				surfaceObbWorldCorners[3 * i + 2]);
+		}
+		if (!surfaceObbPoints.empty()) {
+			minBox = OBB::calculateOBB(surfaceObbPoints);
+			OBBPosition = surfaceObbWorldCorners;
+		}
+
+		std::vector<double> localAabbCornersFlat;
+		if (divideCoor.size() >= 6 && surfaceObbWorldCorners.size() % 3 == 0 && !surfaceObbWorldCorners.empty()) {
+			try {
+				std::vector<double> localObbCorners = transformMultiplePointsToLocal(surfaceObbWorldCorners, divideCoor);
+				std::vector<Point3D> localObbPoints;
+				for (int i = 0; i < localObbCorners.size() / 3; ++i) {
+					localObbPoints.emplace_back(localObbCorners[3 * i], localObbCorners[3 * i + 1], localObbCorners[3 * i + 2]);
+				}
+
+				AABB localAabbBox = AABB::calculateAABB(localObbPoints);
+				std::vector<Point3D> localAabbCorners = localAabbBox.getCorners();
+				localAabbCornersFlat.reserve(localAabbCorners.size() * 3);
+				for (const auto& p : localAabbCorners) {
+					localAabbCornersFlat.push_back(p.x);
+					localAabbCornersFlat.push_back(p.y);
+					localAabbCornersFlat.push_back(p.z);
+				}
+			}
+			catch (const std::exception& ex) {
+				qWarning() << "在划分坐标系中计算AABB失败:" << ex.what();
+			}
+		}
+
+		if (!localAabbCornersFlat.empty()) {
+			AABBPosition = localAabbCornersFlat;
+		}
+
+		std::vector<double> aabbWorldPosition = surfaceObbWorldCorners;
+		if (divideCoor.size() >= 6 && AABBPosition.size() % 3 == 0 && !AABBPosition.empty()) {
+			try {
+				aabbWorldPosition = transformMultiplePointsToWorld(AABBPosition, divideCoor);
+			}
+			catch (const std::exception& ex) {
+				qWarning() << "AABBPosition从划分坐标系转换到世界坐标失败:" << ex.what();
+			}
+		}
+
+		std::vector<Point3D> aabbWorldPoints;
+		for (int i = 0; i < aabbWorldPosition.size() / 3; ++i) {
+			aabbWorldPoints.emplace_back(
+				aabbWorldPosition[3 * i],
+				aabbWorldPosition[3 * i + 1],
+				aabbWorldPosition[3 * i + 2]);
+		}
+		if (aabbWorldPoints.empty()) {
+			qWarning() << "AABB角点为空，无法进行划分";
+			return;
+		}
+
+		AABB worldAabbBox = AABB::calculateAABB(aabbWorldPoints);
+		auto grid = worldAabbBox.createGridOnClosestSurface(length, width, direction, true);
+
+		// 从 textEdit_6/7/8 获取平面过点，并由主/次划分方向构建平面后投影 grid
+		bool okX = false;
+		bool okY = false;
+		bool okZ = false;
+		double planeX = ui->textEdit_6->toPlainText().trimmed().toDouble(&okX);
+		double planeY = ui->textEdit_7->toPlainText().trimmed().toDouble(&okY);
+		double planeZ = ui->textEdit_8->toPlainText().trimmed().toDouble(&okZ);
+
+		if (okX && okY && okZ && mainDivisionDirection.size() >= 3 && otherDivisionDirection.size() >= 3) {
+			std::vector<double> planeNormal = crossProduct(mainDivisionDirection, otherDivisionDirection);
+			double normalLen = std::sqrt(
+				planeNormal[0] * planeNormal[0] +
+				planeNormal[1] * planeNormal[1] +
+				planeNormal[2] * planeNormal[2]);
+
+			if (normalLen > 1e-9) {
+				for (double& v : planeNormal) {
+					v /= normalLen;
+				}
+
+				for (auto& p : grid) {
+					double vx = p.x - planeX;
+					double vy = p.y - planeY;
+					double vz = p.z - planeZ;
+					double signedDistance = vx * planeNormal[0] + vy * planeNormal[1] + vz * planeNormal[2];
+
+					p.x -= signedDistance * planeNormal[0];
+					p.y -= signedDistance * planeNormal[1];
+					p.z -= signedDistance * planeNormal[2];
+				}
 			}
 			else {
-				// Z方向是厚度方向
-				length = maxX - minX; // X方向长度
-				width = maxY - minY;  // Y方向宽度
-			}
-
-			// 将计算出的长和宽设置到textEdit_1和textEdit_2
-			ui->textEdit_1->setPlainText(QString::number(length, 'f', 2));
-			ui->textEdit_2->setPlainText(QString::number(width, 'f', 2));
-		}
-	}
-	else {
-		// 如果没有找到匹配项，继续执行原始逻辑
-
-		ui->textEdit_1->setPlainText("500");
-		ui->textEdit_2->setPlainText("500");
-	}
-
-	int length = ui->textEdit_1->toPlainText().toDouble();
-	int width = ui->textEdit_2->toPlainText().toDouble();
-
-	Point3D direction(mainDirction[0], mainDirction[1], mainDirction[2]);
-	// 按流程：曲面最小包围盒(世界) -> 划分坐标系下AABB -> 转回世界坐标后再划分
-	std::vector<double> surfaceObbWorldCorners = OBBPosition;
-	if (surfaceObbWorldCorners.size() != 24) {
-		surfaceObbWorldCorners = calculateOBBCornersFromPickupMap(pickupMap);
-	}
-
-	std::vector<Point3D> surfaceObbPoints;
-	for (int i = 0; i < surfaceObbWorldCorners.size() / 3; ++i) {
-		surfaceObbPoints.emplace_back(
-			surfaceObbWorldCorners[3 * i],
-			surfaceObbWorldCorners[3 * i + 1],
-			surfaceObbWorldCorners[3 * i + 2]);
-	}
-	if (!surfaceObbPoints.empty()) {
-		minBox = OBB::calculateOBB(surfaceObbPoints);
-		OBBPosition = surfaceObbWorldCorners;
-	}
-
-	std::vector<double> localAabbCornersFlat;
-	if (divideCoor.size() >= 6 && surfaceObbWorldCorners.size() % 3 == 0 && !surfaceObbWorldCorners.empty()) {
-		try {
-			std::vector<double> localObbCorners = transformMultiplePointsToLocal(surfaceObbWorldCorners, divideCoor);
-			std::vector<Point3D> localObbPoints;
-			for (int i = 0; i < localObbCorners.size() / 3; ++i) {
-				localObbPoints.emplace_back(localObbCorners[3 * i], localObbCorners[3 * i + 1], localObbCorners[3 * i + 2]);
-			}
-
-			AABB localAabbBox = AABB::calculateAABB(localObbPoints);
-			std::vector<Point3D> localAabbCorners = localAabbBox.getCorners();
-			localAabbCornersFlat.reserve(localAabbCorners.size() * 3);
-			for (const auto& p : localAabbCorners) {
-				localAabbCornersFlat.push_back(p.x);
-				localAabbCornersFlat.push_back(p.y);
-				localAabbCornersFlat.push_back(p.z);
-			}
-		}
-		catch (const std::exception& ex) {
-			qWarning() << "在划分坐标系中计算AABB失败:" << ex.what();
-		}
-	}
-
-	if (!localAabbCornersFlat.empty()) {
-		AABBPosition = localAabbCornersFlat;
-	}
-
-	std::vector<double> aabbWorldPosition = surfaceObbWorldCorners;
-	if (divideCoor.size() >= 6 && AABBPosition.size() % 3 == 0 && !AABBPosition.empty()) {
-		try {
-			aabbWorldPosition = transformMultiplePointsToWorld(AABBPosition, divideCoor);
-		}
-		catch (const std::exception& ex) {
-			qWarning() << "AABBPosition从划分坐标系转换到世界坐标失败:" << ex.what();
-		}
-	}
-
-	std::vector<Point3D> aabbWorldPoints;
-	for (int i = 0; i < aabbWorldPosition.size() / 3; ++i) {
-		aabbWorldPoints.emplace_back(
-			aabbWorldPosition[3 * i],
-			aabbWorldPosition[3 * i + 1],
-			aabbWorldPosition[3 * i + 2]);
-	}
-	if (aabbWorldPoints.empty()) {
-		qWarning() << "AABB角点为空，无法进行划分";
-		return;
-	}
-
-	AABB worldAabbBox = AABB::calculateAABB(aabbWorldPoints);
-	auto grid = worldAabbBox.createGridOnClosestSurface(length, width, direction, true);
-
-	// 从 textEdit_6/7/8 获取平面过点，并由主/次划分方向构建平面后投影 grid
-	bool okX = false;
-	bool okY = false;
-	bool okZ = false;
-	double planeX = ui->textEdit_6->toPlainText().trimmed().toDouble(&okX);
-	double planeY = ui->textEdit_7->toPlainText().trimmed().toDouble(&okY);
-	double planeZ = ui->textEdit_8->toPlainText().trimmed().toDouble(&okZ);
-
-	if (okX && okY && okZ && mainDivisionDirection.size() >= 3 && otherDivisionDirection.size() >= 3) {
-		std::vector<double> planeNormal = crossProduct(mainDivisionDirection, otherDivisionDirection);
-		double normalLen = std::sqrt(
-			planeNormal[0] * planeNormal[0] +
-			planeNormal[1] * planeNormal[1] +
-			planeNormal[2] * planeNormal[2]);
-
-		if (normalLen > 1e-9) {
-			for (double& v : planeNormal) {
-				v /= normalLen;
-			}
-
-			for (auto& p : grid) {
-				double vx = p.x - planeX;
-				double vy = p.y - planeY;
-				double vz = p.z - planeZ;
-				double signedDistance = vx * planeNormal[0] + vy * planeNormal[1] + vz * planeNormal[2];
-
-				p.x -= signedDistance * planeNormal[0];
-				p.y -= signedDistance * planeNormal[1];
-				p.z -= signedDistance * planeNormal[2];
+				qWarning() << "主划分方向与次要划分方向近似平行，无法构建投影平面";
 			}
 		}
 		else {
-			qWarning() << "主划分方向与次要划分方向近似平行，无法构建投影平面";
+			qWarning() << "平面点坐标或划分方向无效，跳过 grid 投影";
 		}
-	}
-	else {
-		qWarning() << "平面点坐标或划分方向无效，跳过 grid 投影";
-	}
 
-	points.clear(); // 清空之前的点数据
-	for (auto p : grid) {
-		points.push_back(p.x);
-		points.push_back(p.y);
-		points.push_back(p.z);
-	}
+		//points.clear(); // 清空之前的点数据
+		//for (auto p : grid) {
+		//	points.push_back(p.x);
+		//	points.push_back(p.y);
+		//	points.push_back(p.z);
+		//}
 
-	if (!points.empty()) {
-		QString value1 = QString("%1").arg(points[0]);
-		QString value2 = QString("%1").arg(points[1]);
-		QString value3 = QString("%1").arg(points[2]);
+		//if (!points.empty()) {
+		//	QString value1 = QString("%1").arg(points[0]);
+		//	QString value2 = QString("%1").arg(points[1]);
+		//	QString value3 = QString("%1").arg(points[2]);
 
-		ui->textEdit_3->setPlainText(value1);
-		ui->textEdit_4->setPlainText(value2);
-		ui->textEdit_5->setPlainText(value3);
+		//	ui->textEdit_3->setPlainText(value1);
+		//	ui->textEdit_4->setPlainText(value2);
+		//	ui->textEdit_5->setPlainText(value3);
 
-		// 更新x_value和z_value
-		x_value = points[0];
-		z_value = points[2];
+		//	// 更新x_value和z_value
+		//	x_value = points[0];
+		//	z_value = points[2];
+		//}
+		points.clear(); // 清空之前的点数据
+		for (auto p : grid) {
+			points.push_back(p.x);
+			points.push_back(p.y);
+			points.push_back(p.z);
+		}
+
+		if (!points.empty()) {
+			QString value1 = QString("%1").arg(points[0]);
+			QString value2 = QString("%1").arg(points[1]);
+			QString value3 = QString("%1").arg(points[2]);
+
+			ui->textEdit_3->setPlainText(value1);
+			ui->textEdit_4->setPlainText(value2);
+			ui->textEdit_5->setPlainText(value3);
+
+			x_value = points[0];
+			y_value = points[1];
+			z_value = points[2];
+		}
 	}
 }
 
@@ -1484,22 +1750,66 @@ void cursePart::on_spaceSettingButton_clicked()
 		maxtheta = maxtheta * 180 / M_PI;
 		ui->textBrowser_1->setPlainText(QString("%1").arg(maxtheta) + "°");
 
-		// 计算最小包围盒的长度、宽度和厚度
-		double length = 0;
-		double width = 0;
-		bool m_result = calculateOBBDimensionsFromCorners(OBBPosition, length, width, m_thickness);
+		std::vector<std::vector<double>> obbAxes;
+		if (OBBCoor.size() >= 6) {
+			obbAxes = getCoordinateAxesFromEuler(OBBCoor.data());
+		}
+		const auto normalizedObbAxes = normalizeAxesCopy(obbAxes);
+		const auto normalizedDivisionAxes = normalizeAxesCopy(divisionCoorVector);
 
-		double d_length = 0;
-		double d_width = 0;
-		bool ans = calculateAABBDimensionsFromCorners(AABBPosition, mainDivisionDirectionText, d_length, d_width, d_thickness);
-		// 显示长度、宽度和厚度
-		ui->textBrowser_2->setPlainText(QString::number(length, 'f', 2)); // 长度
-		ui->textBrowser_3->setPlainText(QString::number(width, 'f', 2));  // 宽度
-		ui->textBrowser_4->setPlainText(QString::number(m_thickness, 'f', 2)); // 厚度
+		std::vector<double> aabbWorldCorners;
+		if (!AABBPosition.empty() && divideCoor.size() >= 6) {
+			try {
+				aabbWorldCorners = transformMultiplePointsToWorld(AABBPosition, divideCoor);
+			}
+			catch (const std::exception& ex) {
+				qWarning() << "划分包围盒角点转换失败:" << ex.what();
+			}
+		}
+		if (aabbWorldCorners.empty()) {
+			aabbWorldCorners = AABBPosition;
+		}
 
-		ui->textBrowser_5->setPlainText(QString::number(d_length, 'f', 2)); // 长度
-		ui->textBrowser_6->setPlainText(QString::number(d_width, 'f', 2));  // 宽度
-		ui->textBrowser_7->setPlainText(QString::number(d_thickness, 'f', 2)); // 厚度
+		std::array<double, 3> obbExtents{ 0.0, 0.0, 0.0 };
+		std::array<double, 3> aabbExtents{ 0.0, 0.0, 0.0 };
+		const bool obbExtentValid = extractAxisExtents(OBBPosition, normalizedObbAxes, obbExtents);
+		const bool aabbExtentValid = extractAxisExtents(aabbWorldCorners, normalizedDivisionAxes, aabbExtents);
+
+		const auto axisMapping = matchAxesByDotProduct(normalizedObbAxes, normalizedDivisionAxes);
+
+		double length = obbExtentValid ? obbExtents[0] : 0.0;
+		double width = obbExtentValid ? obbExtents[1] : 0.0;
+		m_thickness = obbExtentValid ? obbExtents[2] : 0.0;
+
+		double d_length = 0.0;
+		double d_width = 0.0;
+		d_thickness = 0.0;
+		if (aabbExtentValid) {
+			if (axisMapping[0] >= 0) {
+				d_length = aabbExtents[axisMapping[0]];
+			}
+			if (axisMapping[1] >= 0) {
+				d_width = aabbExtents[axisMapping[1]];
+			}
+			if (axisMapping[2] >= 0) {
+				d_thickness = aabbExtents[axisMapping[2]];
+			}
+		}
+
+		if (!obbExtentValid) {
+			qWarning() << "最小包围盒尺寸计算失败，输出为0。";
+		}
+		if (!aabbExtentValid) {
+			qWarning() << "划分包围盒尺寸计算失败，输出为0。";
+		}
+
+		ui->textBrowser_2->setPlainText(QString::number(length, 'f', 2));
+		ui->textBrowser_3->setPlainText(QString::number(width, 'f', 2));
+		ui->textBrowser_4->setPlainText(QString::number(m_thickness, 'f', 2));
+
+		ui->textBrowser_5->setPlainText(QString::number(d_length, 'f', 2));
+		ui->textBrowser_6->setPlainText(QString::number(d_width, 'f', 2));
+		ui->textBrowser_7->setPlainText(QString::number(d_thickness, 'f', 2));
 
 		qDebug() << "长度计算完成：" << length << "mm";
 		qDebug() << "宽度计算完成：" << width << "mm";
@@ -2423,6 +2733,99 @@ bool cursePart::calculateOBBDimensionsFromCorners(const std::vector<double>& OBB
 	return true;
 }
 
+double cursePart::getSliderRange(bool isMainAxis) const
+{
+	const QString text = isMainAxis ? ui->textEdit_1->toPlainText()
+		: ui->textEdit_2->toPlainText();
+	bool ok = false;
+	double value = text.toDouble(&ok);
+	if (!ok || value <= 0.0) {
+		value = kDefaultSliderRange;
+	}
+	return value;
+}
+
+int cursePart::axisIndexFromDirection(const QString& directionText) const
+{
+	if (directionText.contains("X", Qt::CaseInsensitive)) {
+		return 0;
+	}
+	if (directionText.contains("Y", Qt::CaseInsensitive)) {
+		return 1;
+	}
+	if (directionText.contains("Z", Qt::CaseInsensitive)) {
+		return 2;
+	}
+	return -1;
+}
+
+double cursePart::getAxisBaseValue(int axisIndex) const
+{
+	switch (axisIndex) {
+	case 0:
+		return x_value;
+	case 1:
+		return y_value;
+	case 2:
+		return z_value;
+	default:
+		return x_value;
+	}
+}
+
+void cursePart::updateAxisTextByIndex(int axisIndex, double value)
+{
+	QTextEdit* target = nullptr;
+	switch (axisIndex) {
+	case 0:
+		target = ui->textEdit_3;
+		break;
+	case 1:
+		target = ui->textEdit_4;
+		break;
+	case 2:
+		target = ui->textEdit_5;
+		break;
+	default:
+		target = ui->textEdit_3;
+		break;
+	}
+
+	if (target != nullptr) {
+		target->setPlainText(QString::number(value, 'f', 2));
+	}
+}
+
+void cursePart::applyAreaPositionOffset()
+{
+	if (points.size() < 3) {
+		return;
+	}
+
+	std::array<double, 3> areaPosition{
+		ui->textEdit_3->toPlainText().toDouble(),
+		ui->textEdit_4->toPlainText().toDouble(),
+		ui->textEdit_5->toPlainText().toDouble()
+	};
+
+	std::array<double, 3> basePoint{
+		points[0],
+		points[1],
+		points[2]
+	};
+
+	std::array<double, 3> delta{
+		areaPosition[0] - basePoint[0],
+		areaPosition[1] - basePoint[1],
+		areaPosition[2] - basePoint[2]
+	};
+
+	for (size_t i = 0; i + 2 < points.size(); i += 3) {
+		points[i] += delta[0];
+		points[i + 1] += delta[1];
+		points[i + 2] += delta[2];
+	}
+}
 
 std::vector<double> cursePart::calculateAABBCornersFromPickupMap(const std::map<unsigned long,
 	std::vector<std::wstring>>&pickupMap)
