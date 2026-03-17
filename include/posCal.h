@@ -2,7 +2,7 @@
 #define POSCAL_H
 
 #pragma execution_character_set("utf-8")
-
+#define NOMINMAX
 #include <QDialog>
 #include <QMessageBox>
 #include <QDebug>
@@ -33,49 +33,32 @@ public:
 		CPQKitCallback* ptrKitCallback = nullptr);
 	~posCal();
 
-
-
 private slots:
 	// 机器人选择变化槽函数
 	void onComboBox1CurrentIndexChanged(int index);
 	// 轨迹组选择变化槽函数  
 	void onComboBox2CurrentIndexChanged(int index);
-	// 站位点选择变化槽函数
+	// 选择是否需要AGV移动来实现站位计算的槽函数
 	void onComboBox4CurrentIndexChanged(int index);
 	
 	void onCalculate();
 	void onShow();
 	void onConfirm();
 	void onCancel();
+	
 
 private:
 	Ui::posCalClass *ui;
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
+	QString m_tempDir = "./temp/jsons/";
+	QMap<ULONG, QString> m_robotMap;// 机器人名称到ID的映射
+	std::map<std::string, std::pair<std::string, std::string>> relationsMap;//存储关系
 
 	// 初始化函数
 	void init();
 
-	// 根据类型获取对象列表
-	QMap<ULONG, QString> getObjectsByType(PQDataType objType);
-
-	// 从VARIANT中提取字符串数组
-	QStringList extractStringArrayFromVariant(const VARIANT& variant);
-
-	// 从VARIANT中提取长整型数组
-	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
-
-	//获取机器人列表
-	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);
-
-	// 获取轨迹组名称
-	QStringList getPathGroupNames(ULONG robotID);
-
-	// 获取轨迹名称
-	QStringList getPathNames(ULONG robotID, const QString& groupName);
-
-	//获取id
-	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);
+	std::map<std::string, std::pair<std::string, std::string>> loadRobotRelations(const std::string& filePath = "relations.json");
 
 	//计算出平均法向
 	std::vector<double> calculateAverageNormal(ULONG pathID);
@@ -105,12 +88,26 @@ private:
 	std::vector<double> calculateJointValues(const std::vector<double>& move,
 		const std::vector<std::vector<double>>& guideDir);
 
-	// 机器人名称到ID的映射
-	QMap<ULONG, QString> m_robotMap;
+	// 根据类型获取对象列表
+	QMap<ULONG, QString> getObjectsByType(PQDataType objType);
 
-	// AGV站位名称到ID的映射
-	QMap<ULONG, QString> m_AGVMap;
+	// 从VARIANT中提取字符串数组
+	QStringList extractStringArrayFromVariant(const VARIANT& variant);
 
+	// 从VARIANT中提取长整型数组
+	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
+
+	//获取机器人列表
+	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);
+
+	// 获取轨迹组名称
+	QStringList getPathGroupNames(ULONG robotID);
+
+	// 获取轨迹名称
+	QStringList getPathNames(ULONG robotID, const QString& groupName);
+
+	//获取id
+	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG& o_uID);
 
 };
 

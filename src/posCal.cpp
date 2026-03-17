@@ -1,6 +1,12 @@
 #include "posCal.h"
+#include "parseJSON.h"
+#include "robxFileIO.h"
 #include <comdef.h>
 #include <oaidl.h>
+#include <fstream>
+#include <QMessageBox>
+#include <sstream>
+#include <stdexcept>
 
 posCal::posCal(QWidget *parent,
 	CComPtr<IPQPlatformComponent> ptrKit,
@@ -17,6 +23,7 @@ posCal::posCal(QWidget *parent,
 	connect(ui->pushButton_2, &QPushButton::clicked, this, &posCal::onShow);
 	connect(ui->pushButton_3, &QPushButton::clicked, this, &posCal::onConfirm);
 	connect(ui->pushButton_4, &QPushButton::clicked, this, &posCal::onCancel);
+	
 }
 
 posCal::~posCal()
@@ -27,6 +34,11 @@ posCal::~posCal()
 
 void posCal::init()
 {
+
+	QString relations = m_tempDir + "relations.json";
+	// 加载机器人关系数据
+	relationsMap = loadRobotRelations(relations.toStdString());
+
 	// 使用封装好的函数获取机器人列表
 	PQDataType robotType = PQ_ROBOT;
 	m_robotMap = getObjectsByType(robotType);
@@ -55,7 +67,59 @@ void posCal::init()
 	connect(ui->comboBox_4, QOverload<int>::of(&QComboBox::currentIndexChanged),
 		this, &posCal::onComboBox4CurrentIndexChanged);
 
+}
 
+std::map<std::string, std::pair<std::string, std::string>> posCal::loadRobotRelations(const std::string & filePath)
+{
+	std::map<std::string, std::pair<std::string, std::string>> relationsMap;
+	std::ifstream file(filePath);
+
+	// 1. 检查文件是否打开成功
+	if (!file.is_open()) {
+		qWarning() << "警告: 无法打开关系文件" << QString::fromStdString(filePath) << "，将使用默认值。";
+		return relationsMap; // 返回空地图
+	}
+
+	try {
+		json data;
+		file >> data;
+		file.close();
+
+		// 2. 确保根节点是数组
+		if (!data.is_array()) {
+			qWarning() << "警告: relations.json 根节点不是数组，解析跳过。";
+			return relationsMap;
+		}
+
+		// 3. 遍历数组
+		for (const auto& item : data) {
+			// 确保每一项也是数组，且至少有一个元素（机器人名称）
+			if (item.is_array() && item.size() >= 1) {
+				std::string robotName = item[0].get<std::string>();
+
+				std::string railName = "无";
+				std::string agvName = "无";
+
+				// 读取第二个元素 (导轨)，如果存在且不为空
+				if (item.size() > 1 && !item[1].get<std::string>().empty()) {
+					railName = item[1].get<std::string>();
+				}
+
+				// 读取第三个元素 (AGV)，如果存在且不为空
+				if (item.size() > 2 && !item[2].get<std::string>().empty()) {
+					agvName = item[2].get<std::string>();
+				}
+
+				// 存入 Map，方便后续通过机器人名称快速查找
+				relationsMap[robotName] = std::make_pair(railName, agvName);
+			}
+		}
+	}
+	catch (const std::exception& e) {
+		qCritical() << "解析 relations.json 失败:" << e.what();
+	}
+
+	return relationsMap;
 }
 
 void posCal::onComboBox1CurrentIndexChanged(int index)
@@ -73,6 +137,27 @@ void posCal::onComboBox1CurrentIndexChanged(int index)
 	// 获取当前选择的机器人名称和ID
 	QString robotName = ui->comboBox_1->currentText();
 	ULONG robotID = m_robotMap.key(robotName, 0);
+
+	//将AGV名称添加到控件textBrowser中
+	std::string robotStdName = robotName.toStdString();
+	auto it = relationsMap.find(robotStdName);
+	QString selectedAGV;
+	if (it != relationsMap.end()) {
+		const auto& [railName, agvName] = it->second;
+		selectedAGV = QString::fromStdString(agvName);
+	}
+	else {
+		//// 提示该机器人没有AGV或导轨关系
+		//QMessageBox::warning(nullptr, "警告", "没有机器人创建关系");
+	}
+
+	ui->textBrowser->setPlainText(selectedAGV);
+	const QString agvText = selectedAGV.trimmed();
+	const bool hasAgvBinding = !agvText.isEmpty()
+		&& agvText.compare(QStringLiteral("无"), Qt::CaseInsensitive) != 0;
+	ui->comboBox_4->setEnabled(hasAgvBinding);
+	ui->textEdit->setEnabled(hasAgvBinding);
+
 
 	if (robotID == 0) {
 		return;
@@ -113,43 +198,16 @@ void posCal::onComboBox4CurrentIndexChanged(int index)
 {
 	if (index < 0) return;
 
-	QString isAGV = ui->comboBox_4->currentText();
+	const QString isAGV = ui->comboBox_4->currentText();
 
 	if (isAGV == "是") {
-		ULONG uPartID = 0;
-		GetObjIDByName(PQ_WORKINGPART, L"零件2", uPartID);
-		INT nCount = 0;
-		WCHAR* whPathNames = nullptr; 
-		ULONG* uPathIDs = nullptr;
-		m_ptrKit->Part_get_path(uPartID, &nCount, &whPathNames, &uPathIDs);
-
-		// 清空comboBox_5
-		ui->comboBox_5->clear();
-
-
-		if (whPathNames != nullptr) {
-			std::wstring wstr = whPathNames;
-			QString guidePoints = QString::fromStdWString(wstr);
-			
-			QStringList guideNames = guidePoints.split("#", QString::SkipEmptyParts);
-
-			ui->comboBox_5->addItems(guideNames);
-
-			for (int i = 0; i < nCount; i++) {
-				m_AGVMap[uPathIDs[i]] = guideNames[i];
-			}
-
-		}
-
-		// 释放内存
-		if (whPathNames) m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
-		if (uPathIDs) m_ptrKit->PQAPIFree((LONG_PTR*)uPathIDs);
-		
+		ui->textEdit->setPlainText("站位点");
+		// 原有 AGV 路径加载逻辑保留（如需）
 	}
 	else {
-		ui->comboBox_5->clear();
+		ui->textEdit->clear();
+		// 原有“否”流程（若有）保留
 	}
-
 }
 
 void posCal::onCalculate()
@@ -158,155 +216,217 @@ void posCal::onCalculate()
 	QString groupName = ui->comboBox_2->currentText();
 	QString pathName = ui->comboBox_3->currentText();
 
-	//获取轨迹点id
+	if (robotName.isEmpty() || groupName.isEmpty() || pathName.isEmpty()) {
+		QMessageBox::warning(this, tr("提示"), tr("请先选择机器人、轨迹组和轨迹。"));
+		return;
+	}
+
 	ULONG ulPathID = 0;
 	GetObjIDByName(PQ_PATH, pathName.toStdWString(), ulPathID);
-	int nCount = 0;
+
+	int pointCount = 0;
 	ULONG* ulPtIDs = nullptr;
-	m_ptrKit->Path_get_point_id(ulPathID, &nCount, &ulPtIDs);
-	
-
-	//获取轨迹点信息
-	PQPostureType nPostureType = QUATERNION;
-	INT nPostureCount = 0;
-	double* dPointPosture = nullptr;
-	double dVelocity = 0;
-	double dSpeedPercent = 0;
-	PQPointInstruction nInstruct = PQ_LINE;
-	INT nApproach = 0;
-	
-	double X_min, X_max, Y_min, Y_max, Z_min, Z_max = 0;
-
-	for (int i = 0; i < nCount; i++) {
-		ULONG ulPointID = ulPtIDs[i];
-		m_ptrKit->PQAPIGetPointInfo(ulPointID, nPostureType, &nPostureCount, &dPointPosture,
-			&dVelocity, &dSpeedPercent, &nInstruct, &nApproach);
-
-		double x = dPointPosture[0];
-		double y = dPointPosture[1];
-		double z = dPointPosture[2];
-
-		if (x > X_max) X_max = x;
-		if (x < X_min) X_min = x;
-		if (x > Y_max) Y_max = y;
-		if (x < Y_min) Y_min = y;
-		if (x > Z_max) Z_max = z;
-		if (x < Z_min) Z_min = z;
+	if (FAILED(m_ptrKit->Path_get_point_id(ulPathID, &pointCount, &ulPtIDs)) || pointCount <= 0 || !ulPtIDs) {
+		QMessageBox::warning(this, tr("提示"), tr("当前轨迹没有可用的路径点。"));
+		return;
 	}
 
-	
-	//计算出中心点
+	double minX = std::numeric_limits<double>::max();
+	double maxX = std::numeric_limits<double>::lowest();
+	double minY = std::numeric_limits<double>::max();
+	double maxY = std::numeric_limits<double>::lowest();
+	double minZ = std::numeric_limits<double>::max();
+	double maxZ = std::numeric_limits<double>::lowest();
+	bool hasValidPoint = false;
 
-	double x_center = (X_max + X_min) / 2;
-	double y_center = (Y_max + Y_min) / 2;
-	double z_center = (Z_max + Z_min) / 2;
+	for (int i = 0; i < pointCount; ++i) {
+		PQPostureType nPostureType = QUATERNION;
+		INT nPostureCount = 0;
+		double* dPointPosture = nullptr;
+		double dVelocity = 0.0;
+		double dSpeedPercent = 0.0;
+		PQPointInstruction nInstruct = PQ_LINE;
+		INT nApproach = 0;
 
-	std::vector<double> centerPoint = { x_center, y_center, z_center};
+		if (FAILED(m_ptrKit->PQAPIGetPointInfo(ulPtIDs[i], nPostureType, &nPostureCount, &dPointPosture,
+			&dVelocity, &dSpeedPercent, &nInstruct, &nApproach)) || !dPointPosture) {
+			continue;
+		}
 
-	m_ptrKit->PQAPIFree((LONG_PTR*)dPointPosture);
+		const double x = dPointPosture[0];
+		const double y = dPointPosture[1];
+		const double z = dPointPosture[2];
+
+		minX = std::min(minX, x);
+		maxX = std::max(maxX, x);
+		minY = std::min(minY, y);
+		maxY = std::max(maxY, y);
+		minZ = std::min(minZ, z);
+		maxZ = std::max(maxZ, z);
+
+		hasValidPoint = true;
+
+		m_ptrKit->PQAPIFree((LONG_PTR*)dPointPosture);
+		dPointPosture = nullptr;
+	}
+
 	m_ptrKit->PQAPIFreeArray((LONG_PTR*)ulPtIDs);
 
-	//计算得到平均法矢
+	if (!hasValidPoint) {
+		QMessageBox::warning(this, tr("提示"), tr("轨迹中没有有效的姿态点，无法计算站位。"));
+		return;
+	}
+
+	const double x_center = (maxX + minX) * 0.5;
+	const double y_center = (maxY + minY) * 0.5;
+	const double z_center = (maxZ + minZ) * 0.5;
+	std::vector<double> centerPoint{ x_center, y_center, z_center };
+
 	std::vector<double> dir = calculateAverageNormal(ulPathID);
-	
-	//对于站位来说有两种方式AGV和龙门，对于AGV来说需要确定x、y、theta，对于龙门来说需要确定z、y、z
 
 	ULONG robotID = 0;
-	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(),robotID);
+	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
 
 	std::vector<double> robotJoints = { 0,0,0,0,0,0 };
+	std::vector<double> relativePos = calculataRelativePos(robotID, robotJoints);
 
-	std::vector<double>relativePos = calculataRelativePos(robotID, robotJoints);
+	ULONG coordinateID = 0;
+	m_ptrKit->Robot_get_base_coordinate(robotID, &coordinateID);
 
-	ULONG CoordinateID = 0;
-	m_ptrKit->Robot_get_base_coordinate(robotID, &CoordinateID);
-
-	//计算得到机器人新基座标位置和原来坐标轴位置
-	std::vector<double> newBase = adjustRobotBasePosition(CoordinateID, centerPoint, relativePos);
+	std::vector<double> newBase = adjustRobotBasePosition(coordinateID, centerPoint, relativePos);
 
 	if (ui->comboBox_4->currentText() == "是") {
-		
-		//只移动AGV的xy以及theta
-		std::vector<double> move = {newBase[0] - newBase[3],newBase[1] - newBase[4],newBase[2] - newBase[5]};
-		QString pointName = ui->comboBox_5->currentText();
-		
-		ULONG pointID = m_AGVMap.key(pointName);
-		ULONG uPathId[1] = { pointID };
-		INT i_PathCount = 1;
-		m_ptrKit->Path_Translation(uPathId, i_PathCount, move[0], move[1], move[2]);
+		QString stationName = ui->textEdit->toPlainText().trimmed();
+		if (stationName.isEmpty()) {
+			stationName = tr("站位点");
+			ui->textEdit->setPlainText(stationName);
+		}
 
-		double dJoint[6] = { 0,0,0,0,0,0 };
-		INT o_nPostureArraySize = 0;
-		DOUBLE* o_dPosture = nullptr;
-		m_ptrKit->Robot_get_forward_kinematics(robotID, dJoint, 6, QUATERNION, 0, 1, &o_nPostureArraySize,
-			&o_dPosture);
+		std::vector<double> robotdir{ 0.0, 0.0, 1.0 };
+		double dJoint[6] = { 0, 0, 0, 0, 0, 0 };
+		INT postureSize = 0;
+		DOUBLE* posture = nullptr;
+		if (SUCCEEDED(m_ptrKit->Robot_get_forward_kinematics(
+			robotID, dJoint, 6, QUATERNION, 0, 1, &postureSize, &posture))
+			&& posture && postureSize >= 7) {
+			const double w = posture[3];
+			const double x = posture[4];
+			const double y = posture[5];
+			const double z = posture[6];
+			const std::vector<double> v{ 0.0, 0.0, 1.0 };
+			const double tx = 2 * (y * v[2] - z * v[1]);
+			const double ty = 2 * (z * v[0] - x * v[2]);
+			const double tz = 2 * (x * v[1] - y * v[0]);
 
-		//将四元数转化为方向向量
-		double w = o_dPosture[3], x = o_dPosture[4], y = o_dPosture[5], z = o_dPosture[6];
-		// 计算中间量，优化性能
+			robotdir = {
+				v[0] + w * tx + (y * tz - z * ty),
+				v[1] + w * ty + (z * tx - x * tz),
+				v[2] + w * tz + (x * ty - y * tx) };
+		}
+		if (posture) {
+			m_ptrKit->PQAPIFree((LONG_PTR*)posture);
+		}
 
-		std::vector<double> v = { 0.0, 0.0, 1.0 };
-		double tx = 2 * (y * v[2] - z * v[1]);
-		double ty = 2 * (z * v[0] - x * v[2]);
-		double tz = 2 * (x * v[1] - y * v[0]);
+		const double theta = calculateAGVJoint(robotdir, dir, coordinateID);
 
-		std::vector<double> robotdir;
-		double X = v[0] + w * tx + (y * tz - z * ty);
-		double Y = v[1] + w * ty + (z * tx - x * tz);
-		double Z = v[2] + w * tz + (x * ty - y * tx);
-		m_ptrKit->PQAPIFree((LONG_PTR*)o_dPosture);
+		auto toUtf8 = [](const QString& text) {
+			return text.toUtf8().toStdString();
+			};
 
-		robotdir.push_back(X);
-		robotdir.push_back(Y);
-		robotdir.push_back(Z);
+		AgvStationInfo station;
+		station.robotName = toUtf8(robotName);
+		station.groupName = toUtf8(groupName);
+		station.pathName = toUtf8(pathName);
+		station.stationName = toUtf8(stationName);
+		station.x = newBase[0];
+		station.y = newBase[1];
+		station.z = newBase[2];
+		station.theta = theta;
 
-		//计算按AGV的坐标系旋转theta多少实现
-		double theta = calculateAGVJoint(robotdir, dir, CoordinateID);
+		RobxIO io;
+		QVector<AgvStationInfo> stations;
+		io.updateData(stations, "AgvStationInfo.json");
 
-		m_ptrKit->Path_Rotate(uPathId, i_PathCount, 0, 0, theta);
+		bool replaced = false;
+		for (auto& info : stations) {
+			if (info.robotName == station.robotName
+				&& info.groupName == station.groupName
+				&& info.pathName == station.pathName
+				&& info.stationName == station.stationName) {
+				info = station;
+				replaced = true;
+				break;
+			}
+		}
+		if (!replaced) {
+			stations.append(station);
+		}
 
+		io.writeData(stations, "AgvStationInfo.json");
+		return;
 	}
 	else {
+		std::vector<double> move = { newBase[0] - newBase[3], newBase[1] - newBase[4], newBase[2] - newBase[5] };
 
-		//移动龙门轨道的xyz
-		std::vector<double> move = { newBase[0] - newBase[3],newBase[1] - newBase[4],newBase[2] - newBase[5] };
-		
+		std::string robotStdName = robotName.toStdString();
+		auto it = relationsMap.find(robotStdName);
+		QString selectedRail;
+		if (it != relationsMap.end()) {
+			const auto& relation = it->second;
+			selectedRail = QString::fromStdString(relation.first);
+		}
+
+		if (selectedRail.isEmpty()) {
+			QMessageBox::warning(this, tr("提示"), tr("未找到与机器人绑定的导轨。"));
+			return;
+		}
+
 		ULONG guideID = 0;
-		GetObjIDByName(PQ_ROBOT,L" ",guideID);
+		GetObjIDByName(PQ_ROBOT, selectedRail.toStdWString(), guideID);
+		if (guideID == 0) {
+			QMessageBox::warning(this, tr("提示"), tr("导轨对象不存在。"));
+			return;
+		}
 
-		std::vector<std::vector<double>> guideDir = calculateJointMovementDir(guideID);
+		const auto guideDir = calculateJointMovementDir(guideID);
+		if (guideDir.empty()) {
+			QMessageBox::warning(this, tr("提示"), tr("无法计算导轨的运动方向向量。"));
+			return;
+		}
 
 		std::vector<double> jointDeltas = calculateJointValues(move, guideDir);
-
-		int guideCount = guideDir.size();
-		//获得导轨关节值
-		int nCount = 0;
-		double* dJoints = nullptr;
-		m_ptrKit->Doc_get_obj_joints(guideID, &nCount, &dJoints);
-
-		std::vector<double> newGuideJoints(nCount);
-		for (int i = 0; i < nCount; ++i) {
-			newGuideJoints[i] = dJoints[i] + jointDeltas[i]; // 假设关节值是线性可加的
+		if (jointDeltas.size() != guideDir.size()) {
+			jointDeltas.resize(guideDir.size(), 0.0);
 		}
 
+		int jointCount = 0;
+		double* dJoints = nullptr;
+		if (FAILED(m_ptrKit->Doc_get_obj_joints(guideID, &jointCount, &dJoints)) || jointCount <= 0 || !dJoints) {
+			QMessageBox::warning(this, tr("提示"), tr("无法读取导轨关节数据。"));
+			if (dJoints) {
+				m_ptrKit->PQAPIFreeArray((LONG_PTR*)dJoints);
+			}
+			return;
+		}
+
+		std::vector<double> newGuideJoints(jointCount, 0.0);
+		for (int i = 0; i < jointCount; ++i) {
+			const double delta = (i < static_cast<int>(jointDeltas.size())) ? jointDeltas[i] : 0.0;
+			newGuideJoints[i] = dJoints[i] + delta;
+		}
 		m_ptrKit->PQAPIFreeArray((LONG_PTR*)dJoints);
 
-		//获取导轨的关节限位
-
+		int limitCount = 0;
 		double* dLinks = nullptr;
-		m_ptrKit->Doc_get_obj_links(guideID, &guideCount, &dLinks);
-
-		for (int i = 0; i < nCount; i++) {
-			if(newGuideJoints[i] < dLinks[2*i]){
-				newGuideJoints[i] = dLinks[2 * i];
+		if (SUCCEEDED(m_ptrKit->Doc_get_obj_links(guideID, &limitCount, &dLinks)) && dLinks) {
+			const int clampCount = std::min(limitCount, jointCount);
+			for (int i = 0; i < clampCount; ++i) {
+				const double lower = dLinks[2 * i];
+				const double upper = dLinks[2 * i + 1];
+				newGuideJoints[i] = std::max(lower, std::min(upper, newGuideJoints[i]));
 			}
-			else if (newGuideJoints[i] > dLinks[2*i+1]) {
-				newGuideJoints[i] = dLinks[2 * i + 1];
-			}
+			m_ptrKit->PQAPIFreeArray((LONG_PTR*)dLinks);
 		}
-
-
-		m_ptrKit->PQAPIFreeArray((LONG_PTR*)dLinks);
 
 		DOUBLE dRobotJoints[6] = { 0,0,0,0,0,0 };
 		INT nRJointsCount = 6;
@@ -315,25 +435,19 @@ void posCal::onCalculate()
 		DOUBLE dVelocity[1] = { 50 };
 		DOUBLE dSpeedPercent[1] = { 50 };
 		INT nApproach[1] = { 50 };
-		INT PointCount = 1;
+		INT pointCountOut = 1;
 
 		ULONG uoPathID = 0;
 		m_ptrKit->PQAPIAddAbsJointPath(robotID, dRobotJoints, nRJointsCount,
-			newGuideJoints.data(), nCount, dPositionerJoints, nPJointsCount, dVelocity,
-			dSpeedPercent, nApproach, PointCount, ulPathID, &uoPathID);
-
-
+			newGuideJoints.data(), jointCount, dPositionerJoints, nPJointsCount, dVelocity,
+			dSpeedPercent, nApproach, pointCountOut, ulPathID, &uoPathID);
 	}
-
 }
 
 void posCal::onShow()
 {
-	QString AGVPointName = ui->comboBox_5->currentText();
-	ULONG AGVPoint = m_AGVMap.key(AGVPointName);
-	ULONG uPathId[1] = { AGVPoint };
-	INT i_PathCount = 1;
-	m_ptrKit->Path_Translation(uPathId, i_PathCount, 0, 0, 20);
+
+
 }
 
 void posCal::onConfirm()
@@ -719,7 +833,6 @@ std::vector<double> posCal::calculateAverageNormal(ULONG pathID)
 std::vector<double> posCal::calculataRelativePos(ULONG robotID, std::vector<double> robotJoints)
 {
 	std::vector<double> relativePos;
-	//获取
 	int nCount = 0;
 	m_ptrKit->Robot_get_joints_count(robotID, &nCount);
 

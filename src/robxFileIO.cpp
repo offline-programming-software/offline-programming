@@ -125,6 +125,32 @@ void RobxIO::writeData(QVector<std::tuple<QString, QString, QString>>& list,
 	}
 }
 
+void RobxIO::writeData(const QVector<AgvStationInfo>& list,
+	const std::string& fileName)
+{
+	json j = json::array();
+
+	for (const auto& info : list) {
+		json item;
+		item["robotName"] = info.robotName;
+		item["groupName"] = info.groupName;
+		item["pathName"] = info.pathName;
+		item["stationName"] = info.stationName;
+		item["x"] = info.x;
+		item["y"] = info.y;
+		item["z"] = info.z;
+		item["theta"] = info.theta;
+		j.push_back(std::move(item));
+	}
+
+	const std::string fullPath = m_tempDir + "/" + fileName;
+	std::ofstream ofs(fullPath);
+	if (!ofs.is_open()) {
+		throw std::runtime_error("Cannot open file for writing: " + fullPath);
+	}
+	ofs << j.dump(4);
+}
+
 // ========================
 // ? ´Ó temp/correctionList.json ¶ÁÈ¡
 // ========================
@@ -238,6 +264,33 @@ void RobxIO::updateData(QVector<std::tuple<QString, QString, QString>>& list,
 			};
 			list.push_back(tuple);
 		}
+	}
+}
+
+void RobxIO::updateData(QVector<AgvStationInfo>& list,
+	const std::string& fileName)
+{
+	const std::string fullPath = m_tempDir + "/" + fileName;
+	std::ifstream ifs(fullPath);
+	if (!ifs.is_open()) {
+		return;
+	}
+
+	json j;
+	ifs >> j;
+
+	list.clear();
+	for (const auto& item : j) {
+		AgvStationInfo info;
+		info.robotName = item.value("robotName", std::string{});
+		info.groupName = item.value("groupName", std::string{});
+		info.pathName = item.value("pathName", std::string{});
+		info.stationName = item.value("stationName", std::string{});
+		info.x = item.value("x", 0.0);
+		info.y = item.value("y", 0.0);
+		info.z = item.value("z", 0.0);
+		info.theta = item.value("theta", 0.0);
+		list.push_back(info);
 	}
 }
 

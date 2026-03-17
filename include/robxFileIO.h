@@ -4,6 +4,7 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include <Correction.h>
+#include <string>
 #include <nlohmann/json.hpp>
 
 #include "spaceCalculate.h"
@@ -81,6 +82,17 @@
  *
  */
 
+struct AgvStationInfo {
+	std::string robotName;
+	std::string groupName;
+	std::string pathName;
+	std::string stationName;
+	double x;
+	double y;
+	double z;
+	double theta;
+};
+
 
 class RobxIO
 {
@@ -110,6 +122,9 @@ public:
 	
 	void writeData(QVector<std::tuple<QString, QString, QString>>& list,
 		const std::string& fileName);
+
+	void writeData(const QVector<AgvStationInfo>& list,
+		const std::string& fileName);
 	/**
 	  * @brief 从robx文件中读取数据
 	  * 
@@ -127,6 +142,9 @@ public:
 
 
 	void updateData(QVector<std::tuple<QString, QString, QString>>& list,
+		const std::string& fileName);
+
+	void updateData(QVector<AgvStationInfo>& list,
 		const std::string& fileName);
 
 	//void writeData(const QVector<鏂扮殑鏁版嵁缁撴瀯绫诲瀷>& list,

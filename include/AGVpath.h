@@ -1,7 +1,7 @@
 #pragma once
 
 #pragma execution_character_set("utf-8")
-
+#define NOMINMAX
 #include <QDialog>
 #include <QComboBox>
 #include <QMessageBox>
@@ -9,8 +9,8 @@
 #include <QString>
 #include <QStringList>
 #include <QVector3D>
-#include <algorithm>
 #include <limits>
+#include "robxFileIO.h"
 #include "boundBox.h"
 #include "ui_AGVpath.h"
 #include "PQKitCallback.h"
@@ -38,17 +38,59 @@ private slots:
 	void onCalculate();
 	void onConfirm();
 	void onCancel();
-	void onAGVSelectionChanged(int index);
+	void onInsertRow();
+	void onDeleteRow();
+	void onMoveRowUp();
+	void onMoveRowDown();
+	void onAddSimulationEvent();
 
+	// AGV选择变化槽函数
+	void onAGVSelectionChanged(int index);
+	// 轨迹组选择变化槽函数  
+	void onComboBox2CurrentIndexChanged(int index);
+	void onComboBox4CurrentIndexChanged(int index);
+	void onComboBox3CurrentIndexChanged(int index);
+	void onComboBox5CurrentIndexChanged(int index);
 
 private:
 	Ui::AGVpathClass *ui;
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
 
-	QMap<ULONG, QString> m_AGVMap;
+	QMap<ULONG, QString> m_robotMap;
+	QString m_tempDir = "./temp/jsons/";
+	std::map<std::string, std::pair<std::string, std::string>> relationsMap;//存储关系
+	QVector<AgvStationInfo> agvStations; // 存储AGV站位信息;
+	QMap<QString, ULONG> m_pathIdCache;
 
 	void init();
+
+	//初始化界面数据
+	void initTable();
+
+	//获取机器人、导轨、AGV的关联关系
+	std::map<std::string, std::pair<std::string, std::string>> loadRobotRelations(const std::string& filePath = "relations.json");
+
+	void swapTableRows(int firstRow, int secondRow);
+	void updateAgvNameDisplay(const QString& robotName);
+	QString findStationNames(
+		const QString& robotName,
+		const QString& groupName,
+		const QString& pathName) const;
+
+	bool tryGetStationInfo(
+		const QString& robotName,
+		const QString& groupName,
+		const QString& pathName,
+		const QString& stationName,
+		AgvStationInfo& info) const;
+	int insertTransitionRow(
+		int rowIndex,
+		const QString& groupName,
+		const QString& pathName,
+		const QString& stationLabel,
+		const QVector3D& position,
+		double theta);
 
 	std::vector<QVector3D> calculateTransitionPoints(
 		ULONG startPointID, ULONG endPointID,
@@ -58,6 +100,22 @@ private:
 	double calculateBoundaryValue(const AABB& bbox, const QVector3D& dir);
 
 	QVector3D getDirectionVector(const QString& dirName);
+
+	QVector<AgvStationInfo> loadAgvStationInfos() const;
+	void refreshAgvStationTable();
+	void updateVisibleStationRange();
+	void syncTableToAgvStations();
+	void persistAgvStations();
+	void commitAgvStations();
+	QString nextTransitionLabel() const;
+	int findSortedInsertRow(const QString& groupName,
+		const QString& pathName,
+		const QString& stationLabel) const;
+
+	QString buildPathCacheKey(ULONG robotID, const QString& groupName,
+		const QString& pathName) const;
+	bool tryGetPathId(ULONG robotID, const QString& groupName,
+		const QString& pathName, ULONG& pathId);
 
 	AABB creatAABB(ULONG uID, ULONG uCoordinate);
 
