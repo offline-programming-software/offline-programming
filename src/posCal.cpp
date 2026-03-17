@@ -1,16 +1,10 @@
 #include "posCal.h"
 #include "parseJSON.h"
-<<<<<<< HEAD
 #include "robxFileIO.h"
 #include <comdef.h>
 #include <oaidl.h>
 #include <fstream>
 #include <QMessageBox>
-=======
-#include <comdef.h>
-#include <oaidl.h>
-#include <fstream>
->>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
 #include <sstream>
 #include <stdexcept>
 
@@ -128,58 +122,58 @@ std::map<std::string, std::pair<std::string, std::string>> posCal::loadRobotRela
 	return relationsMap;
 }
 
-std::map<std::string, std::pair<std::string, std::string>> posCal::loadRobotRelations(const std::string & filePath)
-{
-	std::map<std::string, std::pair<std::string, std::string>> relationsMap;
-	std::ifstream file(filePath);
-
-	// 1. 检查文件是否打开成功
-	if (!file.is_open()) {
-		qWarning() << "警告: 无法打开关系文件" << QString::fromStdString(filePath) << "，将使用默认值。";
-		return relationsMap; // 返回空地图
-	}
-
-	try {
-		json data;
-		file >> data;
-		file.close();
-
-		// 2. 确保根节点是数组
-		if (!data.is_array()) {
-			qWarning() << "警告: relations.json 根节点不是数组，解析跳过。";
-			return relationsMap;
-		}
-
-		// 3. 遍历数组
-		for (const auto& item : data) {
-			// 确保每一项也是数组，且至少有一个元素（机器人名称）
-			if (item.is_array() && item.size() >= 1) {
-				std::string robotName = item[0].get<std::string>();
-
-				std::string railName = "无";
-				std::string agvName = "无";
-
-				// 读取第二个元素 (导轨)，如果存在且不为空
-				if (item.size() > 1 && !item[1].get<std::string>().empty()) {
-					railName = item[1].get<std::string>();
-				}
-
-				// 读取第三个元素 (AGV)，如果存在且不为空
-				if (item.size() > 2 && !item[2].get<std::string>().empty()) {
-					agvName = item[2].get<std::string>();
-				}
-
-				// 存入 Map，方便后续通过机器人名称快速查找
-				relationsMap[robotName] = std::make_pair(railName, agvName);
-			}
-		}
-	}
-	catch (const std::exception& e) {
-		qCritical() << "解析 relations.json 失败:" << e.what();
-	}
-
-	return relationsMap;
-}
+//std::map<std::string, std::pair<std::string, std::string>> posCal::loadRobotRelations(const std::string & filePath)
+//{
+//	std::map<std::string, std::pair<std::string, std::string>> relationsMap;
+//	std::ifstream file(filePath);
+//
+//	// 1. 检查文件是否打开成功
+//	if (!file.is_open()) {
+//		qWarning() << "警告: 无法打开关系文件" << QString::fromStdString(filePath) << "，将使用默认值。";
+//		return relationsMap; // 返回空地图
+//	}
+//
+//	try {
+//		json data;
+//		file >> data;
+//		file.close();
+//
+//		// 2. 确保根节点是数组
+//		if (!data.is_array()) {
+//			qWarning() << "警告: relations.json 根节点不是数组，解析跳过。";
+//			return relationsMap;
+//		}
+//
+//		// 3. 遍历数组
+//		for (const auto& item : data) {
+//			// 确保每一项也是数组，且至少有一个元素（机器人名称）
+//			if (item.is_array() && item.size() >= 1) {
+//				std::string robotName = item[0].get<std::string>();
+//
+//				std::string railName = "无";
+//				std::string agvName = "无";
+//
+//				// 读取第二个元素 (导轨)，如果存在且不为空
+//				if (item.size() > 1 && !item[1].get<std::string>().empty()) {
+//					railName = item[1].get<std::string>();
+//				}
+//
+//				// 读取第三个元素 (AGV)，如果存在且不为空
+//				if (item.size() > 2 && !item[2].get<std::string>().empty()) {
+//					agvName = item[2].get<std::string>();
+//				}
+//
+//				// 存入 Map，方便后续通过机器人名称快速查找
+//				relationsMap[robotName] = std::make_pair(railName, agvName);
+//			}
+//		}
+//	}
+//	catch (const std::exception& e) {
+//		qCritical() << "解析 relations.json 失败:" << e.what();
+//	}
+//
+//	return relationsMap;
+//}
 
 void posCal::onComboBox1CurrentIndexChanged(int index)
 {
@@ -260,48 +254,13 @@ void posCal::onComboBox4CurrentIndexChanged(int index)
 	const QString isAGV = ui->comboBox_4->currentText();
 
 	if (isAGV == "是") {
-<<<<<<< HEAD
 		ui->textEdit->setPlainText("站位点");
 		// 原有 AGV 路径加载逻辑保留（如需）
 	}
 	else {
 		ui->textEdit->clear();
-		// 原有“否”流程（若有）保留
-=======
-		//ULONG uPartID = 0;
-		//GetObjIDByName(PQ_WORKINGPART, L"零件2", uPartID);
-		//INT nCount = 0;
-		//WCHAR* whPathNames = nullptr; 
-		//ULONG* uPathIDs = nullptr;
-		//m_ptrKit->Part_get_path(uPartID, &nCount, &whPathNames, &uPathIDs);
-
-		//// 清空comboBox_5
-		//ui->comboBox_5->clear();
-
-
-		//if (whPathNames != nullptr) {
-		//	std::wstring wstr = whPathNames;
-		//	QString guidePoints = QString::fromStdWString(wstr);
-		//	
-		//	QStringList guideNames = guidePoints.split("#", QString::SkipEmptyParts);
-
-		//	ui->comboBox_5->addItems(guideNames);
-
-		//	for (int i = 0; i < nCount; i++) {
-		//		m_AGVMap[uPathIDs[i]] = guideNames[i];
-		//	}
-
-		//}
-
-		//// 释放内存
-		//if (whPathNames) m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
-		//if (uPathIDs) m_ptrKit->PQAPIFree((LONG_PTR*)uPathIDs);
-		
 	}
-	else {
-		//ui->comboBox_5->clear();
->>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
-	}
+
 }
 
 void posCal::onCalculate()
@@ -390,7 +349,6 @@ void posCal::onCalculate()
 	std::vector<double> newBase = adjustRobotBasePosition(coordinateID, centerPoint, relativePos);
 
 	if (ui->comboBox_4->currentText() == "是") {
-<<<<<<< HEAD
 		QString stationName = ui->textEdit->toPlainText().trimmed();
 		if (stationName.isEmpty()) {
 			stationName = tr("站位点");
@@ -456,47 +414,6 @@ void posCal::onCalculate()
 		if (!replaced) {
 			stations.append(station);
 		}
-=======
-		//
-		////只移动AGV的xy以及theta
-		//std::vector<double> move = {newBase[0] - newBase[3],newBase[1] - newBase[4],newBase[2] - newBase[5]};
-		//QString pointName = ui->comboBox_5->currentText();
-		//
-		//ULONG pointID = m_AGVMap.key(pointName);
-		//ULONG uPathId[1] = { pointID };
-		//INT i_PathCount = 1;
-		//m_ptrKit->Path_Translation(uPathId, i_PathCount, move[0], move[1], move[2]);
-
-		//double dJoint[6] = { 0,0,0,0,0,0 };
-		//INT o_nPostureArraySize = 0;
-		//DOUBLE* o_dPosture = nullptr;
-		//m_ptrKit->Robot_get_forward_kinematics(robotID, dJoint, 6, QUATERNION, 0, 1, &o_nPostureArraySize,
-		//	&o_dPosture);
-
-		////将四元数转化为方向向量
-		//double w = o_dPosture[3], x = o_dPosture[4], y = o_dPosture[5], z = o_dPosture[6];
-		//// 计算中间量，优化性能
-
-		//std::vector<double> v = { 0.0, 0.0, 1.0 };
-		//double tx = 2 * (y * v[2] - z * v[1]);
-		//double ty = 2 * (z * v[0] - x * v[2]);
-		//double tz = 2 * (x * v[1] - y * v[0]);
-
-		//std::vector<double> robotdir;
-		//double X = v[0] + w * tx + (y * tz - z * ty);
-		//double Y = v[1] + w * ty + (z * tx - x * tz);
-		//double Z = v[2] + w * tz + (x * ty - y * tx);
-		//m_ptrKit->PQAPIFree((LONG_PTR*)o_dPosture);
-
-		//robotdir.push_back(X);
-		//robotdir.push_back(Y);
-		//robotdir.push_back(Z);
-
-		////计算按AGV的坐标系旋转theta多少实现
-		//double theta = calculateAGVJoint(robotdir, dir, CoordinateID);
-
-		//m_ptrKit->Path_Rotate(uPathId, i_PathCount, 0, 0, theta);
->>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
 
 		io.writeData(stations, "AgvStationInfo.json");
 		return;
@@ -582,16 +499,7 @@ void posCal::onCalculate()
 
 void posCal::onShow()
 {
-<<<<<<< HEAD
-
-
-=======
-	/*QString AGVPointName = ui->comboBox_5->currentText();
-	ULONG AGVPoint = m_AGVMap.key(AGVPointName);
-	ULONG uPathId[1] = { AGVPoint };
-	INT i_PathCount = 1;
-	m_ptrKit->Path_Translation(uPathId, i_PathCount, 0, 0, 20);*/
->>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
+	reject();
 }
 
 void posCal::onConfirm()
