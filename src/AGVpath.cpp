@@ -136,7 +136,12 @@ void AGVpath::init()
 
 	ui->comboBox_1->addItems(robotNames);
 
+<<<<<<< HEAD
 	QString robotName = ui->comboBox_1->currentText();
+=======
+	ui->comboBox_1->addItems(AGVNames);
+	//ui->comboBox_5->addItems(AGVNames);
+>>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
 
 	ULONG AGVID = m_robotMap.key(robotName);
 

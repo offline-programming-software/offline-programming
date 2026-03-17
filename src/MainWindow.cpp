@@ -430,7 +430,11 @@ void MainWindow::on_create_path()
 	//wchar_t whMoudle[256] = L"RO_CMD_GENERATE_PATH";
 	//m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
 
+<<<<<<< HEAD
 	/*wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");*/
+=======
+	//wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
+>>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
 	wchar_t whMoudle[] = L"RO_CMD_GENERATE_PATH";
 	m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
 }
@@ -952,7 +956,11 @@ void MainWindow::on_insert_path()
 
 	//默认取第一个机器人
 	ULONG uRobotID = 0;
+<<<<<<< HEAD
 	//GetObjIDByName(PQ_ROBOT, _T(""), uRobotID);
+=======
+	/*GetObjIDByName(PQ_ROBOT, _T(""), uRobotID);*/
+>>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
 	GetObjIDByName(PQ_ROBOT, L"", uRobotID);
 
 	//
@@ -965,8 +973,13 @@ void MainWindow::on_insert_path()
 	double dVel[1] = { 200.0 };
 	double dSpeedP[1] = { 100.0 };
 	int nApproach[1] = { -1 };
+<<<<<<< HEAD
 	//wchar_t whPathName[] = _T("Test_Path");
 	//wchar_t whPathGroupName[] = _T("Test_Group");
+=======
+	/*wchar_t whPathName[] = _T("Test_Path");
+	wchar_t whPathGroupName[] = _T("Test_Group");*/
+>>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
 	wchar_t whPathName[] = L"Test_Path";
 	wchar_t whPathGroupName[] = L"Test_Group";
 

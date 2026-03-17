@@ -51,14 +51,43 @@ private:
 	Ui::posCalClass *ui;
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
+<<<<<<< HEAD
 	QString m_tempDir = "./temp/jsons/";
 	QMap<ULONG, QString> m_robotMap;// 机器人名称到ID的映射
+=======
+>>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
 	std::map<std::string, std::pair<std::string, std::string>> relationsMap;//存储关系
 
 	// 初始化函数
 	void init();
 
+<<<<<<< HEAD
 	std::map<std::string, std::pair<std::string, std::string>> loadRobotRelations(const std::string& filePath = "relations.json");
+=======
+	
+	std::map<std::string, std::pair<std::string, std::string>> loadRobotRelations(const std::string& filePath = "relations.json");
+
+	// 根据类型获取对象列表
+	QMap<ULONG, QString> getObjectsByType(PQDataType objType);
+
+	// 从VARIANT中提取字符串数组
+	QStringList extractStringArrayFromVariant(const VARIANT& variant);
+
+	// 从VARIANT中提取长整型数组
+	QList<long> extractLongArrayFromVariant(const VARIANT& variant);
+
+	//获取机器人列表
+	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);
+
+	// 获取轨迹组名称
+	QStringList getPathGroupNames(ULONG robotID);
+
+	// 获取轨迹名称
+	QStringList getPathNames(ULONG robotID, const QString& groupName);
+
+	//获取id
+	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);
+>>>>>>> 1c85fd5454076c0fd354098cec5f645d8b2ac145
 
 	//计算出平均法向
 	std::vector<double> calculateAverageNormal(ULONG pathID);
