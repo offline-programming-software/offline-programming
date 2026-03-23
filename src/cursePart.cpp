@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <QDir>
 #include <cmath>
 
 static void normalizeVector(std::vector<double>& v) {
@@ -2312,6 +2313,30 @@ void cursePart::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG 
 	SafeArrayUnaccessData(vIDPara.parray);
 }
 
+void cursePart::dumpPointSetToText(const QString& filePath,
+	const std::vector<double>& data,
+	const QString& tag) const
+{
+	if (data.size() < 3 || data.size() % 3 != 0) {
+		qWarning() << "点集数据不完整，无法导出:" << tag;
+		return;
+	}
+
+	std::ofstream out(filePath.toStdString(), std::ios::app);
+	if (!out.is_open()) {
+		qWarning() << "无法写入文件:" << filePath;
+		return;
+	}
+
+	out << "# " << tag.toStdString() << '\n';
+	for (size_t i = 0; i + 2 < data.size(); i += 3) {
+		out << data[i] << '\t'
+			<< data[i + 1] << '\t'
+			<< data[i + 2] << '\n';
+	}
+	out << std::endl;
+}
+
 std::vector<double> cursePart::convertToLocalEulerAngles(const std::vector<double>& point, const std::vector<double>& mainDirection, const std::vector<double>& otherDirection)
 {
 	// 验证输入向量维度
@@ -3229,6 +3254,10 @@ void cursePart::OnDraw()
 	}
 
 	if (isPreview) {
+
+		const QString dumpPath = QDir(m_tempDir).filePath("preview_points.txt");
+		dumpPointSetToText(dumpPath, points, "preview points");
+
 		std::map<int, std::array<double, 3>> pointMap;
 		std::array<double, 3> tempPoint;
 
@@ -3240,6 +3269,7 @@ void cursePart::OnDraw()
 			{
 				int pointIndex = i / 3; // 顶点索引是连续的
 				pointMap.emplace(pointIndex, tempPoint);
+
 			}
 		}
 

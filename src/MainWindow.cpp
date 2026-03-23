@@ -1453,6 +1453,8 @@ void MainWindow::OnInitializeKitThread()
 	//initialize pqkit
 	CComBSTR bsName = L"ra_tsinghua_whk04";
 	CComBSTR bsPWD = L"tsinghua_whk04";
+	//CComBSTR bsName = L"";
+	//CComBSTR bsPWD = L"";
 	HRESULT hr = m_ptrKit->pq_InitPlatformComponent(m_ptrKitCallback, (int)(this->winId()), bsName, bsPWD);
 	if (S_OK != hr)
 	{

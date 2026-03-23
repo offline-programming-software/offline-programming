@@ -177,6 +177,10 @@ private:
 	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);//获取喷涂机器人列表
 	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o_uID);//通过名称获取ID
 	
+	void dumpPointSetToText(const QString& filePath,
+		const std::vector<double>& data,
+		const QString& tag) const;
+
 	//创建坐标系
 	std::vector<double> convertToLocalEulerAngles(
 		const std::vector<double>& point,
