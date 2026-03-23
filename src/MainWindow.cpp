@@ -20,98 +20,164 @@
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 {
-	//软件图标设置
 	setWindowIcon(QIcon(":/image/resource/APP.svg"));
-
-	//添加菜单栏
 	SARibbonBar* bar = ribbonBar();
 
-
+	//******************//
 	//添加编程仿真**菜单**//
+	//******************//
 	SARibbonCategory* sence = bar->addCategoryPage("  编程仿真  ");
-
 	//添加文件**Pannel**
 	SARibbonPannel*  file = sence->addPannel("文件");
 	QAction* action1 = file->addAction("打开", QIcon(":/image/resource/open.png"), QToolButton::InstantPopup);
 	QAction* action2 = file->addAction("保存", QIcon(":/image/resource/save.png"), QToolButton::InstantPopup);
-
-
+		connect(action1, SIGNAL(triggered()), this, SLOT(OnOpenRobx()));//打开
+		connect(action2, SIGNAL(triggered()), this, SLOT(OnSaveRobx()));//保存
 	//添加模型导入**pannel**
 	SARibbonPannel* impoertModel = sence->addPannel("模型导入");
 	QAction* action5 = impoertModel->addAction("外部模型导入", QIcon(":/image/resource/icons8-folder-32.png"), QToolButton::InstantPopup);
 	QAction* action24 = impoertModel->addAction("导入工具", QIcon(":/image/resource/icons8-imtool.png"), QToolButton::InstantPopup);
 	QAction* action20 = impoertModel->addAction("导入机构", QIcon(":/image/resource/2.png"), QToolButton::InstantPopup);
 	QAction* action22 = impoertModel->addAction("导入零件", QIcon(":/image/resource/icons-gear.png"), QToolButton::InstantPopup);
-
-
+		connect(action20, SIGNAL(triggered()), this, SLOT(on_import_institutions()));//导入机构
+		connect(action22, SIGNAL(triggered()), this, SLOT(on_import_part()));//导入零件
+		connect(action24, SIGNAL(triggered()), this, SLOT(on_import_tool()));//导入工具
+		connect(action5, SIGNAL(triggered()), this, SLOT(on_input()));//输入
 	//添加场景搭建**Pannel**
 	SARibbonPannel*  import = sence->addPannel("场景搭建");
 	QAction* action6 = import->addAction("三维球", QIcon(":/image/resource/5.png"), QToolButton::InstantPopup);
+		connect(action6, SIGNAL(triggered()), this, SLOT(on_proxy()));//三维球
 	QAction* action8 = import->addAction("新建坐标系", QIcon(":/image/resource/icons8-coordinate-system-32.png"), QToolButton::InstantPopup);
-
+		connect(action8, SIGNAL(triggered()), this, SLOT(on_create_frame()));//新建坐标系
 	//添加运动机构定义**Pannel**
 	SARibbonPannel* def = sence->addPannel("运动机构定义");
 	QAction* action19 = def->addAction("定义机构", QIcon(":/image/resource/1.png"), QToolButton::InstantPopup);
-
+		connect(action19, SIGNAL(triggered()), this, SLOT(on_defining_institutions()));//定义机构
 	//添加喷涂工具**pannel**
 	SARibbonPannel* spy = sence->addPannel("喷涂工具");
 	QAction* action25 = spy->addAction("定义喷涂工具", QIcon(":/image/resource/pentu.png"), QToolButton::InstantPopup);
+		connect(action25, SIGNAL(triggered()), this, SLOT(on_rocreate_sprayingtool()));//定义喷涂工具
 	QAction* action26 = spy ->addAction("喷刷管理", QIcon(":/image/resource/icons8-spray.png"), QToolButton::InstantPopup);
-
+		connect(action26, SIGNAL(triggered()), this, SLOT(on_roobjassistor_manage()));//喷刷管理
 	//添加轨迹规划**Pannel**
 	SARibbonPannel*  path = sence->addPannel("轨迹规划");
 	QAction* pathGen = path->addAction("轨迹生成", QIcon(""),QToolButton::InstantPopup);
+		connect(pathGen, SIGNAL(triggered()), this, SLOT(on_create_path()));
 	QAction* action69 = path->addAction("区域划分", QIcon(":/image/resource/33.png"), QToolButton::InstantPopup);
+		connect(action69, SIGNAL(triggered()), this, SLOT(on_curse_part()));//喷涂区域划分
 	QAction* action10 = path->addAction("喷涂路径生成", QIcon(":/image/resource/30.png"), QToolButton::InstantPopup);
-
+		connect(action10, SIGNAL(triggered()), this, SLOT(on_campath_flat_surface()));//随形喷涂
 	//添加轨迹修正**Pannel**
 	SARibbonPannel* correction = sence->addPannel("轨迹修正");
 	QAction* action101 = correction->addAction("变形修正设置", QIcon(":/image/resource/bendingFunc.png"), QToolButton::InstantPopup);
 	QAction* action102 = correction->addAction("对象变形修正", QIcon(":/image/resource/bendingmanager .png"), QToolButton::InstantPopup);
 	QAction* action103 = correction->addAction("对象偏移修正", QIcon(":/image/resource/positioncorrect.png"), QToolButton::InstantPopup);
-
+		connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
+		connect(action102, &QAction::triggered, this, &MainWindow::on_bendingManagerWidget_open);
+		connect(action103, &QAction::triggered, this, &MainWindow::on_PositionCorrectWidget_open);
 	//添加仿真**pannel**
 	SARibbonPannel*  complie = sence->addPannel("仿真调试");
 	QAction* action13 = complie->addAction("编译", QIcon(":/image/resource/compile.png"), QToolButton::InstantPopup);
 	QAction* action14 = complie->addAction("仿真", QIcon(":/image/resource/simulate.png"), QToolButton::InstantPopup);
 	QAction* action15 = complie->addAction("后置", QIcon(":/image/resource/26.png"), QToolButton::InstantPopup);
+		connect(action13, SIGNAL(triggered()), this, SLOT(OnCompile()));//编译
+		connect(action14, SIGNAL(triggered()), this, SLOT(on_simulate()));//仿真
+		connect(action15, SIGNAL(triggered()), this, SLOT(on_post()));//后置
 	QAction* action100 = complie->addAction("批量后置", QIcon(":/image/resource/26.png"), QToolButton::InstantPopup);
+		connect(action100, SIGNAL(triggered()), this, SLOT(on_numPost()));
+	//添加设置
+	SARibbonPannel*  set = sence->addPannel("设置");
+	QAction* action16 = set->addAction("地面", QIcon(":/image/resource/floor.png"), QToolButton::InstantPopup);
+	QAction* action17 = set->addAction("选项", QIcon(":/image/resource/icons8-automatic-100.png"), QToolButton::InstantPopup);
+	QAction* action18 = set->addAction("碰撞设置", QIcon(":/image/resource/28.png"), QToolButton::InstantPopup);
+		connect(action16, SIGNAL(triggered()), this, SLOT(on_floor()));//地面
+		connect(action17, SIGNAL(triggered()), this, SLOT(on_motion_option()));//选项
+		connect(action18, SIGNAL(triggered()), this, SLOT(on_collision_option()));//碰撞设置
 
 
-		//添加
+
+	//******************//
+	//添加定义机构**菜单**//
+	//******************//
+	SARibbonCategory* definition = bar->addCategoryPage("定义机构");
+	SARibbonPannel* pannel = definition->addPannel("机构");
+	SARibbonPannel* part = definition->addPannel("零件");
+	SARibbonPannel* tool = definition->addPannel("工具");
+	//添加菜单栏
+	QAction* action21 = part->addAction("定义零件", QIcon(":/image/resource/icons8-tool.png"), QToolButton::InstantPopup);
+		connect(action21, SIGNAL(triggered()), this, SLOT(on_defining_part()));//定义零件
+	QAction* action23 = tool->addAction("定义工具", QIcon(":/image/resource/icons8-detool.png"), QToolButton::InstantPopup);
+		connect(action23, SIGNAL(triggered()), this, SLOT(on_defining_tool()));//导入工具
+
+	//******************//
+	//添加自由绘制**菜单**//
+	//******************//
+	SARibbonCategory* sketch = bar->addCategoryPage("自由绘制");
+	SARibbonPannel* add = sketch->addPannel("创建基本图元");
+	SARibbonPannel* create = sketch->addPannel("创建草图");
+	
+	QAction* action27 = create->addAction("创建草图", QIcon(":/image/resource/9.png"), QToolButton::InstantPopup);
+	connect(action27, SIGNAL(triggered()), this, SLOT(on_create_newsketch()));//创建草图
+	QAction* action28 = create->addAction("编辑草图", QIcon(":/image/resource/icons8-create-32.png"), QToolButton::InstantPopup);
+	connect(action28, SIGNAL(triggered()), this, SLOT(on_edit_wkptsketch()));//编辑草图
+	QAction* action29 = add->addAction("点", QIcon(":/image/resource/10.png"), QToolButton::InstantPopup);
+	connect(action29, SIGNAL(triggered()), this, SLOT(on_sketcher_createpoint()));//点
+	QAction* action30 = add->addAction("直线", QIcon(":/image/resource/11.png"), QToolButton::InstantPopup);
+	connect(action30, SIGNAL(triggered()), this, SLOT(on_sketcher_line()));//直线
+	QAction* action31 = add->addAction("圆", QIcon(":/image/resource/12.png"), QToolButton::InstantPopup);
+	connect(action31, SIGNAL(triggered()), this, SLOT(on_sketcher_circ()));//圆
+	QAction* action32 = add->addAction("圆弧", QIcon(":/image/resource/13.png"), QToolButton::InstantPopup);
+	connect(action32, SIGNAL(triggered()), this, SLOT(on_sketcher_arc()));//圆弧
+	QAction* action33 = add->addAction("椭圆弧", QIcon(":/image/resource/14.png"), QToolButton::InstantPopup);
+	connect(action33, SIGNAL(triggered()), this, SLOT(on_sketcher_ellipticalarc()));//椭圆弧
+	QAction* action34 = add->addAction("椭圆", QIcon(":/image/resource/21.png"), QToolButton::InstantPopup);
+	connect(action34, SIGNAL(triggered()), this, SLOT(on_sketcher_ellipse()));//椭圆
+	QAction* action35 = add->addAction("矩形", QIcon(":/image/resource/15.png"), QToolButton::InstantPopup);
+	connect(action35, SIGNAL(triggered()), this, SLOT(on_sketcher_rectangle()));//矩形
+	QAction* action36 = add->addAction("正多边形", QIcon(":/image/resource/16.png"), QToolButton::InstantPopup);
+	connect(action36, SIGNAL(triggered()), this, SLOT(on_sketcher_regpolygon()));//正多边形
+	QAction* action37 = add->addAction("键槽", QIcon(":/image/resource/17.png"), QToolButton::InstantPopup);
+	connect(action37, SIGNAL(triggered()), this, SLOT(on_sketcher_slot()));//键槽
+	QAction* action38 = add->addAction("多段线", QIcon(":/image/resource/18.png"), QToolButton::InstantPopup);
+	connect(action38, SIGNAL(triggered()), this, SLOT(on_sketcher_polyline()));//多段线
+	QAction* action39 = add->addAction("圆角", QIcon(":/image/resource/19.png"), QToolButton::InstantPopup);
+	connect(action39, SIGNAL(triggered()), this, SLOT(on_sketcher_fillet()));//圆角
+	QAction* action40 = add->addAction("剪裁", QIcon(":/image/resource/20.png"), QToolButton::InstantPopup);
+	connect(action40, SIGNAL(triggered()), this, SLOT(on_sketcher_triming()));//裁剪
+
+
+
+	//******************//
+	//添加在线控制**菜单**//
+	//******************//
+	SARibbonCategory* online = bar->addCategoryPage("在线仿真");
+	SARibbonPannel* online_adjust = online->addPannel("在线修正");
+	//设置菜单栏名称
+	SARibbonPannel* online_setup = online->addPannel("在线设置");
+	QAction* action56 = online_setup->addAction("加工进度同步", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
+		connect(action56, SIGNAL(triggered()), this, SLOT(on_sync()));//加工进度同步
+	QAction* action58 = online_adjust->addAction("在线修正", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
+		connect(action58, SIGNAL(triggered()), this, SLOT(on_action()));//在线修正
+
+	//添加
 	SARibbonCategory* otherCate = bar->addCategoryPage(tr("Other"));
 	SARibbonPannel* pannel2 = otherCate->addPannel(tr("other"));
 	QAction* action59 = pannel2->addAction("机器人库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+		connect(action59, SIGNAL(triggered()), this, SLOT(on_choose_robot()));//机器人库
 	QAction* action60 = pannel2->addAction("设备库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+		connect(action60, SIGNAL(triggered()), this, SLOT(on_choosetool()));//工具库
 	QAction* action61 = pannel2->addAction("机器人求解",QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+		connect(action61, SIGNAL(triggered()), this, SLOT(on_kinematics()));//机器人逆解
 	QAction* action62 = pannel2->addAction("联动求解求解", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+		connect(action62, SIGNAL(triggered()), this, SLOT(on_linkage()));//机器人联动求解
 	QAction* action63 = pannel2->addAction("输出动画到本地", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+		connect(action63, SIGNAL(triggered()), this, SLOT(on_animation()));//输出视频到本地
 	QAction* action64 = pannel2->addAction("输出视频", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+		connect(action64, SIGNAL(triggered()), this, SLOT(on_video()));//输出动画
 	QAction* openRobxFileIOManagerAction = pannel2->addAction("Robx文件管理器", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+		connect(openRobxFileIOManagerAction, SIGNAL(triggered()), this,SLOT(on_robxFileIOManager_open()));//Robx文件管理器
 	resize(800, 600);
 
-	connect(action1, SIGNAL(triggered()), this, SLOT(OnOpenRobx()));//打开
-	connect(action2, SIGNAL(triggered()), this, SLOT(OnSaveRobx()));//保存
-	connect(action5, SIGNAL(triggered()), this, SLOT(on_input()));//输入
-	connect(action6, SIGNAL(triggered()), this, SLOT(on_proxy()));//三维球
-	connect(action8, SIGNAL(triggered()), this, SLOT(on_create_frame()));//新建坐标系
-	connect(action69, SIGNAL(triggered()), this, SLOT(on_curse_part()));//喷涂区域划分
-	connect(action10, SIGNAL(triggered()), this, SLOT(on_campath_flat_surface()));//随形喷涂
-	connect(pathGen, SIGNAL(triggered()), this, SLOT(on_create_path()));
-	connect(action13, SIGNAL(triggered()), this, SLOT(OnCompile()));//编译
-	connect(action14, SIGNAL(triggered()), this, SLOT(on_simulate()));//仿真
-	connect(action15, SIGNAL(triggered()), this, SLOT(on_post()));//后置
-	connect(action100, SIGNAL(triggered()), this, SLOT(on_numPost()));
-	connect(action19, SIGNAL(triggered()), this, SLOT(on_defining_institutions()));//定义机构
-	connect(action20, SIGNAL(triggered()), this, SLOT(on_import_institutions()));//导入机构
-	connect(action22, SIGNAL(triggered()), this, SLOT(on_import_part()));//导入零件
-	connect(action24, SIGNAL(triggered()), this, SLOT(on_import_tool()));//导入工具
-	connect(action25, SIGNAL(triggered()), this, SLOT(on_rocreate_sprayingtool()));//定义喷涂工具
-	connect(action26, SIGNAL(triggered()), this, SLOT(on_roobjassistor_manage()));//喷刷管理
-	connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
-	connect(action102, &QAction::triggered, this, &MainWindow::on_bendingManagerWidget_open);
-	connect(action103, &QAction::triggered, this, &MainWindow::on_PositionCorrectWidget_open);
-	connect(openRobxFileIOManagerAction, SIGNAL(triggered()), this,SLOT(on_robxFileIOManager_open()));//Robx文件管理器
 	InitPQKit();
 }
 	
@@ -1931,8 +1997,8 @@ void MainWindow::InitPQKit()
 void MainWindow::OnInitializeKitThread()
 {
 	//initialize pqkit
-	CComBSTR bsName = L"ra_tsinghua_whk03";
-	CComBSTR bsPWD = L"tsinghua_whk03";
+	CComBSTR bsName = L"ra_tsinghua_whk01";
+	CComBSTR bsPWD = L"tsinghua_whk01";
 	HRESULT hr = m_ptrKit->pq_InitPlatformComponent(m_ptrKitCallback, (int)(this->winId()), bsName, bsPWD);
 	if (S_OK != hr)
 	{
