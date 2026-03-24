@@ -9,6 +9,7 @@
 #include <QVector>	
 #include "utils/utils.h"
 
+class PQUtils;
 struct edgePoint {
 	double x;
 	double y;
@@ -50,6 +51,7 @@ public:
 	 * \param cor
 	 */
 	void rebuildParentChildRelation();
+	std::array<edgePoint,8> calEqRange(const Correction& parent,const Correction& child);
 private:
 	/**
 	 * \brief 传入correction对象，为其分配待修正轨迹点.
@@ -58,7 +60,6 @@ private:
 	/**
 	 * \brief 计算等效作用域.
 	 */
-	std::array<edgePoint,8> calEqRange(const Correction& parent,const Correction& child);
 private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	std::vector<trajPoint> m_pointsSnapshot; /**轨迹点快照，在应用修正前保存一份轨迹点数据，以便撤销修正时恢复*/

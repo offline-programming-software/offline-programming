@@ -187,10 +187,39 @@ void PQUtils::drawBox(const std::array<double,6>& range)
 	}
 }
 
-void PQUtils::clearDraw()
+void PQUtils::drawBox(std::array<edgePoint, 8> pts)
 {
+	//通过角点画框，输入8个角点坐标，顺序为：左下前、右下前、右上前、左上前、左下后、右下后、右上后、左上后
+	std::vector<std::pair<int, int>> edges = {
+		{0, 1}, {1, 2}, {2, 3}, {3, 0}, // 底面4条边
+		{4, 5}, {5, 6}, {6, 7}, {7, 4}, // 顶面4条边
+		{0, 4}, {1, 5}, {2, 6}, {3, 7}  // 侧面4条垂直边
+	};
 
+	// 绘图参数设置
+	double radius = 4.0;               // 线的粗细，不用太大
+	double dRGB[3] = { 0, 255, 255 };  // 青色
+	ULONG i_uCoordinateID = 0;
+	ULONG o_uCylinderID = 0;
+
+	double start[3];
+	double end[3];
+
+	// 绘制12条边
+	for (size_t i = 0; i < edges.size(); i++)
+	{
+		start[0] = pts[edges[i].first].x;
+		start[1] = pts[edges[i].first].y;
+		start[2] = pts[edges[i].first].z;
+
+		end[0] = pts[edges[i].second].x;
+		end[1] = pts[edges[i].second].y;
+		end[2] = pts[edges[i].second].z;
+
+		m_ptrKit->Doc_draw_cylinder(start, 3, end, 3, radius, dRGB, 3, i_uCoordinateID, &o_uCylinderID, false);
+	}
 }
+
 
 RobMathUtils::RobMathUtils()
 {

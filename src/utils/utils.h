@@ -7,9 +7,10 @@
 #include "PQKitInitThread.h"
 #include "core/Correction.h"
 #include "PQKitCallback.h"
+#include "core/BendingManager.h"
 #include "core/Correction.h"
 #include <comdef.h>
-
+struct edgePoint;
 namespace utils {
 	/** @brief ¾®ºÅ·Ö¸îµÄBSTRÈç"¹ì¼£1#¹ì¼£2#¹ì¼£3#..."×ª»»ÎªQStringlist */
 	QStringList BSTR2QStringList(BSTR bstr);
@@ -70,8 +71,7 @@ public:
 	void getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDAtatype);
 
 	void drawBox(const std::array<double,6>& range);
-
-	void clearDraw();
+	void drawBox(std::array<edgePoint, 8> pts);
 private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 };

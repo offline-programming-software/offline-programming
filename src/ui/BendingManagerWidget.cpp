@@ -63,7 +63,12 @@ void BendingManagerWidget::OnDraw()
 	if(ui->treeCorrection->currentItem() == nullptr)
 		return;
 	const Correction& cor = m_model->getItems().at(item->data(0, Qt::UserRole).toInt());
+	Correction *ParentCorrection = cor.findParent();
 	PQUtils utils(m_ptrKit);
+	if (ParentCorrection) {
+		std::array<edgePoint, 8> eqRange = m_manager->calEqRange(*ParentCorrection, cor);
+		utils.drawBox(eqRange);
+	}
 	utils.drawBox(cor.m_range);
 }
 
