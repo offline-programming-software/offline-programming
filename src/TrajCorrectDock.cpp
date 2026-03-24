@@ -364,6 +364,7 @@ void TrajCorrectDock::setupConnections()
 
 void TrajCorrectDock::OnDraw()
 {
+	if (!this->isVisible()) return;
 	CComBSTR strText = "PtText";
 	CComBSTR bstr = "Origin";
 	CComBSTR emptyText = " ";
@@ -683,6 +684,7 @@ void TrajCorrectDock::OnDraw()
 
 void TrajCorrectDock::OnPickup(unsigned long i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType, double i_dPointX, double i_dPointY, double i_dPointZ)
 {
+	if (!this->isVisible()) return;
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	int myPointCounter = 0 ;
 	bool isFull = true;

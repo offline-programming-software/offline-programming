@@ -3,6 +3,7 @@
 #include "PQKitCallback.h"
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 
 
 namespace utils {
@@ -122,7 +123,7 @@ void PQUtils::getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_
 	}
 }
 
-void PQUtils::drawBox()
+void PQUtils::drawBox(const std::array<double,6>& range)
 {
 	//绘制函数
 	//pq接口说明
@@ -137,12 +138,58 @@ void PQUtils::drawBox()
 	//o_uCylinderID 传出画线对象 id  
 	//i_bIsUpdate 是否刷新绘图区,若循环插入多条线,设置成 false,最后一条线设置  为 True 刷新,或者所有线生成后调用 Doc_update_view 刷新一次即 可,减少计算时间
 	//示例void MainWindow:: DrawLine () {  double start[3] = {0.0}; double dEnd[3] = {100,100,100}; double dRGB[3] = { 255, 0, 0 }; ULONG i_uCoordinateID = 0; ULONG o_uCylinderID = 0; m_ptrKit ->Doc_draw_cylinder(start,3, dEnd,3,16, dRGB,3,i_uCoordinateID,&o_uCylinderID,false); }
-	double start[3] = { 0.0 }; 
-	double dEnd[3] = { 100,100,100 }; 
-	double dRGB[3] = { 255, 0, 0 }; 
+	// 解析范围并确保正确的最大最小值
+	double xMin = (std::min)(range[0], range[1]);
+	double xMax = (std::max)(range[0], range[1]);
+	double yMin = (std::min)(range[2], range[3]);
+	double yMax = (std::max)(range[2], range[3]);
+	double zMin = (std::min)(range[4], range[5]);
+	double zMax = (std::max)(range[4], range[5]);
+
+	// 定义8个顶点
+	std::array<std::array<double, 3>, 8> vertices = { {
+		{xMin, yMin, zMin}, // 0: 左下前
+		{xMax, yMin, zMin}, // 1: 右下前
+		{xMax, yMax, zMin}, // 2: 右上前
+		{xMin, yMax, zMin}, // 3: 左上前
+		{xMin, yMin, zMax}, // 4: 左下后
+		{xMax, yMin, zMax}, // 5: 右下后
+		{xMax, yMax, zMax}, // 6: 右上后
+		{xMin, yMax, zMax}  // 7: 左上后
+	} };
+
+	// 定义组成方框的12条边（点索引对）
+	std::vector<std::pair<int, int>> edges = {
+		{0, 1}, {1, 2}, {2, 3}, {3, 0}, // 底面4条边
+		{4, 5}, {5, 6}, {6, 7}, {7, 4}, // 顶面4条边
+		{0, 4}, {1, 5}, {2, 6}, {3, 7}  // 侧面4条垂直边
+	};
+
+	// 绘图参数设置
+	double radius = 4.0;               // 线的粗细，不用太大
+	double dRGB[3] = { 0, 255, 255 };  // 青色
 	ULONG i_uCoordinateID = 0;
-	ULONG o_uCylinderID = 0; 
-	m_ptrKit->Doc_draw_cylinder(start, 3, dEnd, 3, 16, dRGB, 3, i_uCoordinateID, &o_uCylinderID, false);
+	ULONG o_uCylinderID = 0;
+
+	double start[3];
+	double end[3];
+	//先画一条边
+	for (int i = 0; i < edges.size(); i++)
+	{
+		start[0] = vertices[edges[i].first][0];
+		start[1] = vertices[edges[i].first][1];
+		start[2] = vertices[edges[i].first][2];
+		end[0] = vertices[edges[i].second][0];
+		end[1] = vertices[edges[i].second][1];
+		end[2] = vertices[edges[i].second][2];
+		m_ptrKit->Doc_draw_cylinder(start, 3, end, 3, radius, dRGB, 3, i_uCoordinateID, &o_uCylinderID, false);
+
+	}
+}
+
+void PQUtils::clearDraw()
+{
+
 }
 
 RobMathUtils::RobMathUtils()

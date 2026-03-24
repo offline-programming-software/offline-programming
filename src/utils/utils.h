@@ -69,7 +69,9 @@ public:
 	 */
 	void getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDAtatype);
 
-	void drawBox();
+	void drawBox(const std::array<double,6>& range);
+
+	void clearDraw();
 private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 };

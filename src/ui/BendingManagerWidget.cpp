@@ -52,13 +52,19 @@ void BendingManagerWidget::setConnections()
 	connect(this, &BendingManagerWidget::correctionApplyStateChanged, this, &BendingManagerWidget::applyBendingCorrection);
 }
 
+//刷新一次绘图状态
 void BendingManagerWidget::OnDraw()
 {
 	//在3D视图中高亮显示选中的变形范围内的点
 	qDebug() << "OnDraw called";
 	const auto& item = ui->treeCorrection->currentItem();
 	qDebug() << "Current item:" << (item ? item->text(0) : "None");
-
+	//取出当前correction的对象，取出他的作用域，调用绘图函数
+	if(ui->treeCorrection->currentItem() == nullptr)
+		return;
+	const Correction& cor = m_model->getItems().at(item->data(0, Qt::UserRole).toInt());
+	PQUtils utils(m_ptrKit);
+	utils.drawBox(cor.m_range);
 }
 
 void BendingManagerWidget::closeEvent(QCloseEvent* event)
@@ -130,6 +136,7 @@ void BendingManagerWidget::initTreeWidget()
 
 void BendingManagerWidget::on_treeCorrection_itemChanged(QTreeWidgetItem* item, int column)
 {
+	OnDraw();
 	if (column != 0 || !m_model)
 		return;
 
@@ -191,6 +198,7 @@ void BendingManagerWidget::on_treeCorrection_itemChanged(QTreeWidgetItem* item, 
 
 void BendingManagerWidget::on_treeCorrection_currentItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous)
 {
+	OnDraw();
 }
 
 void BendingManagerWidget::applyBendingCorrection(Correction& cor)
@@ -216,6 +224,7 @@ void BendingManagerWidget::on_chkViewRange_stateChanged(int arg1)
 	{
 		CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 		m_ptrKit->Doc_end_module(cmd);
+		qDebug() << "cancel on draw";
 	}
 }
 
