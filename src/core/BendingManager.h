@@ -9,6 +9,11 @@
 #include <QVector>	
 #include "utils/utils.h"
 
+struct edgePoint {
+	double x;
+	double y;
+	double z;
+};
 /**
  * @class BendingManager.
  *
@@ -53,7 +58,7 @@ private:
 	/**
 	 * \brief 计算等效作用域.
 	 */
-	std::array<double,6> calEqRange(const Correction& parent,const Correction& child);
+	std::array<edgePoint,8> calEqRange(const Correction& parent,const Correction& child);
 private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	std::vector<trajPoint> m_pointsSnapshot; /**轨迹点快照，在应用修正前保存一份轨迹点数据，以便撤销修正时恢复*/

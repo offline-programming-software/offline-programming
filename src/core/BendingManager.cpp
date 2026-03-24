@@ -39,6 +39,7 @@ void BendingManager::rebuildPoints(Correction& cor)
 		//应用修正
 		if (ParentCorrection) {
 			//如果有父修正，先计算等效作用域，再分配轨迹点
+			std::array<edgePoint, 8> eqRange = calEqRange(*ParentCorrection, cor);
 		}
 		else
 		{
@@ -224,5 +225,76 @@ void BendingManager::allocatePoints(Correction& cor)
 
 	qDebug() << "allocatePoints done, correction:" << cor.name()
 		<< ", selected point num:" << cor.m_newTrajPoints.size();
+}
+
+std::array<edgePoint, 8> BendingManager::calEqRange(const Correction& parent, const Correction& child)
+{
+	//计算等效作用域，输入父对象，子对象，计算一个新的范围，使得在这个范围内应用父对象的修正和应用子对象的修正对轨迹点的影响尽可能接近（但不保证完全相同）。这个函数用于当一个correction有父correction时，计算一个新的作用域范围，以便在这个范围内分配轨迹点，达到更合理的修正效果。
+	//大致步骤：
+	//1) 先取出子对象的range范围，把八个角点拿出来
+	//2) 对每个角点，转化成trajPoint的形式（姿态信息全部为0，id也为0）
+	//3) 把每个角点先应用父对象的修正，得到一组新的点A
+	//4) 把角点再转换回edgePoint的形式，得到一组新的角点B，计算等效作用域完成
+	const std::array<double, 6> range = child.range();
+
+	const double xMin = (std::min)(range[0], range[1]);
+	const double xMax = (std::max)(range[0], range[1]);
+	const double yMin = (std::min)(range[2], range[3]);
+	const double yMax = (std::max)(range[2], range[3]);
+	const double zMin = (std::min)(range[4], range[5]);
+	const double zMax = (std::max)(range[4], range[5]);
+
+	std::array<edgePoint, 8> corners = { {
+		{xMin, yMin, zMin},
+		{xMax, yMin, zMin},
+		{xMin, yMax, zMin},
+		{xMax, yMax, zMin},
+		{xMin, yMin, zMax},
+		{xMax, yMin, zMax},
+		{xMin, yMax, zMax},
+		{xMax, yMax, zMax}
+	} };
+
+	//2) 对每个角点，转化成trajPoint的形式（姿态信息全部为0，id也为0）
+	std::vector<trajPoint> pts;
+	pts.reserve(8);
+	for (int i = 0; i < 8; ++i)
+	{
+		trajPoint pt;
+		pt.id = 0;
+		pt.x = corners[i].x;
+		pt.y = corners[i].y;
+		pt.z = corners[i].z;
+		pt.q1 = 0.0;
+		pt.q2 = 0.0;
+		pt.q3 = 0.0;
+		pt.q4 = 0.0;
+		pts.push_back(pt);
+	}
+
+	//3) 把每个角点先应用父对象的修正，得到一组新的点A
+	// 利用 parent 的复制体来计算偏移，以免改变 const 的父对象
+	Correction parentCopy = parent;
+	parentCopy.m_originTrajPoints = pts;
+	parentCopy.calOffset();
+
+	//4) 把角点再转换回edgePoint的形式，得到一组新的角点B，计算等效作用域完成
+	std::array<edgePoint, 8> newCorners;
+	for (int i = 0; i < 8; ++i)
+	{
+		newCorners[i].x = parentCopy.m_newTrajPoints[i].x;
+		newCorners[i].y = parentCopy.m_newTrajPoints[i].y;
+		newCorners[i].z = parentCopy.m_newTrajPoints[i].z;
+	}
+
+	//打印一个调试信息，显示原始角点和新的角点
+	qDebug() << "calEqRange for child correction:" << child.name() << " with parent correction:" << parent.name();
+	for (int i = 0; i < 8; ++i)
+	{
+		qDebug() << "corner " << i << ": original(" << corners[i].x << "," << corners[i].y << "," << corners[i].z
+			<< ") -> new(" << newCorners[i].x << "," << newCorners[i].y << "," << newCorners[i].z << ")";
+	}
+
+	return newCorners;
 }
 
