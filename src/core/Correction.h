@@ -172,7 +172,8 @@ public:
 	Eigen::Vector3d beamDirection; /**梁的方向-json*/
 	std::vector<double> vBeamOrigin = {0.0,0.0,0.0}; /**用于json存储的梁原点位置-json*/
 	std::vector<double> vBeamDirection = { 1.0,0.0,0.0 };/**用于json存储的梁方向-json*/ 
-	Eigen::Matrix4d m_TBO; /**梁坐标系到机器人基坐标系的变换矩阵*/
+	Eigen::Matrix4d m_TBO; /**机器人基坐标系到梁的变换矩阵*/
+	Eigen::Matrix4d m_TOB; /**梁到基坐标系*/
 
 	//计算结果	
 	coeffs m_coeffs; /**修正函数系数-json*/
@@ -213,7 +214,6 @@ public:
 	 * 2. 计算修正量offset
 	 * 3. 修正量应用到待修正轨迹点
 	 */
-
 	void applyCorrection(const std::vector<std::array<double, 7>> &offsets);
 	/**
 	 * 撤销修正.

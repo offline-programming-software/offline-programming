@@ -353,14 +353,7 @@ void MainWindow::on_create_frame()
 
 void MainWindow::on_create_path()
 {
-	//wchar_t whMoudle[256] = L"RO_CMD_GENERATE_PATH";
-	//m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
-
-	//wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
-	//m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
-
-	//wchar_t whMoudle[256] = L"RO_CMD_CAMPATH_FLAT_SURFACE";//平行加工
-	wchar_t whMoudle[256] = L"RO_CMD_CAMPATH_SPRAY_SURFACE";
+	wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
 	m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
 }
 

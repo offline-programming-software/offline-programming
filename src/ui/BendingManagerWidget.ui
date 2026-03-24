@@ -119,14 +119,40 @@
   <widget class="QPushButton" name="btnAppendLog">
    <property name="geometry">
     <rect>
-     <x>110</x>
-     <y>270</y>
+     <x>290</x>
+     <y>290</y>
      <width>75</width>
      <height>23</height>
     </rect>
    </property>
    <property name="text">
     <string>appendLog</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="chkViewRange">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>270</y>
+     <width>101</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>预览作用域</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="chkViewCorrection">
+   <property name="geometry">
+    <rect>
+     <x>100</x>
+     <y>270</y>
+     <width>101</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>预览修正效果</string>
    </property>
   </widget>
  </widget>

@@ -24,7 +24,14 @@ namespace utils {
 }
 class RobMathUtils
 {
+public:
+	RobMathUtils();
+	~RobMathUtils();
 
+	trajPoint homoTransform(const trajPoint& point, const Eigen::Matrix4d& T);
+	void exportToCSV(const std::vector<trajPoint>& points, const std::string& filename,bool isOutPutID = false);
+	void exportToCSV(const Eigen::MatrixX3d, const std::string& filename);
+	Eigen::Matrix4d inv(Eigen::MatrixX4d inputMat);
 };
 
 class PQUtils
@@ -42,6 +49,7 @@ public:
 	 * \note 测试通过
 	 */
 	void setTrajPointPosture(ULONG pointID, const std::array<double, 7>& posture);
+
 	/**
 	 * \brief 获取所有轨迹点的位姿信息
 	 * 
@@ -50,6 +58,7 @@ public:
 	 * \note 测试通过
 	 */
 	std::vector<trajPoint> getAllTrajPointPosture();
+
 	/**
 	 * \brief 获取PQ对象ID.
 	 * 
@@ -59,6 +68,8 @@ public:
 	 * \note 测试通过
 	 */
 	void getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDAtatype);
+
+	void drawBox();
 private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 };

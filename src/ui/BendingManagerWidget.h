@@ -83,6 +83,8 @@ private slots:
 
 	void on_btnAppendLog_clicked();
 
+	void on_chkViewRange_stateChanged(int arg1);
+
 signals:
 	void correctionApplyStateChanged(Correction& cor);
 	

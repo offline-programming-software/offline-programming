@@ -7,6 +7,7 @@
 #include<filesystem>
 #include<iomanip>
 #include "core\Correction.h"
+#include "utils/utils.h"
 
 
 
@@ -126,6 +127,7 @@ coeffs Correction::calCoeffs()
 	//printTBO
 	std::cout << "TBO: \n" << TBO << std::endl;
 	m_TBO = TBO;
+	m_TOB = TOB;
 	
 	if (m_bendingDeg != 0)
 	{
@@ -203,8 +205,25 @@ coeffs Correction::calCoeffs()
 
 void Correction::calOffset()
 {
+	//init
 	coeffs myCoeffs = calCoeffs();
-
+	std::vector<trajPoint> myOrigin = m_originTrajPoints;
+	int pointCount = myOrigin.size();
+	RobMathUtils mathUtils;
+	std::vector<trajPoint> myOriginInBeam;
+	//将原始轨迹点从基坐标系转换到梁坐标系
+	for(auto trajPoint : myOrigin)
+	{
+		myOriginInBeam.push_back(mathUtils.homoTransform(trajPoint, m_TBO));
+	}
+	//准备开始变换，并灌入新的轨迹点数据
+	m_newTrajPoints.clear();
+	for (auto& pt : myOriginInBeam)
+	{
+		pt.y = pt.y + (myCoeffs.a1 * pt.x);
+		m_newTrajPoints.push_back(mathUtils.homoTransform(pt,m_TOB));
+	}
+	
 }
 
 

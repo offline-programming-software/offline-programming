@@ -1,6 +1,7 @@
 #include "BendingManager.h"
 #include <atlstr.h>
 #include<QDebug>
+#include <limits> 
 
 BendingManager::BendingManager(CComPtr<IPQPlatformComponent> ptrKit,
 	CorrectionModel* model)
@@ -29,6 +30,7 @@ void BendingManager::initOriginPointsSnapshot()
 
 void BendingManager::rebuildPoints(Correction& cor)
 {
+	RobMathUtils mathUtils;
 	bool isApply = cor.isApplied();
 	auto ChildrenCorrections = cor.findChildren();
 	Correction *ParentCorrection = cor.findParent();
@@ -42,15 +44,141 @@ void BendingManager::rebuildPoints(Correction& cor)
 		{
 			//没有父修正，直接分配轨迹点
 			allocatePoints(cor);
+			cor.calOffset();  //calculate The Coeffs
+			Eigen:Matrix4d TOB = mathUtils.inv(cor.m_TBO);
+	    	for(size_t i = 0; i < cor.m_newTrajPoints.size(); ++i)
+			 {
+				 const auto& pt = cor.m_newTrajPoints[i];   
+				 m_utils->setTrajPointPosture(pt.id, {pt.x, pt.y, pt.z, pt.q1, pt.q2, pt.q3, pt.q4});
+			 }
+
+			
 			
 		}
 		qDebug()<<"apply correction: "<<cor.name();
+		qDebug() << "apply m_newTrajsPoints, PointsCount = " << cor.m_newTrajPoints.size();
 	}
 	else
 	{
-		//撤销修正
+		for(size_t i = 0; i < cor.m_originTrajPoints.size(); ++i)
+		 {
+			 const auto& pt = cor.m_originTrajPoints[i];   
+			 m_utils->setTrajPointPosture(pt.id, {pt.x, pt.y, pt.z, pt.q1, pt.q2, pt.q3, pt.q4});
+		 }
 		qDebug() << "undo correction: " << cor.name();
+		qDebug() << "apply m_originTrajPoints , PointsCount = " << cor.m_originTrajPoints.size();
+
 	}
+}
+
+void BendingManager::rebuildParentChildRelation()
+{
+	auto& corList = m_correctionModel->getItems();
+	if (corList.isEmpty())
+		return;
+
+	struct RangeBox
+	{
+		double xMin, xMax;
+		double yMin, yMax;
+		double zMin, zMax;
+	};
+
+	auto makeBox = [](const std::array<double, 6>& r) -> RangeBox
+		{
+			RangeBox b;
+			b.xMin = (std::min)(r[0], r[1]);
+			b.xMax = (std::max)(r[0], r[1]);
+			b.yMin = (std::min)(r[2], r[3]);
+			b.yMax = (std::max)(r[2], r[3]);
+			b.zMin = (std::min)(r[4], r[5]);
+			b.zMax = (std::max)(r[4], r[5]);
+			return b;
+		};
+
+	auto isZeroBox = [](const RangeBox& b) -> bool
+		{
+			return b.xMin == 0.0 && b.xMax == 0.0
+				&& b.yMin == 0.0 && b.yMax == 0.0
+				&& b.zMin == 0.0 && b.zMax == 0.0;
+		};
+
+	auto contains = [&](const RangeBox& parent, const RangeBox& child) -> bool
+		{
+			if (isZeroBox(parent) || isZeroBox(child))
+				return false;
+
+			const bool inX = parent.xMin <= child.xMin && parent.xMax >= child.xMax;
+			const bool inY = parent.yMin <= child.yMin && parent.yMax >= child.yMax;
+			const bool inZ = parent.zMin <= child.zMin && parent.zMax >= child.zMax;
+
+			// 完全相同范围不建立父子，避免歧义
+			const bool exactlySame =
+				parent.xMin == child.xMin && parent.xMax == child.xMax &&
+				parent.yMin == child.yMin && parent.yMax == child.yMax &&
+				parent.zMin == child.zMin && parent.zMax == child.zMax;
+
+			return inX && inY && inZ && !exactlySame;
+		};
+
+	auto volume = [](const RangeBox& b) -> double
+		{
+			return (b.xMax - b.xMin) * (b.yMax - b.yMin) * (b.zMax - b.zMin);
+		};
+
+	// 1) 先清空旧关系
+	for (int i = 0; i < corList.size(); ++i)
+	{
+		corList[i].m_parentCorrection = nullptr;
+		corList[i].m_childCorrections.clear();
+	}
+
+	// 2) 预计算所有 box
+	std::vector<RangeBox> boxes;
+	boxes.reserve(static_cast<size_t>(corList.size()));
+	for (int i = 0; i < corList.size(); ++i)
+	{
+		boxes.push_back(makeBox(corList[i].range()));
+	}
+
+	// 3) 为每个节点找“最小包含父节点”
+	std::vector<int> parentIndex(static_cast<size_t>(corList.size()), -1);
+	for (int childIdx = 0; childIdx < corList.size(); ++childIdx)
+	{
+		double bestVol = (std::numeric_limits<double>::max)();
+		int bestParent = -1;
+
+		for (int candParentIdx = 0; candParentIdx < corList.size(); ++candParentIdx)
+		{
+			if (candParentIdx == childIdx)
+				continue;
+
+			if (!contains(boxes[static_cast<size_t>(candParentIdx)], boxes[static_cast<size_t>(childIdx)]))
+				continue;
+
+			const double v = volume(boxes[static_cast<size_t>(candParentIdx)]);
+			if (v < bestVol)
+			{
+				bestVol = v;
+				bestParent = candParentIdx;
+			}
+		}
+
+		parentIndex[static_cast<size_t>(childIdx)] = bestParent;
+	}
+
+	// 4) 回填父子指针
+	Correction* dataPtr = corList.data(); // 获取底层连续内存的裸指针，避免 operator[] 触发任何隐式共享分离
+	for (int i = 0; i < corList.size(); ++i)
+	{
+		const int p = parentIndex[static_cast<size_t>(i)];
+		if (p >= 0)
+		{
+			dataPtr[i].m_parentCorrection = &dataPtr[p];
+			dataPtr[p].m_childCorrections.push_back(&dataPtr[i]);
+		}
+	}
+	qDebug() << "rebuildParentChildRelation done ";
 }
 
 void BendingManager::allocatePoints(Correction& cor)
