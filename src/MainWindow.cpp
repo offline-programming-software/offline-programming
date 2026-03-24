@@ -356,7 +356,11 @@ void MainWindow::on_create_path()
 	//wchar_t whMoudle[256] = L"RO_CMD_GENERATE_PATH";
 	//m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
 
-	wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
+	//wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
+	//m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
+
+	//wchar_t whMoudle[256] = L"RO_CMD_CAMPATH_FLAT_SURFACE";//平行加工
+	wchar_t whMoudle[256] = L"RO_CMD_CAMPATH_SPRAY_SURFACE";
 	m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
 }
 
@@ -1997,8 +2001,8 @@ void MainWindow::InitPQKit()
 void MainWindow::OnInitializeKitThread()
 {
 	//initialize pqkit
-	CComBSTR bsName = L"ra_tsinghua_whk01";
-	CComBSTR bsPWD = L"tsinghua_whk01";
+	CComBSTR bsName = L"ra_tsinghua_whk03";
+	CComBSTR bsPWD = L"tsinghua_whk03";
 	HRESULT hr = m_ptrKit->pq_InitPlatformComponent(m_ptrKitCallback, (int)(this->winId()), bsName, bsPWD);
 	if (S_OK != hr)
 	{
@@ -2471,6 +2475,5 @@ void MainWindow::OnDraw()
 		delete[] dEnd;
 	}
 
-	
 }
 

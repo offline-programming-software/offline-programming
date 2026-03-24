@@ -199,27 +199,14 @@ coeffs Correction::calCoeffs()
 
 
 
-void Correction::prepareTrajPoints2Correct(const std::vector<std::array<double, 7>>& ptList)
+
+
+void Correction::calOffset()
 {
+	coeffs myCoeffs = calCoeffs();
+
 }
 
-void Correction::calPointOffset()
-{
-	//修改 m_v2dOffSets;
-	//单个OffSets形式：{deltaX,deltaY,deltaZ,deltaQ1,deltaQ2,deltaQ3,deltaQ4}
-	//目前函数功能不完善，只能计算Z方向的修正量
-	//实现方法：
-	//1. 先将m_v2dTrajPointsToCorrect转换到尾梁坐标系下(TBO)
-	//2. m_coeffs的a1为尾梁的斜率，计算deltaZ
-	//3. 修改m_v2dOffSets
-// 修改 m_v2dOffSets;
-	// 单个OffSets形式：{deltaX,deltaY,deltaZ,deltaQ1,deltaQ2,deltaQ3,deltaQ4}
-	// 目前函数功能不完善，只能计算Z方向的修正量
-	// 实现方法：
-	// 1. 先将m_v2dTrajPointsToCorrect转换到尾梁坐标系下(TBO)
-	// 2. m_coeffs的a1为尾梁的斜率，计算deltaZ
-	// 3. 修改m_v2dOffSets
-}
 
 Eigen::MatrixX3d Correction::HT(Eigen::MatrixX3d pointSet, Eigen::Matrix4d TransformMatrix)
 {

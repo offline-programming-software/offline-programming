@@ -10,6 +10,8 @@ using namespace Eigen;
 struct coeffs
 {
 	//设置三组系数，每组5个系数，全部初始化为0
+	//参数矩阵含义:
+	//y轴挠曲变形v(x)的系数：a0, a1, a2, a3, a4, a5
 	double a0, a1, a2, a3, a4, a5;
 	double b0, b1, b2, b3, b4, b5;
 	double c0, c1, c2, c3, c4, c5;
@@ -145,6 +147,8 @@ public:
 	void setBeamOrigin(const std::vector<double>& orig) { vBeamOrigin = orig; }
 	void setBendingDeg(double deg) { m_bendingDeg = deg; }
 	//------setter-----------
+	auto findChildren() const { return m_childCorrections; }
+	auto findParent() const { return m_parentCorrection; }
 public:	
 	QString m_name = "null";/**修正名称 - json*/
 	//选项
@@ -153,8 +157,8 @@ public:
 	bool m_isPosCorrect = false; /**是否修正姿态-json*/
 
 	//待修正轨迹点
-	std::vector<trajPoint> m_trajPointsToCorrect; /**待修正轨迹点-cal*/
-	std::vector<trajPoint> m_originTrajPoints; /**原始轨迹点-cal*/
+	std::vector<trajPoint> m_newTrajPoints; /**newPos待修正轨迹点-cal*/
+	std::vector<trajPoint> m_originTrajPoints; /**originPos原始轨迹点-cal*/
 	//作用域
 	std::array<double, 6> m_range = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; /**作用域-json*/
 
@@ -175,6 +179,7 @@ public:
 	std::vector<std::array<double,7>> m_v2dOffSets; /**修正量*/
 	Correction* m_parentCorrection = nullptr;
 	std::vector<Correction*> m_childCorrections;
+	Correction* m_parentCorrections;
 private:
 
 
@@ -198,27 +203,17 @@ public:
 	 * @brief 计算参数，程序总入口
 	 */
 	coeffs calCoeffs();
-
-	//在管理界面
-	/**
-	 * 计算待修正轨迹点.
-	 */
-	void prepareTrajPoints2Correct(const std::vector<std::array<double, 7>>& ptList);
-	/**
-	 * fn 
-	 * @brief 计算单个点的修正量
-	 */
-	void calPointOffset();
 	/**
 	 * @brief 计算修正量，程序总入口
 	 */
-	std::vector<std::array<double, 7>> calOffset(const std::vector<std::array<double,7>> &trajPoint, const coeffs &c);
+	void calOffset();
 	/**
 	 * 应用修正
 	 * 1. 计算当前range待修正轨迹点ID列表
 	 * 2. 计算修正量offset
 	 * 3. 修正量应用到待修正轨迹点
 	 */
+
 	void applyCorrection(const std::vector<std::array<double, 7>> &offsets);
 	/**
 	 * 撤销修正.

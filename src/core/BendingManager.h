@@ -47,8 +47,9 @@ private:
 	std::array<double,6> calEqRange(const Correction& parent,const Correction& child);
 private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
-	std::vector<trajPoint> pointsSnapshot; /**轨迹点快照，在应用修正前保存一份轨迹点数据，以便撤销修正时恢复*/
+	std::vector<trajPoint> m_pointsSnapshot; /**轨迹点快照，在应用修正前保存一份轨迹点数据，以便撤销修正时恢复*/
 	CorrectionModel* m_correctionModel;
+	PQUtils* m_utils = nullptr;
 
 };
 

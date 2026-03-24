@@ -40,6 +40,7 @@ BendingManagerWidget::BendingManagerWidget(CComPtr<IPQPlatformComponent> ptrKit,
 	initTreeWidget();
 	ui->treeCorrection->blockSignals(false);
 	m_manager = new BendingManager(m_ptrKit, m_model);
+	m_manager->initOriginPointsSnapshot();
 
 }
 
@@ -296,7 +297,12 @@ void BendingManagerWidget::on_treeCorrection_currentItemChanged(QTreeWidgetItem*
 
 void BendingManagerWidget::applyBendingCorrection(Correction& cor)
 {
-	
+	m_manager->rebuildPoints(cor);
+}
+
+void BendingManagerWidget::on_btnAppendLog_clicked()
+{
+	qDebug() << "\n\n\n\n";
 }
 
 

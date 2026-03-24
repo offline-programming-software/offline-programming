@@ -22,6 +22,10 @@ namespace utils {
 //  * @param[in] viewDir 视线投影的方向，单位向量
 
 }
+class RobMathUtils
+{
+
+};
 
 class PQUtils
 {

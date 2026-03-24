@@ -59,10 +59,29 @@ private slots:
 	 * 1. 更新对应修正对象的isApply属性
 	 * 2. 发送信号，调用对应接口通知bendingmanager和对应correction执行更新
 	 * 
+	 * -----
+	 * #status
+	 * 测试通过
+	 * -----
 	 */
 	void on_treeCorrection_itemChanged(QTreeWidgetItem* item, int column);
+
+	/**
+	 * \brief 当树形视图选中某个对象时,界面显示其作用域.
+	 * 
+	 * -----
+	 * #status
+	 * 待实现
+	 * -----
+	 */
 	void on_treeCorrection_currentItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+
+	/**
+	 * \brief bendingmanager函数入口，接受 itemChanged发出的信号 
+	 */
 	void applyBendingCorrection(Correction& cor);
+
+	void on_btnAppendLog_clicked();
 
 signals:
 	void correctionApplyStateChanged(Correction& cor);

@@ -135,6 +135,7 @@ protected slots:
 	void OnMenuPop(unsigned long i_ulObjID, long i_lPosX, long i_lPosY, int* o_nHandled);
 	void OnInitializeKitThread();
 	void OnDraw();
+	void on_campath_flat_surface();
 
 
 	//own slot
@@ -175,7 +176,6 @@ protected slots:
 	void on_floor();
 	void on_motion_option();
 	void on_choosetool();
-	void on_campath_flat_surface();
 	void on_roobjassistor_manage();
 	void on_rocreate_sprayingtool();
 	void on_collision_option();
