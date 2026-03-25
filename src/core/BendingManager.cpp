@@ -300,14 +300,14 @@ std::array<edgePoint, 8> BendingManager::calEqRange(const Correction& parent, co
 	const double zMax = (std::max)(range[4], range[5]);
 
 	std::array<edgePoint, 8> corners = { {
-		{xMin, yMin, zMin},
-		{xMax, yMin, zMin},
-		{xMin, yMax, zMin},
-		{xMax, yMax, zMin},
-		{xMin, yMin, zMax},
-		{xMax, yMin, zMax},
-		{xMin, yMax, zMax},
-		{xMax, yMax, zMax}
+		{xMin, yMin, zMin}, // 左下前
+		{xMax, yMin, zMin}, // 右下前
+		{xMax, yMax, zMin}, // 右上前
+		{xMin, yMax, zMin}, // 左上前
+		{xMin, yMin, zMax}, // 左下后
+		{xMax, yMin, zMax}, // 右下后
+		{xMax, yMax, zMax}, // 右上后
+		{xMin, yMax, zMax}  // 左上后
 	} };
 
 	//2) 对每个角点，转化成trajPoint的形式（姿态信息全部为0，id也为0）
