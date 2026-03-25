@@ -30,6 +30,7 @@ void BendingManager::initOriginPointsSnapshot()
 
 void BendingManager::rebuildPoints(Correction& cor)
 {
+	//主功能函数
 	RobMathUtils mathUtils;
 	bool isApply = cor.isApplied();
 	auto ChildrenCorrections = cor.findChildren();
@@ -40,13 +41,20 @@ void BendingManager::rebuildPoints(Correction& cor)
 		if (ParentCorrection) {
 			//如果有父修正，先计算等效作用域，再分配轨迹点
 			std::array<edgePoint, 8> eqRange = calEqRange(*ParentCorrection, cor);
+			//TODO...
+			//再为全局轨迹点取一次快照，然后再这次快照里根据eqrange分配轨迹点
+			allocatePoints(cor, eqRange);
+			cor.calOffset();
+			for (size_t i = 0; i < cor.m_newTrajPoints.size(); ++i) {
+				const auto& pt = cor.m_newTrajPoints[i];
+				m_utils->setTrajPointPosture(pt.id, { pt.x, pt.y, pt.z, pt.q1, pt.q2, pt.q3, pt.q4 });
+			}
 		}
 		else
 		{
 			//没有父修正，直接分配轨迹点
 			allocatePoints(cor);
 			cor.calOffset();  //calculate The Coeffs
-			Eigen:Matrix4d TOB = mathUtils.inv(cor.m_TBO);
 	    	for(size_t i = 0; i < cor.m_newTrajPoints.size(); ++i)
 			 {
 				 const auto& pt = cor.m_newTrajPoints[i];   
@@ -185,7 +193,6 @@ void BendingManager::rebuildParentChildRelation()
 void BendingManager::allocatePoints(Correction& cor)
 {
 	//根据全局snapshot和cor的range分配轨迹点变量m_trajtocorrect
-	//根据全局snapshot和cor的range分配轨迹点变量m_trajtocorrect
 	if (m_pointsSnapshot.empty())
 	{
 		initOriginPointsSnapshot();
@@ -225,6 +232,54 @@ void BendingManager::allocatePoints(Correction& cor)
 
 	qDebug() << "allocatePoints done, correction:" << cor.name()
 		<< ", selected point num:" << cor.m_newTrajPoints.size();
+}
+
+void BendingManager::allocatePoints(Correction& cor, std::array<edgePoint, 8> eqRange)
+{
+	//为子节点分配轨迹点的方法
+	//1) 先做一次全局snapshot
+	std::vector<trajPoint> latestSnapShot = snapShot(); // 获取最新的轨迹点快照，确保包含父修正可能已经修改过的点
+	cor.m_newTrajPoints.clear();
+	cor.m_originTrajPoints.clear();
+
+	//2) 根据传入的eqRange（通常是一个斜平行六面体的8个角点）来分配轨迹点，判断每个轨迹点是否在这个eqRange内，如果在，就分配给correction
+	// 简单起见，提取 eqRange 的包围盒 (AABB) 来进行筛选
+	double xMin = (std::numeric_limits<double>::max)();
+	double xMax = std::numeric_limits<double>::lowest();
+	double yMin = (std::numeric_limits<double>::max)();
+	double yMax = std::numeric_limits<double>::lowest();
+	double zMin = (std::numeric_limits<double>::max)();
+	double zMax = std::numeric_limits<double>::lowest();
+
+	for (const auto& corner : eqRange)
+	{
+		xMin = (std::min)(xMin, corner.x);
+		xMax = (std::max)(xMax, corner.x);
+		yMin = (std::min)(yMin, corner.y);
+		yMax = (std::max)(yMax, corner.y);
+		zMin = (std::min)(zMin, corner.z);
+		zMax = (std::max)(zMax, corner.z);
+	}
+
+	for (const auto& pt :latestSnapShot)
+	{
+		// 判断轨迹点是否在 AABB 范围内（若需要更精确的斜六面体包含测试，可在此处完善）
+		if (pt.x >= xMin && pt.x <= xMax &&
+			pt.y >= yMin && pt.y <= yMax &&
+			pt.z >= zMin && pt.z <= zMax)
+		{
+			cor.m_newTrajPoints.push_back(pt);
+			cor.m_originTrajPoints.push_back(pt);
+		}
+	}
+
+	qDebug() << "allocatePoints with eqRange done, correction:" << cor.name()
+		<< ", selected point num:" << cor.m_newTrajPoints.size();
+}
+
+std::vector<trajPoint> BendingManager::snapShot()
+{
+	return m_utils->getAllTrajPointPosture();
 }
 
 std::array<edgePoint, 8> BendingManager::calEqRange(const Correction& parent, const Correction& child)

@@ -23,12 +23,25 @@ namespace utils {
 //  * @param[in] viewDir 视线投影的方向，单位向量
 
 }
+
+/**
+ * @class RobMathUtils.
+ * 
+ * @brief 包含一些机器人学相关的工具函数，如齐次变换、CSV导出等.
+ */
 class RobMathUtils
 {
 public:
 	RobMathUtils();
 	~RobMathUtils();
 
+	/**
+	 * \brief 对单个点进行齐次坐标变换.
+	 * 
+	 * \param point 输入的轨迹点 （x,y,z,q1,q2,q3,q4,id）id是pq中轨迹点的id，没有就不写
+	 * \param T 齐次变换矩阵
+	 * \return trajPoint
+	 */
 	trajPoint homoTransform(const trajPoint& point, const Eigen::Matrix4d& T);
 	void exportToCSV(const std::vector<trajPoint>& points, const std::string& filename,bool isOutPutID = false);
 	void exportToCSV(const Eigen::MatrixX3d, const std::string& filename);
@@ -70,7 +83,14 @@ public:
 	 */
 	void getID(std::vector<ULONG>& listID, __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDAtatype);
 
+	/**
+	 * \brief 根据xyz的最大最小值画一个方框.
+	 * 
+	 * \param range
+	 */
 	void drawBox(const std::array<double,6>& range);
+
+
 	void drawBox(std::array<edgePoint, 8> pts);
 private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
