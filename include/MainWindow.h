@@ -205,6 +205,7 @@ protected slots:
 	void on_bendingManagerWidget_open();
 	void on_PositionCorrectWidget_open();
 	void on_robxFileIOManager_open();
+	void on_connectSetting_open();
 
 };
 #endif 

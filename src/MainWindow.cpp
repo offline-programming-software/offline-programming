@@ -16,6 +16,7 @@
 #include"ui\PositionCorrectWidget.h"
 #include"robxFileIO.h"
 #include "test\RobxFileIOManagerWidget.h"
+#include "OnlineProcess\ConnectSetting.h"
 
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
@@ -158,6 +159,8 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 		connect(action56, SIGNAL(triggered()), this, SLOT(on_sync()));//加工进度同步
 	QAction* action58 = online_adjust->addAction("在线修正", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
 		connect(action58, SIGNAL(triggered()), this, SLOT(on_action()));//在线修正
+	QAction* actionConnectSetting = online_setup->addAction("连接设置", QIcon(""), QToolButton::InstantPopup);
+	connect(actionConnectSetting, SIGNAL(triggered()), this, SLOT(on_connectSetting_open()));
 
 	//添加
 	SARibbonCategory* otherCate = bar->addCategoryPage(tr("Other"));
@@ -1591,6 +1594,11 @@ void MainWindow::on_robxFileIOManager_open()
 	m_robxIOMgr->show();
 	m_robxIOMgr->raise();
 	m_robxIOMgr->activateWindow();
+}
+
+void MainWindow::on_connectSetting_open()
+{
+
 }
 
 void MainWindow::on_effectiveness_analysis()
