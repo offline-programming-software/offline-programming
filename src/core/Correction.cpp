@@ -99,12 +99,10 @@ private:
 };
 
 
-coeffs Correction::calCoeffs()
+void Correction::constructBeamFrame()
 {
-	
-	//构造齐次变换矩阵，将坐标点变换到尾梁坐标系：
+	//构造齐次变换矩阵，将坐标点变换到尾梁坐标系：	
 	//R = [beamDirection, [0,0,1]^T, zDirection]
-	
 	// 从向量中读取数据，转换为 Vector3d
 	Eigen::Vector3d beamDir(vBeamDirection[0], vBeamDirection[1], vBeamDirection[2]);
 	Eigen::Vector3d T(vBeamOrigin[0], vBeamOrigin[1], vBeamOrigin[2]);
@@ -129,6 +127,12 @@ coeffs Correction::calCoeffs()
 	m_TBO = TBO;
 	m_TOB = TOB;
 	
+
+}
+
+coeffs Correction::calCoeffs()
+{
+	constructBeamFrame();
 	if (m_bendingDeg != 0)
 	{
 		//优先采用简单弯曲量输入模式
@@ -160,8 +164,8 @@ coeffs Correction::calCoeffs()
 	std::cout << "flagPointMat = " << flagPointsMat<<std::endl;
 	std::cout << "measurePointsMat = " << measurePointsMat << std::endl;
 
-	flagPointsMat = HT(flagPointsMat, TBO);
-	measurePointsMat = HT(measurePointsMat, TBO);
+	flagPointsMat = HT(flagPointsMat,m_TBO);
+	measurePointsMat = HT(measurePointsMat,m_TBO);
 	std::cout << "flagPointMat after HT = " << flagPointsMat << std::endl;
 	std::cout << "measurePointsMat after HT= " << measurePointsMat << std::endl;
 	
@@ -171,8 +175,6 @@ coeffs Correction::calCoeffs()
 	 * measurePointsMat
 	 * \return 
 	 */
-
-	
 
 	if (m_interType == interpolationType::Liner)
 	{

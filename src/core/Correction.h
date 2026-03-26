@@ -181,46 +181,53 @@ public:
 	Correction* m_parentCorrection = nullptr;
 	std::vector<Correction*> m_childCorrections;
 	Correction* m_parentCorrections;
+	
 private:
+//算法部分
+	/**
+	 * @brief 齐次变换函数.
+	 * 
+	 * \param pointSet
+	 * \param TransformMatrix
+	 * \return 
+	 */
+	Eigen::MatrixX3d HT(Eigen::MatrixX3d pointSet, Eigen::Matrix4d TransformMatrix);
+	coeffs timoShenkoBeamSolve(const MatrixX3d& flagPointsMat, const MatrixX3d& measurePointsMat);
 
+	/**
+	 * @brief LinearSolve 线性方程组求解
+	 * 
+	 * @param flagPointsMat
+	 * @param measurePointsMat
+	 * \return 
+	 */
+	coeffs LinearSolve(const MatrixX3d& flagPointsMat, const MatrixX3d& measurePointsMat);
+	
+	/**
+	 * @brief TimoshenkoSolve 铁木辛柯方程组求解
+	 *
+	 * @param flagPointsMat 理想标志点矩阵
+	 * @param measurePointsMat 标志点矩阵
+	 */
+	coeffs TimoshenkoSolve(const MatrixX3d& flagPointsMat, const MatrixX3d& measurePointsMat);
 
-private:
-		Eigen::MatrixX3d HT(Eigen::MatrixX3d pointSet, Eigen::Matrix4d TransformMatrix);
-		coeffs timoShenkoBeamSolve(const MatrixX3d& flagPointsMat, const MatrixX3d& measurePointsMat);
-		/**
-		 * @brief LinearSolve 线性方程组求解
-		 * 
-		 * @param flagPointsMat
-		 * @param measurePointsMat
-		 * \return 
-		 */
-		coeffs LinearSolve(const MatrixX3d& flagPointsMat, const MatrixX3d& measurePointsMat);
-		
-
+	/**
+	 * @brief Euler欧拉模型求解.
+	 *
+	 */
+	void constructBeamFrame();
 public:
-	//算法部分
+	//算法部分程序入口
 	//属性编辑界面
 	/**
-	 * @brief 计算参数，程序总入口
+	 * @brief 计算变形系数程序总入口
 	 */
 	coeffs calCoeffs();
+	
 	/**
-	 * @brief 计算修正量，程序总入口
+	 * @brief 修正轨迹点程序总入口
+	 *
+	 * @detail 前提是已经取到待修正轨迹点m_originPos,并计算好参数m_coeffs
 	 */
 	void calOffset();
-	/**
-	 * 应用修正
-	 * 1. 计算当前range待修正轨迹点ID列表
-	 * 2. 计算修正量offset
-	 * 3. 修正量应用到待修正轨迹点
-	 */
-	void applyCorrection(const std::vector<std::array<double, 7>> &offsets);
-	/**
-	 * 撤销修正.
-	 * 1. 
-	 */
-	void withDrawCorrection();
-
-	//功能函数: 
-	
 };

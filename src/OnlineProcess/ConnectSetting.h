@@ -24,4 +24,12 @@ private:
 	Ui::ConnectSettingClass *ui;
 	void initUI();
 	void initTree();
+
+private slots:
+	void on_chkLocal_toggled(bool checked);
+	void on_btnConnect_clicked();
+	void on_btnDisconnect_clicked();
+	void on_btnRefresh_clicked();
+	void on_btnOk_clicked();
+	void on_btnCancel_clicked();
 };

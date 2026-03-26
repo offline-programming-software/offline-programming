@@ -21,9 +21,9 @@ ConnectSetting::~ConnectSetting()
 void ConnectSetting::initUI()
 {
 	QList<QString> itemList;
-	itemList << QString::fromLocal8Bit("机器人") << QString::fromLocal8Bit("测量设备") << QString::fromLocal8Bit("agv");
-	ui->comboBox->addItems(itemList);
-	ui->lineEdit->setInputMask("000.000.000.000;_");
+	ui->edtIP->setInputMask("000.000.000.000;_");
+	QIntValidator* validator = new QIntValidator(5000, 65536, this);
+	ui->edtPort->setValidator(validator);
 
 }
 
@@ -32,5 +32,26 @@ void ConnectSetting::initTree()
 	QList<QString> head;
 	head << QString::fromLocal8Bit("设备类型") << QString::fromLocal8Bit("设备名") << QString::fromLocal8Bit("连接状态");
 	
-	ui->treeWidget->setHeaderLabels(head);
+	ui->treeDeviceList->setHeaderLabels(head);
+}
+
+void ConnectSetting::on_chkLocal_toggled(bool checked)
+{
+	if (checked)
+	{
+		ui->edtIP->setEnabled(false);
+		ui->edtIP->setText("");
+		ui->edtIP->setInputMask("000.000.000.000;_");
+	}
+	else
+	{
+		ui->edtIP->setEnabled(true);
+		ui->edtIP->setInputMask("000.000.000.000;_");
+	}
+}
+
+void ConnectSetting::on_btnConnect_clicked()
+{
+	QString Port = ui->edtPort->text();
+	
 }
