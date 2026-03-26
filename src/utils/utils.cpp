@@ -167,7 +167,7 @@ void PQUtils::drawBox(const std::array<double,6>& range)
 
 	// 绘图参数设置
 	double radius = 4.0;               // 线的粗细，不用太大
-	double dRGB[3] = { 0, 255, 255 };  // 青色
+	double dRGB[3] = { 255,0, 0};  // 青色
 	ULONG i_uCoordinateID = 0;
 	ULONG o_uCylinderID = 0;
 
@@ -197,7 +197,7 @@ void PQUtils::drawBox(std::array<edgePoint, 8> pts)
 	};
 
 	// 绘图参数设置
-	double radius = 4.0;               // 线的粗细，不用太大
+	double radius = 5.0;               // 线的粗细，不用太大
 	double dRGB[3] = { 0, 255, 255 };  // 青色
 	ULONG i_uCoordinateID = 0;
 	ULONG o_uCylinderID = 0;

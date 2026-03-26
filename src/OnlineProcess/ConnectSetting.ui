@@ -91,7 +91,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QPushButton" name="btnConnect">
+          <widget class="QPushButton" name="btnAdd">
            <property name="text">
             <string>添加</string>
            </property>
@@ -110,23 +110,28 @@
         <item>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
-           <widget class="QTreeWidget" name="treeDeviceList">
+           <widget class="QTreeWidget" name="treeClient">
             <property name="columnCount">
-             <number>3</number>
+             <number>4</number>
             </property>
             <column>
              <property name="text">
-              <string notr="true">1</string>
+              <string notr="true">客户端</string>
              </property>
             </column>
             <column>
              <property name="text">
-              <string notr="true">2</string>
+              <string>新建列</string>
              </property>
             </column>
             <column>
              <property name="text">
-              <string notr="true">3</string>
+              <string>端口号</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string notr="true">连接状态</string>
              </property>
             </column>
            </widget>
@@ -147,9 +152,9 @@
              </spacer>
             </item>
             <item>
-             <widget class="QPushButton" name="btnRefresh">
+             <widget class="QPushButton" name="btnConnect">
               <property name="text">
-               <string>刷新</string>
+               <string>连接</string>
               </property>
              </widget>
             </item>

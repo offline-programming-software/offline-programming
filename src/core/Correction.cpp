@@ -367,3 +367,8 @@ coeffs Correction::timoShenkoBeamSolve(const Eigen::MatrixX3d& flagPointsMat, co
 	return resultCoeffs;
 }
 
+coeffs Correction::LinearSolve(const MatrixX3d& flagPointsMat, const MatrixX3d& measurePointsMat)
+{
+	return coeffs();
+}
+
