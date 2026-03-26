@@ -1,4 +1,6 @@
 #include "ConnectSetting.h"
+#include <QMessageBox>
+#include <QDebug>
 
 ConnectSetting::ConnectSetting(QWidget *parent)
 	: QWidget(parent)
@@ -15,6 +17,12 @@ ConnectSetting::ConnectSetting(QWidget *parent)
 
 ConnectSetting::~ConnectSetting()
 {
+	if (m_zmqRepSocket) {
+		m_zmqRepSocket->close();
+	}
+	if (m_zmqContext) {
+		m_zmqContext->close();
+	}
 	delete ui;
 }
 
@@ -53,5 +61,34 @@ void ConnectSetting::on_chkLocal_toggled(bool checked)
 void ConnectSetting::on_btnConnect_clicked()
 {
 	QString Port = ui->edtPort->text();
-	
+	QString IP = ui->edtIP->text();
+	if (ui->chkLocal->isChecked()) {
+		IP = "*";
+	} else if (IP.isEmpty() || IP == "...") {
+		QMessageBox::warning(this, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("请输入有效的IP地址或勾选本地"));
+		return;
+	}
+
+	if (Port.isEmpty()) {
+		QMessageBox::warning(this, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("请输入端口号"));
+		return;
+	}
+
+	try {
+		if (!m_zmqContext) {
+			m_zmqContext = std::make_unique<zmq::context_t>(1);
+		}
+		if (!m_zmqRepSocket) {
+			m_zmqRepSocket = std::make_unique<zmq::socket_t>(*m_zmqContext, ZMQ_REP);
+		}
+
+		QString address = QString("tcp://%1:%2").arg(IP).arg(Port);
+		m_zmqRepSocket->bind(address.toStdString());
+
+		QMessageBox::information(this, QString::fromLocal8Bit("连接提示"), QString::fromLocal8Bit("成功启动服务绑定并监听: ") + address);
+		qDebug() << "服务端成功绑定并在监听:" << address;
+
+	} catch (const zmq::error_t& e) {
+		QMessageBox::critical(this, QString::fromLocal8Bit("ZMQ 错误"), QString::fromLocal8Bit("ZMQ 初始化或绑定失败: ") + QString(e.what()));
+	}
 }

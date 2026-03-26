@@ -7,6 +7,8 @@
 
 #include <QWidget>
 #include "ui_ConnectSetting.h"
+#include <zmq.hpp>
+#include <memory>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ConnectSettingClass; };
@@ -24,12 +26,11 @@ private:
 	Ui::ConnectSettingClass *ui;
 	void initUI();
 	void initTree();
+	
+	std::unique_ptr<zmq::context_t> m_zmqContext;
+	std::unique_ptr<zmq::socket_t> m_zmqRepSocket;
 
 private slots:
 	void on_chkLocal_toggled(bool checked);
 	void on_btnConnect_clicked();
-	void on_btnDisconnect_clicked();
-	void on_btnRefresh_clicked();
-	void on_btnOk_clicked();
-	void on_btnCancel_clicked();
 };
