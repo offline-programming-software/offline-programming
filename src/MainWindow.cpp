@@ -1598,7 +1598,8 @@ void MainWindow::on_robxFileIOManager_open()
 
 void MainWindow::on_connectSetting_open()
 {
-
+	ConnectSetting *w = new ConnectSetting();
+	w->show();
 }
 
 void MainWindow::on_effectiveness_analysis()

@@ -7,7 +7,6 @@
 
 #include <QWidget>
 #include "ui_ConnectSetting.h"
-#include "Device.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ConnectSettingClass; };
