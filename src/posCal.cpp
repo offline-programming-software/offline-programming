@@ -122,59 +122,6 @@ std::map<std::string, std::pair<std::string, std::string>> posCal::loadRobotRela
 	return relationsMap;
 }
 
-//std::map<std::string, std::pair<std::string, std::string>> posCal::loadRobotRelations(const std::string & filePath)
-//{
-//	std::map<std::string, std::pair<std::string, std::string>> relationsMap;
-//	std::ifstream file(filePath);
-//
-//	// 1. 检查文件是否打开成功
-//	if (!file.is_open()) {
-//		qWarning() << "警告: 无法打开关系文件" << QString::fromStdString(filePath) << "，将使用默认值。";
-//		return relationsMap; // 返回空地图
-//	}
-//
-//	try {
-//		json data;
-//		file >> data;
-//		file.close();
-//
-//		// 2. 确保根节点是数组
-//		if (!data.is_array()) {
-//			qWarning() << "警告: relations.json 根节点不是数组，解析跳过。";
-//			return relationsMap;
-//		}
-//
-//		// 3. 遍历数组
-//		for (const auto& item : data) {
-//			// 确保每一项也是数组，且至少有一个元素（机器人名称）
-//			if (item.is_array() && item.size() >= 1) {
-//				std::string robotName = item[0].get<std::string>();
-//
-//				std::string railName = "无";
-//				std::string agvName = "无";
-//
-//				// 读取第二个元素 (导轨)，如果存在且不为空
-//				if (item.size() > 1 && !item[1].get<std::string>().empty()) {
-//					railName = item[1].get<std::string>();
-//				}
-//
-//				// 读取第三个元素 (AGV)，如果存在且不为空
-//				if (item.size() > 2 && !item[2].get<std::string>().empty()) {
-//					agvName = item[2].get<std::string>();
-//				}
-//
-//				// 存入 Map，方便后续通过机器人名称快速查找
-//				relationsMap[robotName] = std::make_pair(railName, agvName);
-//			}
-//		}
-//	}
-//	catch (const std::exception& e) {
-//		qCritical() << "解析 relations.json 失败:" << e.what();
-//	}
-//
-//	return relationsMap;
-//}
-
 void posCal::onComboBox1CurrentIndexChanged(int index)
 {
 	if (index < 0) return;
@@ -414,8 +361,51 @@ void posCal::onCalculate()
 		if (!replaced) {
 			stations.append(station);
 		}
-
 		io.writeData(stations, "AgvStationInfo.json");
+
+		// 插入pos点（Part）
+		QString agvName = ui->textBrowser->toPlainText().trimmed();
+		ULONG uPartID = 0;
+		if (!agvName.isEmpty() && agvName != QStringLiteral("无")) {
+			GetObjIDByName(PQ_WORKINGPART, agvName.toStdWString(), uPartID);
+		}
+
+		if (uPartID == 0) {
+			QMessageBox::warning(this, tr("提示"), tr("AGV对应Part对象不存在，已写入JSON但未插入pos点。"));
+			return;
+		}
+
+		double i_dPosition[6] = { station.x, station.y, station.z, 0.0, 0.0, station.theta };
+		PQPostureType i_ePostureType = EULERANGLEXYZ;
+		DOUBLE i_dVelocity = 30;
+		DOUBLE i_dpalvel = 0.1;
+		INT i_nApproach[1] = { -1 };
+		ULONG uPathID = 0;
+
+		QString i_PathName = QStringLiteral("%1_%2_%3_%4")
+			.arg(robotName)
+			.arg(groupName)
+			.arg(pathName)
+			.arg(stationName);
+		QString i_GroupName = QStringLiteral("Group");
+
+		std::wstring wsPathName = i_PathName.toStdWString();
+		std::wstring wsGroupName = i_GroupName.toStdWString();
+
+		std::vector<wchar_t> pathNameBuf(wsPathName.begin(), wsPathName.end());
+		pathNameBuf.push_back(L'\0');
+
+		std::vector<wchar_t> groupNameBuf(wsGroupName.begin(), wsGroupName.end());
+		groupNameBuf.push_back(L'\0');
+
+		HRESULT hrInsert = m_ptrKit->Part_insert_point_with_posture(
+			uPartID, 1, i_dPosition, i_ePostureType,
+			i_dVelocity, i_dpalvel, i_nApproach,
+			pathNameBuf.data(), groupNameBuf.data(), 0, 1, &uPathID);
+
+		if (FAILED(hrInsert)) {
+			QMessageBox::warning(this, tr("提示"), tr("JSON已写入，但插入pos点失败。"));
+		}
 		return;
 	}
 	else {

@@ -5,7 +5,6 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
-#include <QDir>
 #include <cmath>
 
 static void normalizeVector(std::vector<double>& v) {
@@ -1804,6 +1803,19 @@ void cursePart::on_spaceSettingButton_clicked()
 			qWarning() << "划分包围盒尺寸计算失败，输出为0。";
 		}
 
+		//CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+		//HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+		//if (SUCCEEDED(hr)) {
+		//	isPickupActive = true;
+		//	istest = true; // 确保预览模式关闭
+		//	this->setModal(false);
+		//	this->setWindowModality(Qt::NonModal);
+		//	qDebug() << "曲面拾取模块已启动，请在3D窗口中点击元素";
+		//}
+		//else {
+		//	QMessageBox::warning(this, "错误", "启动曲面拾取模块失败！");
+		//}
+
 		ui->textBrowser_2->setPlainText(QString::number(length, 'f', 2));
 		ui->textBrowser_3->setPlainText(QString::number(width, 'f', 2));
 		ui->textBrowser_4->setPlainText(QString::number(m_thickness, 'f', 2));
@@ -3208,9 +3220,9 @@ std::vector<double> cursePart::getAxisVector(const std::vector<std::vector<doubl
 void cursePart::OnDraw()
 {
 
-	if (istest) {
+	/*if (istest) {
 
-		/*CComBSTR strText1 = "aabb point";
+		CComBSTR strText1 = "aabb point";
 		double dPos1[3] = { 0.0 };
 		int counter1 = 0;
 		for (size_t i = 0; i < aabbPosition.size(); i++)
@@ -3251,12 +3263,9 @@ void cursePart::OnDraw()
 			}
 
 		}*/
-	}
+	//}
 
 	if (isPreview) {
-
-		const QString dumpPath = QDir(m_tempDir).filePath("preview_points.txt");
-		dumpPointSetToText(dumpPath, points, "preview points");
 
 		std::map<int, std::array<double, 3>> pointMap;
 		std::array<double, 3> tempPoint;

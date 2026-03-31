@@ -43,6 +43,7 @@ private slots:
 	void onMoveRowUp();
 	void onMoveRowDown();
 	void onAddSimulationEvent();
+	void onPreview();
 
 	// AGV选择变化槽函数
 	void onAGVSelectionChanged(int index);
@@ -52,6 +53,10 @@ private slots:
 	void onComboBox3CurrentIndexChanged(int index);
 	void onComboBox5CurrentIndexChanged(int index);
 
+	void OnDraw(); //绘制划分曲线
+	void OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
+		double i_dPointX, double i_dPointY, double i_dPointZ);
+
 private:
 	Ui::AGVpathClass *ui;
 	CComPtr<IPQPlatformComponent> m_ptrKit;
@@ -59,9 +64,11 @@ private:
 
 	QMap<ULONG, QString> m_robotMap;
 	QString m_tempDir = "./temp/jsons/";
+	QString m_currentAgvJsonFile = "AgvStationInfo.json";
 	std::map<std::string, std::pair<std::string, std::string>> relationsMap;//存储关系
 	QVector<AgvStationInfo> agvStations; // 存储AGV站位信息;
 	QMap<QString, ULONG> m_pathIdCache;
+	QMap<QString, QSet<QString>> insertedPathNamesByAgv;
 
 	void init();
 
@@ -73,6 +80,7 @@ private:
 
 	void swapTableRows(int firstRow, int secondRow);
 	void updateAgvNameDisplay(const QString& robotName);
+	bool insertAgvStationsToSystem();
 	QString findStationNames(
 		const QString& robotName,
 		const QString& groupName,
@@ -116,6 +124,14 @@ private:
 		const QString& pathName) const;
 	bool tryGetPathId(ULONG robotID, const QString& groupName,
 		const QString& pathName, ULONG& pathId);
+	QString buildAgvPathNameFromRow(int row) const;
+	bool tryGetAgvPathIdByName(ULONG agvID, const QString& fullPathName, ULONG& pathID);
+	bool moveStationOrderInSystem(int srcRow, int tarRow, bool ahead);
+	bool deleteRemovedAgvStationsPointsInSystem();
+
+	/*QString buildAgvJsonFileName(const QString& agvName) const;*/
+	QVector<AgvStationInfo> loadStationsFromSystem(const QString& robotName, const QString& agvName);
+	bool syncCurrentAgvSystemToJson(const QString& robotName, const QString& agvName);
 
 	AABB creatAABB(ULONG uID, ULONG uCoordinate);
 

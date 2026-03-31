@@ -1006,9 +1006,6 @@ void MainWindow::on_curse_part()
 
 }
 
-
-
-
 void MainWindow::on_pos_cal()
 {
 	posCal *dlg = new posCal(this,m_ptrKit,m_ptrKitCallback);

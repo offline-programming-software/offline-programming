@@ -333,8 +333,8 @@ connect(dlg, &addRobotSpace::calculateRequested, this, [this, robotName, dlg]() 
 
 	QString filename = QString("workspace_%1.json").arg(robotName);
 
-	m_io->writeData(m_list[robotName], filename.toStdString().c_str());
-	m_io->writeData(m_list[robotName], filename.toStdString().c_str());
+	m_io->writeData(m_list[robotName], filename.toStdString());
+	/*m_io->writeData(m_list[robotName], filename.toUtf8().toStdString());*/
 
 	// 获取用户选择的坐标系名称和法向量，然后添加到界面表格中
 	QString coordinateName = dlg->getCoordinate();  // 坐标系名称

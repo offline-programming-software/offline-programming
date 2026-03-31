@@ -8,6 +8,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
+#include <QSet>
+#include <QtMath>
 
 AGVpath::AGVpath(QWidget *parent,
 	CComPtr<IPQPlatformComponent> ptrKit,
@@ -32,6 +34,10 @@ AGVpath::AGVpath(QWidget *parent,
 	connect(ui->pushButton_6, &QPushButton::clicked, this, &AGVpath::onMoveRowUp);
 	connect(ui->pushButton_5, &QPushButton::clicked, this, &AGVpath::onMoveRowDown);
 	connect(ui->pushButton_8, &QPushButton::clicked, this, &AGVpath::onAddSimulationEvent);
+	connect(ui->pushButton_9, &QPushButton::clicked, this, &AGVpath::onPreview);
+
+	connect(m_ptrKitCallback, &CPQKitCallback::signalDraw, this, &AGVpath::OnDraw);//绘制划分区域分界线
+	connect(m_ptrKitCallback, &CPQKitCallback::signalElementPickup, this, &AGVpath::OnElementPickup);//拾取
 }
 
 AGVpath::~AGVpath()
@@ -156,14 +162,6 @@ void AGVpath::init()
 		this, &AGVpath::onComboBox5CurrentIndexChanged);
 
 
-}
-
-QVector<AgvStationInfo> AGVpath::loadAgvStationInfos() const
-{
-	QVector<AgvStationInfo> stations;
-	RobxIO io;
-	io.updateData(stations, "AgvStationInfo.json");
-	return stations;
 }
 
 void AGVpath::refreshAgvStationTable()
@@ -319,9 +317,6 @@ void AGVpath::syncTableToAgvStations()
 
 void AGVpath::persistAgvStations()
 {
-	if (agvStations.isEmpty()) {
-		// 允许写入空数组，也可在此判断是否需要
-	}
 	try {
 		RobxIO io;
 		io.writeData(agvStations, "AgvStationInfo.json");
@@ -439,6 +434,353 @@ bool AGVpath::tryGetPathId(ULONG robotID, const QString& groupName,
 	}
 
 	return false;
+}
+
+QString AGVpath::buildAgvPathNameFromRow(int row) const
+{
+	if (!ui || !ui->tableWidget || row < 0 || row >= ui->tableWidget->rowCount()) {
+		return QString();
+	}
+
+	const QTableWidgetItem* groupItem = ui->tableWidget->item(row, 0);
+	const QTableWidgetItem* pathItem = ui->tableWidget->item(row, 1);
+	const QTableWidgetItem* stationItem = ui->tableWidget->item(row, 2);
+	if (!groupItem || !pathItem || !stationItem) {
+		return QString();
+	}
+
+	QString robotName = groupItem->data(Qt::UserRole).toString().trimmed();
+	if (robotName.isEmpty() && ui->comboBox_1) {
+		robotName = ui->comboBox_1->currentText().trimmed();
+	}
+
+	const QString groupName = groupItem->text().trimmed();
+	const QString pathName = pathItem->text().trimmed();
+	const QString stationName = stationItem->text().trimmed();
+
+	if (robotName.isEmpty() || groupName.isEmpty() || pathName.isEmpty() || stationName.isEmpty()) {
+		return QString();
+	}
+
+	return QStringLiteral("%1_%2_%3_%4").arg(robotName, groupName, pathName, stationName);
+}
+
+bool AGVpath::tryGetAgvPathIdByName(ULONG agvID, const QString& fullPathName, ULONG& pathID)
+{
+	pathID = 0;
+	if (!m_ptrKit || agvID == 0 || fullPathName.trimmed().isEmpty()) {
+		return false;
+	}
+
+	INT pathCount = 0;
+	WCHAR* whPathNames = nullptr;
+	ULONG* pathIDs = nullptr;
+	HRESULT hr = m_ptrKit->Part_get_path(agvID, &pathCount, &whPathNames, &pathIDs);
+	if (FAILED(hr) || pathCount <= 0 || !whPathNames || !pathIDs) {
+		if (whPathNames) m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+		if (pathIDs) m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+		return false;
+	}
+
+	const QString rawNames = QString::fromWCharArray(whPathNames);
+	const QStringList nameList = rawNames.split('#', QString::SkipEmptyParts);
+	const int usable = qMin(pathCount, nameList.size());
+
+	const QString target = fullPathName.trimmed();
+	for (int i = 0; i < usable; ++i) {
+		if (nameList.at(i).trimmed() == target) {
+			pathID = pathIDs[i];
+			break;
+		}
+	}
+
+	m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+	m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+
+	return pathID != 0;
+}
+
+bool AGVpath::moveStationOrderInSystem(int srcRow, int tarRow, bool ahead)
+{
+	if (!ui || !m_ptrKit || !ui->tableWidget) {
+		return false;
+	}
+
+	const QString agvName = ui->textBrowser ? ui->textBrowser->toPlainText().trimmed() : QString();
+	if (agvName.isEmpty() || agvName == QStringLiteral("无")) {
+		return false;
+	}
+
+	ULONG agvID = 0;
+	GetObjIDByName(PQ_WORKINGPART, agvName.toStdWString(), agvID);
+	if (agvID == 0) {
+		return false;
+	}
+
+	const QString srcPathName = buildAgvPathNameFromRow(srcRow);
+	const QString tarPathName = buildAgvPathNameFromRow(tarRow);
+	if (srcPathName.isEmpty() || tarPathName.isEmpty() || srcPathName == tarPathName) {
+		return false;
+	}
+
+	ULONG srcPathID = 0;
+	ULONG tarPathID = 0;
+	if (!tryGetAgvPathIdByName(agvID, srcPathName, srcPathID)
+		|| !tryGetAgvPathIdByName(agvID, tarPathName, tarPathID)) {
+		return false;
+	}
+
+	HRESULT hr = m_ptrKit->Path_change_order(srcPathID, tarPathID, ahead ? TRUE : FALSE);
+	return SUCCEEDED(hr);
+}
+
+bool AGVpath::deleteRemovedAgvStationsPointsInSystem()
+{
+	if (!m_ptrKit || !ui) {
+		return false;
+	}
+
+	const QString robotName = ui->comboBox_1 ? ui->comboBox_1->currentText().trimmed() : QString();
+	const QString agvName = ui->textBrowser ? ui->textBrowser->toPlainText().trimmed() : QString();
+	if (robotName.isEmpty() || agvName.isEmpty() || agvName == QStringLiteral("无")) {
+		return false;
+	}
+
+	ULONG agvID = 0;
+	GetObjIDByName(PQ_WORKINGPART, agvName.toStdWString(), agvID);
+	if (agvID == 0) {
+		return false;
+	}
+
+	INT pathCount = 0;
+	WCHAR* whPathNames = nullptr;
+	ULONG* pathIDs = nullptr;
+	HRESULT hr = m_ptrKit->Part_get_path(agvID, &pathCount, &whPathNames, &pathIDs);
+	if (FAILED(hr) || pathCount <= 0 || !whPathNames || !pathIDs) {
+		if (whPathNames) m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+		if (pathIDs) m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+		return true;
+	}
+
+	const QString rawNames = QString::fromWCharArray(whPathNames);
+	const QStringList nameList = rawNames.split('#', QString::SkipEmptyParts);
+	const int usable = qMin(pathCount, nameList.size());
+
+	bool allOk = true;
+	const QString prefix = robotName + QStringLiteral("_");
+
+	for (int i = 0; i < usable; ++i) {
+		const QString sysPathName = nameList.at(i).trimmed();
+
+		// 仅删除当前机器人命名空间的站位点
+		if (!sysPathName.startsWith(prefix, Qt::CaseSensitive)) {
+			continue;
+		}
+
+		const ULONG pathID = pathIDs[i];
+		if (pathID == 0) {
+			continue;
+		}
+
+		int nPointsCount = 0;
+		ULONG* ulPointsIDs = nullptr;
+		HRESULT hrPts = m_ptrKit->Path_get_point_id(pathID, &nPointsCount, &ulPointsIDs);
+		if (FAILED(hrPts) || nPointsCount <= 0 || !ulPointsIDs) {
+			if (ulPointsIDs) m_ptrKit->PQAPIFreeArray((LONG_PTR*)ulPointsIDs);
+			continue;
+		}
+
+		SAFEARRAYBOUND bound;
+		bound.lLbound = 0;
+		bound.cElements = static_cast<ULONG>(nPointsCount);
+		SAFEARRAY* psa = SafeArrayCreate(VT_UI4, 1, &bound);
+		if (!psa) {
+			m_ptrKit->PQAPIFreeArray((LONG_PTR*)ulPointsIDs);
+			allOk = false;
+			continue;
+		}
+
+		ULONG* pdData = nullptr;
+		if (FAILED(SafeArrayAccessData(psa, (void**)&pdData)) || !pdData) {
+			SafeArrayDestroy(psa);
+			m_ptrKit->PQAPIFreeArray((LONG_PTR*)ulPointsIDs);
+			allOk = false;
+			continue;
+		}
+
+		for (int k = 0; k < nPointsCount; ++k) {
+			pdData[k] = ulPointsIDs[k];
+		}
+		SafeArrayUnaccessData(psa);
+
+		VARIANT varArray;
+		VariantInit(&varArray);
+		varArray.vt = VT_ARRAY | VT_UI4;
+		varArray.parray = psa;
+
+		long long result = 0;
+		CComBSTR cmd(L"RO_CMD_DELETE_POINT");
+		CComBSTR bsParam(L"");
+		HRESULT hrDel = m_ptrKit->pq_RunCommand(cmd, NULL, NULL, bsParam, varArray, &result);
+
+		VariantClear(&varArray);
+		m_ptrKit->PQAPIFreeArray((LONG_PTR*)ulPointsIDs);
+
+		if (FAILED(hrDel)) {
+			allOk = false;
+		}
+	}
+
+	m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+	m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+	return allOk;
+}
+
+//QString AGVpath::buildAgvJsonFileName(const QString& agvName) const
+//{
+//	QString safe = agvName.trimmed();
+//	safe.replace("\\", "_").replace("/", "_").replace(":", "_")
+//		.replace("*", "_").replace("?", "_").replace("\"", "_")
+//		.replace("<", "_").replace(">", "_").replace("|", "_");
+//	if (safe.isEmpty()) {
+//		safe = QStringLiteral("UnknownAGV");
+//	}
+//	return QStringLiteral("AgvStationInfo_%1.json").arg(safe);
+//}
+
+
+QVector<AgvStationInfo> AGVpath::loadAgvStationInfos() const
+{
+	QVector<AgvStationInfo> stations;
+	RobxIO io;
+	io.updateData(stations, "AgvStationInfo.json");
+	return stations;
+}
+
+
+QVector<AgvStationInfo> AGVpath::loadStationsFromSystem(const QString& robotName, const QString& agvName)
+{
+	QVector<AgvStationInfo> result;
+	if (!m_ptrKit || robotName.trimmed().isEmpty() || agvName.trimmed().isEmpty()) {
+		return result;
+	}
+
+	ULONG agvID = 0;
+	GetObjIDByName(PQ_WORKINGPART, agvName.toStdWString(), agvID);
+	if (agvID == 0) {
+		return result;
+	}
+
+	INT pathCount = 0;
+	WCHAR* whPathNames = nullptr;
+	ULONG* pathIDs = nullptr;
+	HRESULT hr = m_ptrKit->Part_get_path(agvID, &pathCount, &whPathNames, &pathIDs);
+	if (FAILED(hr) || pathCount <= 0 || !whPathNames || !pathIDs) {
+		if (whPathNames) m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+		if (pathIDs) m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+		return result;
+	}
+
+	const QString rawNames = QString::fromWCharArray(whPathNames);
+	const QStringList nameList = rawNames.split('#', QString::SkipEmptyParts);
+	const int usable = qMin(pathCount, nameList.size());
+
+	const QString prefix = robotName.trimmed() + QStringLiteral("_");
+
+	for (int i = 0; i < usable; ++i) {
+		const QString fullName = nameList.at(i).trimmed();
+		if (!fullName.startsWith(prefix, Qt::CaseSensitive)) {
+			continue;
+		}
+
+		// 命名规则：robot_group_path_station
+		const QString payload = fullName.mid(prefix.size());
+		const QStringList parts = payload.split('_', QString::KeepEmptyParts);
+		if (parts.size() < 3) {
+			continue;
+		}
+
+		const QString stationName = parts.last().trimmed();
+		const QString pathName = parts.at(parts.size() - 2).trimmed();
+		QString groupName;
+		for (int k = 0; k < parts.size() - 2; ++k) {
+			if (!groupName.isEmpty()) groupName += QStringLiteral("_");
+			groupName += parts.at(k);
+		}
+		groupName = groupName.trimmed();
+
+		ULONG pathID = pathIDs[i];
+		if (pathID == 0) {
+			continue;
+		}
+
+		int pointCount = 0;
+		ULONG* pointIDs = nullptr;
+		if (FAILED(m_ptrKit->Path_get_point_id(pathID, &pointCount, &pointIDs))
+			|| pointCount <= 0 || !pointIDs) {
+			if (pointIDs) m_ptrKit->PQAPIFreeArray((LONG_PTR*)pointIDs);
+			continue;
+		}
+
+		const ULONG pointID = pointIDs[0];
+		m_ptrKit->PQAPIFreeArray((LONG_PTR*)pointIDs);
+
+		PQPostureType postureType = EULERANGLEXYZ;
+		INT postureCount = 0;
+		double* posture = nullptr;
+		double velocity = 0.0;
+		double speedPercent = 0.0;
+		PQPointInstruction instruct = PQ_LINE;
+		INT approach = 0;
+
+		if (FAILED(m_ptrKit->PQAPIGetPointInfo(pointID, postureType, &postureCount, &posture,
+			&velocity, &speedPercent, &instruct, &approach)) || !posture || postureCount < 3) {
+			if (posture) {
+				m_ptrKit->PQAPIFree((LONG_PTR*)posture);
+			}
+			continue;
+		}
+
+		AgvStationInfo info;
+		info.robotName = robotName.toStdString();
+		info.groupName = groupName.toStdString();
+		info.pathName = pathName.toStdString();
+		info.stationName = stationName.toStdString();
+		info.x = posture[0];
+		info.y = posture[1];
+		info.z = posture[2];
+		info.theta = (postureCount >= 6) ? posture[5] : 0.0;
+
+		m_ptrKit->PQAPIFree((LONG_PTR*)posture);
+		result.push_back(info);
+	}
+
+	m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+	m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+
+	return result;
+}
+
+bool AGVpath::syncCurrentAgvSystemToJson(const QString& robotName, const QString& agvName)
+{
+	if (robotName.trimmed().isEmpty() || agvName.trimmed().isEmpty()
+		|| agvName.trimmed() == QStringLiteral("无")) {
+		return false;
+	}
+
+	try {
+		QVector<AgvStationInfo> stations = loadStationsFromSystem(robotName, agvName);
+
+		RobxIO io;
+		io.writeData(stations, "AgvStationInfo.json");
+
+		agvStations = std::move(stations);
+		return true;
+	}
+	catch (const std::exception& ex) {
+		qWarning() << "同步AGV系统站位到JSON失败:" << ex.what();
+		return false;
+	}
 }
 
 std::map<std::string, std::pair<std::string, std::string>> AGVpath::loadRobotRelations(const std::string& filePath)
@@ -594,7 +936,32 @@ void AGVpath::onCalculate() {
 
 void AGVpath::onConfirm()
 {
+	// 表格 -> JSON内存 -> JSON文件
 	commitAgvStations();
+
+	// 先删当前AGV相关站位点
+	if (!deleteRemovedAgvStationsPointsInSystem()) {
+		QMessageBox::warning(this, tr("提示"), tr("删除项目中的旧pos点失败。"));
+		return;
+	}
+
+	// 再按JSON重建
+	if (!insertAgvStationsToSystem()) {
+		QMessageBox::warning(this, tr("提示"), tr("JSON已保存，但项目中重建pos点失败。"));
+		return;
+	}
+
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+	if (SUCCEEDED(hr)) {
+		this->setModal(false);
+		this->setWindowModality(Qt::NonModal);
+		qDebug() << "曲面拾取模块已启动，请在3D窗口中点击元素";
+	}
+	else {
+		QMessageBox::warning(this, "错误", "启动曲面拾取模块失败！");
+	}
+
 	reject();
 }
 
@@ -745,9 +1112,19 @@ void AGVpath::onAGVSelectionChanged(int index)
 		return;
 	}
 
-	const QString robotName = ui->comboBox_1->itemText(index);
-	ULONG robotID = m_robotMap.key(robotName, 0);
+	const QString robotName = ui->comboBox_1->itemText(index).trimmed();
 	updateAgvNameDisplay(robotName);
+	const QString agvName = ui->textBrowser ? ui->textBrowser->toPlainText().trimmed() : QString();
+
+	/*m_currentAgvJsonFile = buildAgvJsonFileName(agvName);*/
+
+	// 关键：选中AGV时，先用系统数据覆盖当前AGV json
+	syncCurrentAgvSystemToJson(robotName, agvName);
+
+	// 然后再刷新表格（改成读取 m_currentAgvJsonFile）
+	refreshAgvStationTable();
+
+	ULONG robotID = m_robotMap.key(robotName, 0);
 
 	QStringList groupNames = getPathGroupNames(robotID);
 	ui->comboBox_2->addItems(groupNames);
@@ -776,6 +1153,209 @@ void AGVpath::updateAgvNameDisplay(const QString& robotName)
 	}
 
 	ui->textBrowser->setText(agvName);
+}
+
+bool AGVpath::insertAgvStationsToSystem()
+{
+	if (!m_ptrKit) {
+		return false;
+	}
+
+	bool allOk = true;
+	QMap<QString, QSet<QString>> existingPathNamesByAgv;
+	QMap<QString, ULONG> agvIdByName;
+	QMap<QString, QStringList> desiredOrderByAgv;
+
+	auto loadExistingPathNames = [&](ULONG agvID, QSet<QString>& names) -> bool {
+		INT pathCount = 0;
+		WCHAR* whPathNames = nullptr;
+		ULONG* pathIDs = nullptr;
+		HRESULT hr = m_ptrKit->Part_get_path(agvID, &pathCount, &whPathNames, &pathIDs);
+		if (FAILED(hr)) {
+			if (whPathNames) m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+			if (pathIDs) m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+			return false;
+		}
+
+		if (whPathNames) {
+			const QString rawNames = QString::fromWCharArray(whPathNames);
+			const QStringList list = rawNames.split('#', QString::SkipEmptyParts);
+			for (const QString& n : list) {
+				names.insert(n.trimmed());
+			}
+		}
+
+		if (whPathNames) m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+		if (pathIDs) m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+		return true;
+		};
+
+	// 1) 插入（不存在才插入）+ 收集每个AGV的目标顺序
+	for (const auto& station : agvStations) {
+		const QString robotName = QString::fromStdString(station.robotName).trimmed();
+		const QString groupName = QString::fromStdString(station.groupName).trimmed();
+		const QString pathName = QString::fromStdString(station.pathName).trimmed();
+		const QString stationName = QString::fromStdString(station.stationName).trimmed();
+
+		if (robotName.isEmpty() || groupName.isEmpty() || pathName.isEmpty() || stationName.isEmpty()) {
+			continue;
+		}
+
+		auto relationIt = relationsMap.find(robotName.toStdString());
+		if (relationIt == relationsMap.end() || relationIt->second.second.empty()) {
+			allOk = false;
+			continue;
+		}
+
+		const QString agvName = QString::fromStdString(relationIt->second.second).trimmed();
+		if (agvName.isEmpty() || agvName == QStringLiteral("无")) {
+			allOk = false;
+			continue;
+		}
+
+		ULONG agvID = 0;
+		if (agvIdByName.contains(agvName)) {
+			agvID = agvIdByName.value(agvName);
+		}
+		else {
+			GetObjIDByName(PQ_WORKINGPART, agvName.toStdWString(), agvID);
+			agvIdByName.insert(agvName, agvID);
+		}
+		if (agvID == 0) {
+			allOk = false;
+			continue;
+		}
+
+		// 名称规则：机器人_组_轨迹_站位点（与事件检索一致）
+		const QString iPathName = QStringLiteral("%1_%2_%3_%4")
+			.arg(robotName, groupName, pathName, stationName);
+		const QString iGroupName = QStringLiteral("Group");
+
+		// 记录目标顺序（去重保序）
+		QStringList& order = desiredOrderByAgv[agvName];
+		if (!order.contains(iPathName)) {
+			order.append(iPathName);
+		}
+
+		if (!existingPathNamesByAgv.contains(agvName)) {
+			QSet<QString> names;
+			loadExistingPathNames(agvID, names);
+			existingPathNamesByAgv.insert(agvName, names);
+		}
+
+		QSet<QString>& existing = existingPathNamesByAgv[agvName];
+		if (existing.contains(iPathName)) {
+			continue;
+		}
+
+		double i_dPosition[6] = { station.x, station.y, station.z, 0.0, 0.0, station.theta };
+		PQPostureType i_ePostureType = EULERANGLEXYZ;
+		DOUBLE i_dVelocity = 30;
+		DOUBLE i_dpalvel = 0.1;
+		INT i_nApproach[1] = { -1 };
+		ULONG uPathID = 0;
+
+		std::wstring wsPathName = iPathName.toStdWString();
+		std::wstring wsGroupName = iGroupName.toStdWString();
+
+		std::vector<wchar_t> pathNameBuf(wsPathName.begin(), wsPathName.end());
+		pathNameBuf.push_back(L'\0');
+		std::vector<wchar_t> groupNameBuf(wsGroupName.begin(), wsGroupName.end());
+		groupNameBuf.push_back(L'\0');
+
+		HRESULT hrInsert = m_ptrKit->Part_insert_point_with_posture(
+			agvID, 1, i_dPosition, i_ePostureType,
+			i_dVelocity, i_dpalvel, i_nApproach,
+			pathNameBuf.data(), groupNameBuf.data(), 0, 1, &uPathID);
+
+		if (FAILED(hrInsert)) {
+			allOk = false;
+			continue;
+		}
+
+		existing.insert(iPathName);
+		insertedPathNamesByAgv[agvName].insert(iPathName);
+	}
+
+	// 2) 仅对“本次新插入点”按 JSON 顺序重排：把 src 移到 tar 后面
+	auto loadPathNameIdMap = [&](ULONG agvID, QMap<QString, ULONG>& nameToId) -> bool {
+		nameToId.clear();
+
+		INT pathCount = 0;
+		WCHAR* whPathNames = nullptr;
+		ULONG* pathIDs = nullptr;
+		HRESULT hr = m_ptrKit->Part_get_path(agvID, &pathCount, &whPathNames, &pathIDs);
+		if (FAILED(hr) || pathCount <= 0 || !whPathNames || !pathIDs) {
+			if (whPathNames) m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+			if (pathIDs) m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+			return false;
+		}
+
+		const QString rawNames = QString::fromWCharArray(whPathNames);
+		const QStringList names = rawNames.split('#', QString::SkipEmptyParts);
+		const int usable = qMin(pathCount, names.size());
+		for (int i = 0; i < usable; ++i) {
+			nameToId.insert(names.at(i).trimmed(), pathIDs[i]);
+		}
+
+		m_ptrKit->PQAPIFree((LONG_PTR*)whPathNames);
+		m_ptrKit->PQAPIFree((LONG_PTR*)pathIDs);
+		return true;
+		};
+
+	for (auto it = desiredOrderByAgv.constBegin(); it != desiredOrderByAgv.constEnd(); ++it) {
+		const QString agvName = it.key();
+		const QStringList& order = it.value();
+		const ULONG agvID = agvIdByName.value(agvName, 0);
+		if (agvID == 0 || order.size() <= 1) {
+			continue;
+		}
+
+		const QSet<QString> insertedSet = insertedPathNamesByAgv.value(agvName);
+		if (insertedSet.isEmpty()) {
+			continue;
+		}
+
+		QMap<QString, ULONG> nameToId;
+		if (!loadPathNameIdMap(agvID, nameToId)) {
+			allOk = false;
+			continue;
+		}
+
+		for (int i = 0; i < order.size(); ++i) {
+			const QString srcName = order.at(i);
+			if (!insertedSet.contains(srcName)) {
+				continue; // 只移动新插入点
+			}
+
+			// 找 JSON 中前一个存在的点作为锚点 tar
+			QString tarName;
+			for (int j = i - 1; j >= 0; --j) {
+				const QString candidate = order.at(j);
+				if (nameToId.contains(candidate) && candidate != srcName) {
+					tarName = candidate;
+					break;
+				}
+			}
+			if (tarName.isEmpty()) {
+				continue;
+			}
+
+			const ULONG srcID = nameToId.value(srcName, 0);
+			const ULONG tarID = nameToId.value(tarName, 0);
+			if (srcID == 0 || tarID == 0 || srcID == tarID) {
+				continue;
+			}
+
+			// i_bAhead = FALSE：放到 tar 后面（符合你的需求）
+			HRESULT hrMove = m_ptrKit->Path_change_order(srcID, tarID, FALSE);
+			if (FAILED(hrMove)) {
+				allOk = false;
+			}
+		}
+	}
+
+	return allOk;
 }
 
 void AGVpath::onInsertRow()
@@ -815,9 +1395,11 @@ void AGVpath::onInsertRow()
 	}
 	clonedItems[2]->setText(transitionLabel);
 
-	const QString groupName = clonedItems[0] ? clonedItems[0]->text().trimmed() : QString();
-	const QString pathName = clonedItems[1] ? clonedItems[1]->text().trimmed() : QString();
-	const int insertRow = findSortedInsertRow(groupName, pathName, transitionLabel);
+	int insertRow = table->currentRow();
+	if (insertRow < 0) {
+		insertRow = table->rowCount() - 1;
+	}
+	insertRow = qBound(0, insertRow + 1, table->rowCount());
 
 	table->insertRow(insertRow);
 	for (int col = 0; col < columnCount; ++col) {
@@ -849,28 +1431,43 @@ void AGVpath::onMoveRowUp()
 	if (!ui->tableWidget) {
 		return;
 	}
-	QTableWidget * table = ui->tableWidget;
+	QTableWidget* table = ui->tableWidget;
 	const int row = table->currentRow();
 	if (row <= 0) {
 		return;
 	}
+
+	// 上移：src 放到 tar 前面
+	if (!moveStationOrderInSystem(row, row - 1, true)) {
+		QMessageBox::warning(this, tr("提示"), tr("系统内上移失败，未更新表格顺序。"));
+		return;
+	}
+
 	swapTableRows(row, row - 1);
 	table->setCurrentCell(row - 1, table->currentColumn());
+	commitAgvStations();
 }
 
 void AGVpath::onMoveRowDown()
 {
 	if (!ui->tableWidget) {
 		return;
-		
 	}
-	QTableWidget * table = ui->tableWidget;
+	QTableWidget* table = ui->tableWidget;
 	const int row = table->currentRow();
 	if (row < 0 || row >= table->rowCount() - 1) {
 		return;
 	}
+
+	// 下移：src 放到 tar 后面
+	if (!moveStationOrderInSystem(row, row + 1, false)) {
+		QMessageBox::warning(this, tr("提示"), tr("系统内下移失败，未更新表格顺序。"));
+		return;
+	}
+
 	swapTableRows(row, row + 1);
 	table->setCurrentCell(row + 1, table->currentColumn());
+	commitAgvStations();
 }
 
 void AGVpath::onAddSimulationEvent()
@@ -1009,7 +1606,7 @@ void AGVpath::onAddSimulationEvent()
 	CComBSTR e3WaitEventBstr(e3WaitName.toStdWString().c_str());
 	CComBSTR e3WaitContentBstr(e3Name.toStdWString().c_str());
 
-	if (FAILED(m_ptrKit->Path_add_send_event(&stationStartPointID, 1, agvID, 0, e1SendBstr))
+	/*if (FAILED(m_ptrKit->Path_add_send_event(&stationStartPointID, 1, agvID, 0, e1SendBstr))
 		|| FAILED(m_ptrKit->Path_add_wait_event(&startTrackFirstPointID, 1, robotID, 1, e1WaitEventBstr, e1WaitContentBstr))
 		|| FAILED(m_ptrKit->Path_add_send_event(&startTrackLastPointID, 1, robotID, 0, e2SendBstr))
 		|| FAILED(m_ptrKit->Path_add_wait_event(&stationEndPointID, 1, agvID, 1, e2WaitEventBstr, e2WaitContentBstr))
@@ -1020,7 +1617,112 @@ void AGVpath::onAddSimulationEvent()
 	}
 
 	QMessageBox::information(this, tr("提示"),
-		tr("站位与喷涂轨迹的三段信号链路已全部建立。"));
+		tr("站位与喷涂轨迹的三段信号链路已全部建立。"));*/
+
+
+	// ---------- 中间过渡点等待事件（与终点前等待事件一致） ----------
+	auto findRowByTriple = [&](const QString& g, const QString& p, const QString& s) -> int {
+		if (!ui || !ui->tableWidget) {
+			return -1;
+		}
+		for (int r = 0; r < ui->tableWidget->rowCount(); ++r) {
+			const QTableWidgetItem* gItem = ui->tableWidget->item(r, 0);
+			const QTableWidgetItem* pItem = ui->tableWidget->item(r, 1);
+			const QTableWidgetItem* sItem = ui->tableWidget->item(r, 2);
+			if (!gItem || !pItem || !sItem) {
+				continue;
+			}
+			if (gItem->text().trimmed() == g
+				&& pItem->text().trimmed() == p
+				&& sItem->text().trimmed() == s) {
+				return r;
+			}
+		}
+		return -1;
+		};
+
+	const int startRow = findRowByTriple(startGroup, startPath, startStation);
+	const int endRow = findRowByTriple(endGroup, endPath, endStation);
+
+	QVector<ULONG> transitionWaitPointIDs;
+	if (startRow >= 0 && endRow >= 0) {
+		const int lower = qMin(startRow, endRow);
+		const int upper = qMax(startRow, endRow);
+
+		for (int r = lower + 1; r < upper; ++r) {
+			const QTableWidgetItem* gItem = ui->tableWidget->item(r, 0);
+			const QTableWidgetItem* pItem = ui->tableWidget->item(r, 1);
+			const QTableWidgetItem* sItem = ui->tableWidget->item(r, 2);
+			if (!gItem || !pItem || !sItem) {
+				continue;
+			}
+
+			const QString midGroup = gItem->text().trimmed();
+			const QString midPath = pItem->text().trimmed();
+			const QString midStation = sItem->text().trimmed();
+			if (midGroup.isEmpty() || midPath.isEmpty() || midStation.isEmpty()) {
+				continue;
+			}
+
+			const QString midKey = buildStationKey(midGroup, midPath, midStation);
+			const ULONG midPathID = stationToPathId.value(midKey, 0);
+			if (midPathID == 0) {
+				continue;
+			}
+
+			ULONG midPointID = 0;
+			// 对站位点路径，取首点即可（单点路径时首尾一致）
+			if (fetchBoundaryPoint(midPathID, true, midPointID) && midPointID != 0) {
+				transitionWaitPointIDs.push_back(midPointID);
+			}
+		}
+	}
+
+	const bool baseEventsOk =
+		SUCCEEDED(m_ptrKit->Path_add_send_event(&stationStartPointID, 1, agvID, 0, e1SendBstr))
+		&& SUCCEEDED(m_ptrKit->Path_add_wait_event(&startTrackFirstPointID, 1, robotID, 1, e1WaitEventBstr, e1WaitContentBstr))
+		&& SUCCEEDED(m_ptrKit->Path_add_send_event(&startTrackLastPointID, 1, robotID, 0, e2SendBstr))
+		&& SUCCEEDED(m_ptrKit->Path_add_wait_event(&stationEndPointID, 1, agvID, 1, e2WaitEventBstr, e2WaitContentBstr))
+		&& SUCCEEDED(m_ptrKit->Path_add_send_event(&stationEndPointID, 1, agvID, 0, e3SendBstr))
+		&& SUCCEEDED(m_ptrKit->Path_add_wait_event(&endTrackFirstPointID, 1, robotID, 1, e3WaitEventBstr, e3WaitContentBstr));
+
+	if (!baseEventsOk) {
+		QMessageBox::warning(this, tr("提示"), tr("写入发送/等待事件失败，请检查配置。"));
+		return;
+	}
+
+
+	// 中间过渡点前追加“等待事件”（与终点前等待事件一致：e2Wait）
+	for (ULONG midPointID : transitionWaitPointIDs) {
+		if (FAILED(m_ptrKit->Path_add_wait_event(
+			&midPointID, 1, agvID, 1, e2WaitEventBstr, e2WaitContentBstr))) {
+			QMessageBox::warning(this, tr("提示"), tr("中间过渡点等待事件写入失败。"));
+			return;
+		}
+	}
+
+	if (baseEventsOk) {
+		QMessageBox::information(
+			this,
+			tr("提示"),
+			tr("事件添加成功，共添加基础事件6条，中间过渡点等待事件%1条。")
+			.arg(transitionWaitPointIDs.size()));
+	}
+
+}
+
+void AGVpath::onPreview()
+{
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+	if (SUCCEEDED(hr)) {
+		this->setModal(false);
+		this->setWindowModality(Qt::NonModal);
+		qDebug() << "曲面拾取模块已启动，请在3D窗口中点击元素";
+	}
+	else {
+		QMessageBox::warning(this, "错误", "启动曲面拾取模块失败！");
+	}
 }
 
 void AGVpath::swapTableRows(int firstRow, int secondRow)
@@ -1440,4 +2142,106 @@ void AGVpath::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG &o
 	SafeArrayAccessData(vIDPara.parray, (void**)&bufID);
 	o_uID = bufID[nTarIndex];
 	SafeArrayUnaccessData(vIDPara.parray);
+}
+
+
+void AGVpath::OnDraw()
+{
+	if (!ui || !ui->tableWidget || !m_ptrKit) {
+		return;
+	}
+
+	QTableWidget* table = ui->tableWidget;
+	if (table->rowCount() <= 0) {
+		return;
+	}
+
+	// 优先使用当前机器人基坐标系；失败则使用0（默认坐标系）
+	ULONG ulCoordinateID = 0;
+	const QString robotName = ui->comboBox_1 ? ui->comboBox_1->currentText().trimmed() : QString();
+	if (!robotName.isEmpty()) {
+		ULONG robotID = m_robotMap.key(robotName, 0);
+		if (robotID != 0) {
+			m_ptrKit->Robot_get_base_coordinate(robotID, &ulCoordinateID);
+		}
+	}
+
+	auto parseDouble = [](const QTableWidgetItem* item, double defaultValue) -> double {
+		if (!item) {
+			return defaultValue;
+		}
+		bool ok = false;
+		const double value = item->text().trimmed().toDouble(&ok);
+		return ok ? value : defaultValue;
+		};
+
+	bool hasPrev = false;
+	double prevPoint[3] = { 0.0, 0.0, 0.0 };
+
+	for (int row = 0; row < table->rowCount(); ++row) {
+		if (table->isRowHidden(row)) {
+			continue; // 仅绘制当前展示行
+		}
+
+		const QTableWidgetItem* groupItem = table->item(row, 0);
+		const QTableWidgetItem* pathItem = table->item(row, 1);
+		const QTableWidgetItem* stationItem = table->item(row, 2);
+		const QTableWidgetItem* xItem = table->item(row, 3);
+		const QTableWidgetItem* yItem = table->item(row, 4);
+		const QTableWidgetItem* thetaItem = table->item(row, 5);
+
+		if (!groupItem || !pathItem || !stationItem || !xItem || !yItem || !thetaItem) {
+			continue;
+		}
+
+		const double x = parseDouble(xItem, 0.0);
+		const double y = parseDouble(yItem, 0.0);
+		const double z = stationItem->data(Qt::UserRole).isValid()
+			? stationItem->data(Qt::UserRole).toDouble()
+			: 0.0;
+		const double thetaDeg = parseDouble(thetaItem, 0.0);
+
+		double dPosition[3] = { x, y, z };
+
+		// 画点
+		LONG lptSize = 12;
+		LONG lptColor = RGB(255, 255, 0);
+		std::wstring wsText = stationItem->text().toStdWString();
+		std::vector<wchar_t> textBuf(wsText.begin(), wsText.end());
+		textBuf.push_back(L'\0');
+		LONG ltextColor = RGB(255, 255, 0);
+		m_ptrKit->View_draw_point(dPosition, ulCoordinateID, lptSize, lptColor, textBuf.data(), ltextColor);
+
+		// 相邻点连线
+		if (hasPrev) {
+			double dRGB[3] = { 255, 0, 0 };
+			ULONG o_uCylinderID = 0;
+			m_ptrKit->Doc_draw_cylinder(prevPoint, 3, dPosition, 3, 4,
+				dRGB, 3, ulCoordinateID, &o_uCylinderID, false);
+		}
+
+		// 画方向线（由theta决定，默认沿XY平面）
+		const double rad = qDegreesToRadians(thetaDeg);
+		const double dirLen = 100.0;
+		double dEnd[3] = {
+			x + dirLen * std::cos(rad),
+			y + dirLen * std::sin(rad),
+			z
+		};
+		double dirRGB[3] = { 0, 255, 0 };
+		ULONG dirLineID = 0;
+		m_ptrKit->Doc_draw_cylinder(dPosition, 3, dEnd, 3, 3,
+			dirRGB, 3, ulCoordinateID, &dirLineID, false);
+
+		prevPoint[0] = x;
+		prevPoint[1] = y;
+		prevPoint[2] = z;
+		hasPrev = true;
+	}
+}
+
+void AGVpath::OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
+	double i_dPointX, double i_dPointY, double i_dPointZ)
+{
+	
 }
