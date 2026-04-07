@@ -1598,7 +1598,7 @@ void MainWindow::on_robxFileIOManager_open()
 
 void MainWindow::on_connectSetting_open()
 {
-	ConnectSetting *w = new ConnectSetting();
+	ConnectSetting *w = new ConnectSetting(m_zmqContext);
 	w->show();
 }
 

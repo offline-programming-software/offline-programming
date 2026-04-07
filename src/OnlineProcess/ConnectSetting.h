@@ -5,15 +5,9 @@
 #include <memory>
 #include <qthread.h>
 #include <QTreeWidgetItem> // 新增
-#include "OnlineProcess/model/clientModel.h" // 新增
+#include "OnlineProcess/model/clientModel.h"
+#include "OnlineProcess/client.h"
 
-struct Client
-{
-	QString Name;
-	QString IP = "0.0.0.0";
-	QString Port;
-	bool status = false;
-};
 class ZmqWorker;
 
 QT_BEGIN_NAMESPACE
@@ -25,7 +19,7 @@ class ConnectSetting : public QWidget
 	Q_OBJECT
 
 public:
-	ConnectSetting(QWidget* parent = nullptr);
+	ConnectSetting(zmq::context_t &ctx,QWidget* parent = nullptr);
 	~ConnectSetting();
 
 private:
@@ -35,10 +29,13 @@ private:
 	void updateDeviceTree(const QString& deviceType, const QString& deviceName, const QString& status); // 新增树更新函数
 	QThread m_workerThread;
 	ZmqWorker* m_worker;
-	ClientModel* m_clientModel; 
+	ClientModel* m_clientModel;
+	zmq::context_t& m_zmqContext;   // ZeroMQ上下文对象
 
 private slots:
 	void on_chkLocal_toggled(bool checked);
 	void on_btnConnect_clicked();
 	void on_btnAdd_clicked();
+	void on_connect_result(bool flag);
+
 };

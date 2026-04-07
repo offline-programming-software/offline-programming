@@ -41,6 +41,7 @@
 #include "robxFileIO.h"
 #include "TrajCorrectDock.h"
 #include "test\robxFileIOManagerWidget.h"
+#include <zmq.hpp>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -69,6 +70,7 @@ private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
 	PQKitInitThread* m_ptrKitInitThread;
+	zmq::context_t m_zmqContext;   // ZeroMQ上下文对象
 
 	QWidget* m_pPQPlatformView;
 	QWidget* m_pPQModeTreeView;

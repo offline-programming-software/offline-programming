@@ -5,9 +5,9 @@
 #include <qprogressbar.h>
 #include <qprogressdialog.h>
 
-ConnectSetting::ConnectSetting(QWidget* parent)
+ConnectSetting::ConnectSetting(zmq::context_t& ctx, QWidget* parent)
 	: QWidget(parent)
-	, ui(new Ui::ConnectSettingClass())
+	, ui(new Ui::ConnectSettingClass()), m_zmqContext(ctx)
 {
 	ui->setupUi(this);
 	initUI();
@@ -16,39 +16,24 @@ ConnectSetting::ConnectSetting(QWidget* parent)
 	setWindowFlags(Qt::Window
 		| Qt::WindowContextHelpButtonHint   // 问号
 		| Qt::WindowCloseButtonHint);       // 关闭
-	m_worker = new ZmqWorker();
+	m_clientModel = new ClientModel(this);
+
+	ui->tblClient->setModel(m_clientModel);
+	ui->tblClient->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+	// 设置为只能整行选中
+	ui->tblClient->setSelectionBehavior(QAbstractItemView::SelectRows);
+
+	// 隐藏左侧自带的行号表头（如果不需要的话）
+	ui->tblClient->verticalHeader()->setVisible(false);
+
+	// 创建 Worker 对象并移动到线程
+	m_worker = new ZmqWorker(m_zmqContext);
 	m_worker->moveToThread(&m_workerThread);
+	connect(m_worker, &ZmqWorker::connectResult, this, &ConnectSetting::on_connect_result);
+
 	connect(&m_workerThread, &QThread::finished, m_worker, &QObject::deleteLater);
-	connect(m_worker, &ZmqWorker::serverStarted, this, [this](bool success, const QString& addr, const QString& errorMsg) {
-		if (success) {
-			QMessageBox::information(this, QString::fromLocal8Bit("连接提示"), QString::fromLocal8Bit("成功启动服务绑定并监听: ") + addr);
-		}
-		else {
-			QMessageBox::critical(this, QString::fromLocal8Bit("ZMQ 错误"), QString::fromLocal8Bit("ZMQ 初始化或绑定失败: ") + errorMsg);
-		}
-		});
 
-	// 5. 监听 Worker 收到的消息并在树上显示
-	connect(m_worker, &ZmqWorker::messageReceived, this, [this](const QString& msg) {
-		qDebug() << "收到客户端消息:" << msg;
-
-		// 简单的解析机制：假设客户端发来的消息格式是 "设备类型,设备名称" (例如 "Robot,KUKA_1")
-		// 如果你想显示所有收到的信息，可以直接把整个 msg 当作设备名
-		QStringList parts = msg.split(",");
-		QString type = QString::fromLocal8Bit("未知设备");
-		QString name = msg;
-
-		if (parts.size() >= 2) {
-			type = parts[0];
-			name = parts[1];
-		}
-
-		// 更新树节点，状态标记为“已连接”
-		updateDeviceTree(type, name, QString::fromLocal8Bit("已连接"));
-		});
-
-	// 6. 启动子线程 (此时 worker 还没开始工作，只是所在的线程跑起来了)
-	m_workerThread.start();
 }
 
 ConnectSetting::~ConnectSetting()
@@ -74,10 +59,6 @@ void ConnectSetting::initUI()
 
 void ConnectSetting::initTree()
 {
-	QList<QString> head;
-	head << QString::fromLocal8Bit("设备类型") << QString::fromLocal8Bit("设备名") << QString::fromLocal8Bit("连接状态");
-
-	ui->treeClient->setHeaderLabels(head);
 }
 
 // === 新增的添加树节点函数实现 ===
@@ -102,42 +83,70 @@ void ConnectSetting::on_chkLocal_toggled(bool checked)
 
 void ConnectSetting::on_btnConnect_clicked()
 {
-	QString Port = ui->edtPort->text();
-	QString IP = ui->edtIP->text();
+	QModelIndex currentIndex = ui->tblClient->currentIndex();
 
-	if (ui->chkLocal->isChecked()) {
-		IP = "*";
-	}
-	else if (IP.isEmpty() || IP == "...") {
-		QMessageBox::warning(this, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("请输入有效的IP地址或勾选本地"));
+	if (!currentIndex.isValid()) {
+		QMessageBox::information(this, QString::fromLocal8Bit("提示"), QString::fromLocal8Bit("请先选择一个客户端"));
 		return;
 	}
 
-	if (Port.isEmpty()) {
-		QMessageBox::warning(this, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("请输入端口号"));
-		return;
+	int row = currentIndex.row();
+
+	const auto& clients = m_clientModel->getAllClient();
+	if (row >= 0 && row < clients.size()) {
+		const Client& selectedClient = clients.at(row);
+
+		QString name = selectedClient.name();
+		QString ip = selectedClient.ip();
+		m_worker->on_connectToServer(ip, selectedClient.port());
+		
+		qDebug() << "Selected Client:" << name << ip;
 	}
 
-	QString address = QString("tcp://%1:%2").arg(IP).arg(Port);
-
-	// 不要直接调用 m_worker->startServer(address)，会阻塞主线程!
-	// 必须通过 invokeMethod 触发排队调用，让它是子线程里执行
-	QMetaObject::invokeMethod(m_worker, "startServer", Qt::QueuedConnection, Q_ARG(QString, address));
-	QProgressDialog* dialog = new QProgressDialog("正在处理数据...", "取消", 0, 0, this);
-	dialog->setWindowTitle("请稍候");
-	dialog->setWindowModality(Qt::WindowModal); // 模态对话框，防止用户操作主窗口
-	dialog->show();
 }
 
 void ConnectSetting::on_btnAdd_clicked()
 {
-	Client client;
-	client.Name = QString::fromLocal8Bit("客户端") + QString::number(m_clientModel->rowCount() + 1);
-	client.IP = ui->edtIP->text();
-	client.Port = ui->edtPort->text();
-	client.status = false; // 默认状态为未连接
+	QString newName = ui->edtClientName->text();
+	// 1. 判断名称是否为空
+	if (newName.isEmpty()) {
+		QMessageBox::warning(this, QString::fromLocal8Bit("提示"), QString::fromLocal8Bit("请输入主机名称"));
+		return;
+	}
 
-	const auto& clients = m_clientModel->getClients();
-	m_clientModel->addClient(client);
-	
+	// 2. 同名检查
+	const auto& existingClients = m_clientModel->getAllClient();
+	for (const auto& client : existingClients) {
+		if (client.name() == newName) {
+			QMessageBox::warning(this, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("该主机名称已存在，请使用其他名称"));
+			return;
+		}
+	}
+
+	// 3. 构造并添加新 Client
+	Client newClient;
+	newClient.setName(newName);
+	newClient.setPort(ui->edtPort->text());
+	newClient.setIp(ui->edtIP->text());
+	newClient.setIsLocal(ui->chkLocal->isChecked());
+
+	m_clientModel->addClient(newClient);
+}
+
+void ConnectSetting::on_connect_result(bool flag)
+{
+	QModelIndex currentIndex = ui->tblClient->currentIndex();
+	int row = currentIndex.row();
+	Client& client = m_clientModel->getClient(row) ;
+	if (flag)
+	{
+		QMessageBox::information(this, QString::fromLocal8Bit("成功"), QString::fromLocal8Bit("连接成功！"));
+		client.setIsConnected(true);
+
+	}
+	else
+	{
+		QMessageBox::critical(this, QString::fromLocal8Bit("失败"), QString::fromLocal8Bit("连接失败，请检查IP和端口设置！"));
+		client.setIsConnected(false);
+	}
 }

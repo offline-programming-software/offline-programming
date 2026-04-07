@@ -8,19 +8,17 @@ class ZmqWorker : public QObject
 {
     Q_OBJECT
 public:
-    explicit ZmqWorker(QObject* parent = nullptr);
+    explicit ZmqWorker(zmq::context_t& ctx);
     ~ZmqWorker();
 
 public slots:
-    void startServer(const QString& address);
-    void stopServer();
 
+	void on_connectToServer(const QString& ip, const QString& port);
+ 
 signals:
-    void messageReceived(const QString& msg);
-    void serverStarted(bool success, const QString& addr, const QString& errorMsg = "");
+    void connectResult(bool isSuccess);
 
 private:
-    std::unique_ptr<zmq::context_t> m_zmqContext;
-    std::unique_ptr<zmq::socket_t> m_zmqRepSocket;
+    zmq::context_t& m_zmqContext;
     bool m_running;
 };

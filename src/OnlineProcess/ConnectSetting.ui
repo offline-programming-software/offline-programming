@@ -58,7 +58,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="edtIP_2"/>
+             <widget class="QLineEdit" name="edtClientName"/>
             </item>
            </layout>
           </item>
@@ -127,31 +127,7 @@
         <item>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
-           <widget class="QTreeWidget" name="treeClient">
-            <property name="columnCount">
-             <number>4</number>
-            </property>
-            <column>
-             <property name="text">
-              <string notr="true">主机名称</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>IP地址</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>端口号</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string notr="true">连接状态</string>
-             </property>
-            </column>
-           </widget>
+           <widget class="QTableView" name="tblClient"/>
           </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
