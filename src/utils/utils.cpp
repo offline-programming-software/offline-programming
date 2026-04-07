@@ -187,6 +187,22 @@ void PQUtils::drawBox(const std::array<double,6>& range)
 	}
 }
 
+QString PQUtils::getName(const ulong id)
+{
+	CComBSTR bsName;
+	m_ptrKit->Doc_get_obj_name(id, &bsName);
+	std::wstring wstr(bsName, bsName.Length());
+	QString qstr = QString::fromWCharArray(bsName, SysStringLen(bsName));
+	return qstr;
+}
+
+ulong PQUtils::getPathIDOfPoint(ulong pointID)
+{
+	ulong pathID;
+	m_ptrKit->Point_get_parent_path(pointID, &pathID);
+	return pathID;
+}
+
 void PQUtils::drawBox(std::array<edgePoint, 8> pts)
 {
 	//通过角点画框，输入8个角点坐标，顺序为：左下前、右下前、右上前、左上前、左下后、右下后、右上后、左上后

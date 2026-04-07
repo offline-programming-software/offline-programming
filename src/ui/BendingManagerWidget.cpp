@@ -31,6 +31,8 @@ BendingManagerWidget::BendingManagerWidget(CComPtr<IPQPlatformComponent> ptrKit,
 	m_manager = new BendingManager(m_ptrKit, m_model);
 	m_manager->initOriginPointsSnapshot();
 	m_manager->rebuildParentChildRelation();
+	m_manager->initPathIDMap();
+	m_manager->initIncludedPathForCorrections();
 	auto& items = m_model->getItems();
 	ui->treeCorrection->blockSignals(false);
 	initTreeWidget();
@@ -81,7 +83,17 @@ void BendingManagerWidget::closeEvent(QCloseEvent* event)
 void BendingManagerWidget::initTreeWidget()
 {
 	ui->treeCorrection->clear();
-	ui->treeCorrection->setHeaderLabel(QString::fromLocal8Bit("修正名称"));
+	QStringList headerLabels;
+	headerLabels << QString::fromLocal8Bit("修正名称")<< QString::fromLocal8Bit("所属轨迹");
+	ui->treeCorrection->setHeaderLabels(headerLabels);
+	QHeaderView* header = ui->treeCorrection->header();
+	header->setSectionResizeMode(0, QHeaderView::Stretch); // 第一列自适应填充
+	header->setSectionResizeMode(1, QHeaderView::Fixed);   // 第二列固定宽度
+	ui->treeCorrection->setColumnWidth(1, 35);            // 第二列宽度可按需调小
+
+	// 关键：第二列表头右对齐
+	ui->treeCorrection->headerItem()->setTextAlignment(1, Qt::AlignLeft | Qt::AlignVCenter);
+
 
 	if (!m_model || m_model->rowCount() == 0)
 		return;
@@ -103,6 +115,7 @@ void BendingManagerWidget::initTreeWidget()
 			treeItem->setText(0, cor.name());
 			treeItem->setCheckState(0, cor.isApplied() ? Qt::Checked : Qt::Unchecked);
 			treeItem->setData(0, Qt::UserRole, i); // 存储模型行索引
+			treeItem->setText(1, cor.m_includedPathStrList.join(","));
 			ui->treeCorrection->blockSignals(true);
 			itemMap.insert(&cor, treeItem);
 		}
@@ -129,6 +142,7 @@ void BendingManagerWidget::initTreeWidget()
 			treeItem->setText(0, cor.name());
 			treeItem->setCheckState(0, cor.isApplied() ? Qt::Checked : Qt::Unchecked);
 			treeItem->setData(0, Qt::UserRole, i);
+			treeItem->setText(1, cor.m_includedPathStrList.join(","));
 			ui->treeCorrection->blockSignals(true);
 			itemMap.insert(&cor, treeItem);
 		}

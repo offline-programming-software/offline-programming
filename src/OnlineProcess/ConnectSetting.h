@@ -5,6 +5,7 @@
 #include <memory>
 #include <qthread.h>
 #include <QTreeWidgetItem> // 新增
+#include "OnlineProcess/model/clientModel.h" // 新增
 
 struct Client
 {
@@ -34,10 +35,10 @@ private:
 	void updateDeviceTree(const QString& deviceType, const QString& deviceName, const QString& status); // 新增树更新函数
 	QThread m_workerThread;
 	ZmqWorker* m_worker;
-	
+	ClientModel* m_clientModel; 
 
 private slots:
 	void on_chkLocal_toggled(bool checked);
 	void on_btnConnect_clicked();
-	void on_benAdd_clicked();
+	void on_btnAdd_clicked();
 };

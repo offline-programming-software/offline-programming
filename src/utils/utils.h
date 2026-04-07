@@ -90,6 +90,10 @@ public:
 	 */
 	void drawBox(const std::array<double,6>& range);
 
+	QString getName(const ulong id);
+
+	ulong getPathIDOfPoint(ulong pointID);
+
 
 	void drawBox(std::array<edgePoint, 8> pts);
 private:

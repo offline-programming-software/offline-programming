@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include<Eigen/dense>
 #include <Windows.h>
+#include <qstringlist.h>
 
 using namespace Eigen;
 struct coeffs
@@ -161,6 +162,8 @@ public:
 	std::vector<trajPoint> m_originTrajPoints; /**originPos原始轨迹点-cal*/
 	//作用域
 	std::array<double, 6> m_range = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; /**作用域-json*/
+	std::vector<ulong> m_includedPath;
+	QStringList m_includedPathStrList;
 
 	//约束点&弯曲量输入
 	double m_bendingDeg = 0.0;/**为方便定义，输入的弯曲量角度-json*/

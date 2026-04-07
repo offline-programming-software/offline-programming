@@ -33,6 +33,16 @@ public:
 public:
 
 	/**
+	 * \brief 初始化路径ID映射，读取pq中所有路径对象的ID和名称，并建立一个映射关系。
+	 */
+	void initPathIDMap();
+
+	/**
+	 * \brief 为所有轨迹点
+	 */
+	void initIncludedPathForCorrections();
+
+	/**
 	 * \brief 初始化轨迹点快照，在应用修正前保存一份轨迹点数据，以便撤销修正时恢复,
 	 *		  同样用于为corrections提供轨迹点数据
 	 */
@@ -73,6 +83,7 @@ private:
 	std::vector<trajPoint> snapShot();
 private:
 	CComPtr<IPQPlatformComponent> m_ptrKit;
+	std::map<ulong, QString> m_pathIDMap; /**路径ID映射，key为路径在correctionModel中的路径字符串，value为对应的pq路径ID*/
 	std::vector<trajPoint> m_pointsSnapshot; /**轨迹点快照，在应用修正前保存一份轨迹点数据，以便撤销修正时恢复*/
 	CorrectionModel* m_correctionModel;
 	PQUtils* m_utils = nullptr;

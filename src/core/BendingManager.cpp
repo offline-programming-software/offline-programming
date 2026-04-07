@@ -16,6 +16,40 @@ BendingManager::~BendingManager()
 	delete m_utils;
 }
 
+void BendingManager::initPathIDMap()
+{
+	std::vector<ULONG> pathIDs;
+	m_utils->getID(pathIDs, PQ_PATH);
+	int countPath = pathIDs.size();
+	for (int i = 0; i <countPath; i++)
+	{
+		m_pathIDMap[pathIDs[i]] = m_utils->getName(pathIDs[i]);
+	}
+}
+
+void BendingManager::initIncludedPathForCorrections()
+{
+	auto& corList = m_correctionModel->getItems();
+	for (auto& cor : corList)
+	{
+		std::vector<ulong> pathIDs;
+		allocatePoints(cor);
+		cor.m_includedPath.clear();
+		cor.m_includedPathStrList.clear();
+		for (const auto& pt : cor.m_originTrajPoints) {
+			pathIDs.push_back(m_utils->getPathIDOfPoint(pt.id));
+		}
+		std::sort(pathIDs.begin(), pathIDs.end());
+		auto it = std::unique(pathIDs.begin(), pathIDs.end());
+		pathIDs.erase(it, pathIDs.end());
+		cor.m_includedPath = std::move(pathIDs);
+		for (int i = 0; i < cor.m_includedPath.size(); ++i) {
+			QString pathName = m_pathIDMap[cor.m_includedPath[i]];
+			cor.m_includedPathStrList.append(pathName);
+		}
+	}
+}
+
 
 
 void BendingManager::initOriginPointsSnapshot()
@@ -53,7 +87,8 @@ void BendingManager::rebuildPoints(Correction& cor)
 		else
 		{
 			//没有父修正，直接分配轨迹点
-			allocatePoints(cor);
+			allocatePoints(cor);	
+
 			cor.calOffset();  //calculate The Coeffs
 	    	for(size_t i = 0; i < cor.m_newTrajPoints.size(); ++i)
 			 {

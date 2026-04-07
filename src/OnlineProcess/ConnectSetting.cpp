@@ -2,6 +2,8 @@
 #include <QMessageBox>
 #include <QDebug>
 #include "OnlineProcess/worker/zmqWorker.h"
+#include <qprogressbar.h>
+#include <qprogressdialog.h>
 
 ConnectSetting::ConnectSetting(QWidget* parent)
 	: QWidget(parent)
@@ -121,8 +123,21 @@ void ConnectSetting::on_btnConnect_clicked()
 	// 不要直接调用 m_worker->startServer(address)，会阻塞主线程!
 	// 必须通过 invokeMethod 触发排队调用，让它是子线程里执行
 	QMetaObject::invokeMethod(m_worker, "startServer", Qt::QueuedConnection, Q_ARG(QString, address));
+	QProgressDialog* dialog = new QProgressDialog("正在处理数据...", "取消", 0, 0, this);
+	dialog->setWindowTitle("请稍候");
+	dialog->setWindowModality(Qt::WindowModal); // 模态对话框，防止用户操作主窗口
+	dialog->show();
 }
 
-void ConnectSetting::on_benAdd_clicked()
+void ConnectSetting::on_btnAdd_clicked()
 {
+	Client client;
+	client.Name = QString::fromLocal8Bit("客户端") + QString::number(m_clientModel->rowCount() + 1);
+	client.IP = ui->edtIP->text();
+	client.Port = ui->edtPort->text();
+	client.status = false; // 默认状态为未连接
+
+	const auto& clients = m_clientModel->getClients();
+	m_clientModel->addClient(client);
+	
 }
