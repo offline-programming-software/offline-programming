@@ -356,6 +356,15 @@ void MainWindow::on_create_frame()
 
 void MainWindow::on_create_path()
 {
+	const auto& myCorList = m_correctionModel->corrections();
+	for (auto cor : myCorList)
+	{
+		if (cor.isApplied())
+		{
+			QMessageBox::warning(this, "警告","当前存在已应用的弯曲变形，无法编辑轨迹",QMessageBox::Ok);
+			return;
+		}
+	}
 	wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
 	m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
 }
@@ -1574,8 +1583,18 @@ void MainWindow::on_trajCorrectdock_open()
 
 void MainWindow::on_bendingManagerWidget_open()
 {
-	BendingManagerWidget* widget = new BendingManagerWidget(m_ptrKit, m_ptrKitCallback, m_correctionModel,this);
-	widget->show();
+	CComBSTR robxName = " ";
+	m_ptrKit->Doc_get_name(&robxName);
+	if (robxName == L"设计") {
+		//代表当前没有打开的robx文件，不能打开轨迹修正面板
+		QMessageBox::information(this, "提示", "请先打开robx文件！");
+		return;
+	}
+
+	if (!m_bendingManagerWidget) {
+		m_bendingManagerWidget = new BendingManagerWidget(m_ptrKit, m_ptrKitCallback, m_correctionModel,this);
+	}
+		m_bendingManagerWidget ->show();
 }
 
 void MainWindow::on_PositionCorrectWidget_open()

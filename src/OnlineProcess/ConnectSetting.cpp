@@ -142,7 +142,6 @@ void ConnectSetting::on_connect_result(bool flag)
 	{
 		QMessageBox::information(this, QString::fromLocal8Bit("成功"), QString::fromLocal8Bit("连接成功！"));
 		client.setIsConnected(true);
-
 	}
 	else
 	{

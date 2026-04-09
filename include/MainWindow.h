@@ -42,6 +42,7 @@
 #include "TrajCorrectDock.h"
 #include "test\robxFileIOManagerWidget.h"
 #include <zmq.hpp>
+#include "ui/BendingManagerWidget.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -75,6 +76,7 @@ private:
 	QWidget* m_pPQPlatformView;
 	QWidget* m_pPQModeTreeView;
 	QWidget* m_pPQDebugView;
+	BendingManagerWidget* m_bendingManagerWidget;
 
 	//数据模型
 	CorrectionModel* m_correctionModel;

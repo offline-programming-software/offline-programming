@@ -6,6 +6,8 @@
 #include "PQKitCallback.h"
 #include "model\CorrectionModel.h"
 #include "utils\utils.h"
+#include <QCloseEvent>
+#include <QShowEvent>
 QT_BEGIN_NAMESPACE
 namespace Ui { class BendingManagerClass; };
 QT_END_NAMESPACE
@@ -47,7 +49,9 @@ private:
 	void setConnections();
 	void OnDraw();
 	void closeEvent(QCloseEvent* event) override;
+	void showEvent(QShowEvent* event) override;
 	void initTreeWidget();
+	
 
 private slots:
 	void on_btnOK_clicked();

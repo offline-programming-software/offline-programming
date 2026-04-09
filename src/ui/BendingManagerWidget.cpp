@@ -78,13 +78,19 @@ void BendingManagerWidget::closeEvent(QCloseEvent* event)
 {
 	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
 	m_ptrKit->Doc_end_module(cmd);
+	event->ignore();
+	this->hide();
+}
+
+void BendingManagerWidget::showEvent(QShowEvent* event)
+{
 }
 
 void BendingManagerWidget::initTreeWidget()
 {
 	ui->treeCorrection->clear();
 	QStringList headerLabels;
-	headerLabels << QString::fromLocal8Bit("修正名称")<< QString::fromLocal8Bit("所属轨迹");
+	headerLabels << QString::fromLocal8Bit("修正名称")<< QString::fromLocal8Bit("作用于轨迹...");
 	ui->treeCorrection->setHeaderLabels(headerLabels);
 	QHeaderView* header = ui->treeCorrection->header();
 	header->setSectionResizeMode(0, QHeaderView::Stretch); // 第一列自适应填充

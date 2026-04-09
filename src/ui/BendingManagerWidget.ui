@@ -119,9 +119,9 @@
   <widget class="QPushButton" name="btnAppendLog">
    <property name="geometry">
     <rect>
-     <x>290</x>
+     <x>390</x>
      <y>290</y>
-     <width>75</width>
+     <width>0</width>
      <height>23</height>
     </rect>
    </property>
@@ -134,8 +134,8 @@
     <rect>
      <x>10</x>
      <y>270</y>
-     <width>101</width>
-     <height>16</height>
+     <width>111</width>
+     <height>0</height>
     </rect>
    </property>
    <property name="text">
@@ -145,9 +145,9 @@
   <widget class="QCheckBox" name="chkViewCorrection">
    <property name="geometry">
     <rect>
-     <x>100</x>
+     <x>130</x>
      <y>270</y>
-     <width>101</width>
+     <width>0</width>
      <height>16</height>
     </rect>
    </property>
