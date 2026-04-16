@@ -456,89 +456,10 @@ void MainWindow::on_post()
 
 void MainWindow::on_numPost() {
 	// 创建后处理对话框
-	postProcessing postDialog;
-
-	// 获取机器人列表
-	PQDataType robotType = PQ_ROBOT;
-	QMap<ULONG, QString> institutionMap = getObjectsByType(robotType);
-
-	if (institutionMap.empty()) {
-		QMessageBox::information(this, "提示", "当前没有可用的机器人！");
+	postProcessing postDialog(this, m_ptrKit, m_ptrKitCallback);
+	if (!postDialog.loadRobotAndPathData()) {
 		return;
 	}
-
-	// 过滤机械臂机器人
-	QMap<ULONG, QString> robotMap;
-	for (auto it = institutionMap.begin(); it != institutionMap.end(); ++it) {
-		ULONG robotID = it.key();
-		PQRobotType eRobotType = PQ_MECHANISM_ROBOT;
-		if (SUCCEEDED(m_ptrKit->Robot_get_type(robotID, &eRobotType))){
-			if (eRobotType == PQ_MECHANISM_ROBOT) {
-				robotMap.insert(robotID, it.value());
-			}
-		}
-	}
-
-	if (robotMap.empty()) {
-		QMessageBox::information(this, "提示", "当前没有可用的机械臂机器人！");
-			return;
-	}
-
-	// 添加所有机器人和路径组
-	bool hasValidData = false;
-	for (auto it = robotMap.begin(); it != robotMap.end(); ++it) {
-		ULONG robotId = it.key();
-		QString robotName = it.value();
-
-		// 添加机器人父节点
-		int parentNodeId = postDialog.addParentNode(robotName, robotId);
-		if (parentNodeId == -1) continue;
-
-		// 获取路径组
-		VARIANT pathGroupVariant;
-		VariantInit(&pathGroupVariant);
-
-		if (SUCCEEDED(m_ptrKit->Doc_get_pathgroup_name(robotId, &pathGroupVariant))) {
-			SAFEARRAY* pathGroupArray = pathGroupVariant.parray;
-			if (pathGroupArray && pathGroupArray->cDims == 1) {
-				ULONG pathGroupCount = pathGroupArray->rgsabound[0].cElements;
-
-				for (ULONG pgIndex = 0; pgIndex < pathGroupCount; pgIndex++) {
-					BSTR pathGroupId = 0;
-					if (SUCCEEDED(SafeArrayGetElement(pathGroupArray, (LONG*)&pgIndex, &pathGroupId))) {
-						QString pathGroupName = QString::fromWCharArray(pathGroupId);
-
-						int groupNodeId = robotId * 1000 + pgIndex;
-						postDialog.addChildNode(parentNodeId, pathGroupName, groupNodeId, "");
-
-						// 生成轨迹内容
-						QString postContent = generatePathGroupPostContent(robotId, pathGroupId, robotName, pathGroupName);
-
-						// 添加轨迹节点
-						int trajectoryNodeId = robotId * 10000 + pgIndex * 100 + 1;
-						QString trajectoryNodeName = QString("轨迹_%1").arg(pathGroupName);
-						postDialog.addSubChildNode(groupNodeId, trajectoryNodeName, trajectoryNodeId, postContent);
-
-						// 添加位置节点
-						int positionNodeId = robotId * 10000 + pgIndex * 100 + 2;
-						QString positionNodeName = QString("位置_%1").arg(pathGroupName);
-						postDialog.addSubChildNode(groupNodeId, positionNodeName, positionNodeId, "");
-
-						SysFreeString(pathGroupId);
-						hasValidData = true;
-					}
-				}
-			}
-			VariantClear(&pathGroupVariant);
-		}
-	}
-
-	if (!hasValidData) {
-		QMessageBox::information(this, "提示", "没有找到有效的路径组数据！");
-		return;
-	}
-
-	// 显示对话框
 	postDialog.exec();
 }
 

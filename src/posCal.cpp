@@ -8,6 +8,10 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <QFile>
+#include <QTextStream>
+#include <QDateTime>
+
 posCal::posCal(QWidget *parent,
 	CComPtr<IPQPlatformComponent> ptrKit,
 	CPQKitCallback* ptrKitCallback)
@@ -282,7 +286,8 @@ void posCal::onCalculate()
 	const double z_center = (maxZ + minZ) * 0.5;
 	std::vector<double> centerPoint{ x_center, y_center, z_center };
 
-	std::vector<double> dir = calculateAverageNormal(ulPathID);
+	/*std::vector<double> dir = calculateAverageNormal(ulPathID);*/
+	std::vector<double> dir = calculateAveragePathDirection(ulPathID);
 
 	ULONG robotID = 0;
 	GetObjIDByName(PQ_ROBOT, robotName.toStdWString(), robotID);
@@ -296,13 +301,40 @@ void posCal::onCalculate()
 	std::vector<double> newBase = adjustRobotBasePosition(coordinateID, centerPoint, relativePos);
 
 	if (ui->comboBox_4->currentText() == "是") {
+		auto readOffset = [this](QTextEdit* edit, const QString& name, bool& ok) {
+			const QString text = edit->toPlainText().trimmed();
+			if (text.isEmpty()) {
+				return 0.0;
+			}
+			const double value = text.toDouble(&ok);
+			if (!ok) {
+				QMessageBox::warning(this, tr("提示"), tr("%1 偏置值不是有效数字。").arg(name));
+			}
+			return value;
+			};
+
+		bool okX = true;
+		bool okY = true;
+		bool okZ = true;
+		const double offsetX = readOffset(ui->textEdit_x, tr("X"), okX);
+		const double offsetY = readOffset(ui->textEdit_y, tr("Y"), okY);
+		const double offsetZ = readOffset(ui->textEdit_z, tr("Z"), okZ);
+
+		if (!okX || !okY || !okZ) {
+			return;
+		}
+
+		newBase[0] += offsetX;
+		newBase[1] += offsetY;
+		newBase[2] += offsetZ;
+
 		QString stationName = ui->textEdit->toPlainText().trimmed();
 		if (stationName.isEmpty()) {
 			stationName = tr("站位点");
 			ui->textEdit->setPlainText(stationName);
 		}
 
-		std::vector<double> robotdir{ 0.0, 0.0, 1.0 };
+		std::vector<double> robotdir{ 1.0, 0.0, 0.0 };
 		double dJoint[6] = { 0, 0, 0, 0, 0, 0 };
 		INT postureSize = 0;
 		DOUBLE* posture = nullptr;
@@ -313,7 +345,7 @@ void posCal::onCalculate()
 			const double x = posture[4];
 			const double y = posture[5];
 			const double z = posture[6];
-			const std::vector<double> v{ 0.0, 0.0, 1.0 };
+			const std::vector<double> v{ 1.0, 0.0, 0.0 };
 			const double tx = 2 * (y * v[2] - z * v[1]);
 			const double ty = 2 * (z * v[0] - x * v[2]);
 			const double tz = 2 * (x * v[1] - y * v[0]);
@@ -327,7 +359,8 @@ void posCal::onCalculate()
 			m_ptrKit->PQAPIFree((LONG_PTR*)posture);
 		}
 
-		const double theta = calculateAGVJoint(robotdir, dir, coordinateID);
+		std::vector<double> negDir{ -dir[0], -dir[1], -dir[2] };
+		const double theta = calculateAGVJoint(robotdir, negDir, coordinateID);
 
 		auto toUtf8 = [](const QString& text) {
 			return text.toUtf8().toStdString();
@@ -405,7 +438,69 @@ void posCal::onCalculate()
 
 		if (FAILED(hrInsert)) {
 			QMessageBox::warning(this, tr("提示"), tr("JSON已写入，但插入pos点失败。"));
+			return;
 		}
+
+		// 追加插入关节点（机器人关节=0，导轨关节=中间值）
+		{
+			std::string robotStdName = robotName.toStdString();
+			auto itRel = relationsMap.find(robotStdName);
+			if (itRel != relationsMap.end()) {
+				const std::string railNameStd = itRel->second.first;
+				if (!railNameStd.empty() && railNameStd != "无") {
+					QString selectedRail = QString::fromStdString(railNameStd);
+					ULONG guideID = 0;
+					GetObjIDByName(PQ_ROBOT, selectedRail.toStdWString(), guideID);
+					if (guideID != 0) {
+						// 读取导轨轴限位
+						int guideLinkCount = 0;
+						double* guideLinks = nullptr;
+						if (SUCCEEDED(m_ptrKit->Doc_get_obj_links(guideID, &guideLinkCount, &guideLinks))
+							&& guideLinks && guideLinkCount >= 2) {
+							const int guideJointCount = guideLinkCount / 2;
+							std::vector<double> midGuideJoints(guideJointCount, 0.0);
+							for (int i = 0; i < guideJointCount; ++i) {
+								const double lower = guideLinks[2 * i];
+								const double upper = guideLinks[2 * i + 1];
+								midGuideJoints[i] = (lower + upper) * 0.5;
+							}
+							m_ptrKit->PQAPIFreeArray((LONG_PTR*)guideLinks);
+
+							// 读取机器人轴数（用 links 数量 / 2）
+							int robotLinkCount = 0;
+							double* robotLinks = nullptr;
+							int robotJointCount = 6;
+							if (SUCCEEDED(m_ptrKit->Doc_get_obj_links(robotID, &robotLinkCount, &robotLinks))
+								&& robotLinks && robotLinkCount >= 2) {
+								robotJointCount = robotLinkCount / 2;
+								m_ptrKit->PQAPIFreeArray((LONG_PTR*)robotLinks);
+							}
+							if (robotJointCount <= 0) {
+								robotJointCount = 6;
+							}
+
+							std::vector<DOUBLE> zeroRobotJoints(robotJointCount, 0.0);
+							DOUBLE dVelocity[1] = { 50 };
+							DOUBLE dSpeedPercent[1] = { 50 };
+							INT nApproach[1] = { 50 };
+							INT pointCountOut = 1;
+							ULONG uoPathID = 0;
+
+							m_ptrKit->PQAPIAddAbsJointPath(
+								robotID,
+								zeroRobotJoints.data(), static_cast<INT>(zeroRobotJoints.size()),
+								midGuideJoints.data(), static_cast<INT>(midGuideJoints.size()),
+								nullptr, 0, dVelocity, dSpeedPercent, nApproach,
+								pointCountOut, ulPathID, &uoPathID);
+						}
+						else if (guideLinks) {
+							m_ptrKit->PQAPIFreeArray((LONG_PTR*)guideLinks);
+						}
+					}
+				}
+			}
+		}
+
 		return;
 	}
 	else {
@@ -487,9 +582,171 @@ void posCal::onCalculate()
 	}
 }
 
+//void posCal::onShow()
+//{
+//	reject();
+//}
+
 void posCal::onShow()
 {
-	reject();
+	// 获取当前选中的机器人、路径组和路径名称
+	QString robotName = ui->comboBox_1->currentText();
+	QString groupName = ui->comboBox_2->currentText();
+	QString pathName = ui->comboBox_3->currentText();
+
+	if (robotName.isEmpty() || groupName.isEmpty() || pathName.isEmpty()) {
+		QMessageBox::warning(this, tr("警告"), tr("请选择机器人、路径组和路径"));
+		return;
+	}
+
+	// 获取路径ID
+	ULONG ulPathID = 0;
+	GetObjIDByName(PQ_PATH, pathName.toStdWString(), ulPathID);
+
+	int nPointsCount = 0;
+	ULONG* ulPointsIDs = nullptr;
+
+	// 获取路径上的所有点ID
+	HRESULT hr = m_ptrKit->Path_get_point_id(ulPathID, &nPointsCount, &ulPointsIDs);
+	if (FAILED(hr) || nPointsCount <= 0 || !ulPointsIDs) {
+		QMessageBox::warning(this, tr("警告"), tr("当前路径没有可用的路径点"));
+		return;
+	}
+
+	// 创建CSV文件
+	QString fileName = QString("PathPoints_%1_%2_%3_%4.csv")
+		.arg(robotName)
+		.arg(groupName)
+		.arg(pathName)
+		.arg(QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss"));
+
+	QFile csvFile(fileName);
+	if (!csvFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+		QMessageBox::warning(this, tr("错误"), tr("无法创建CSV文件: %1").arg(fileName));
+		m_ptrKit->PQAPIFreeArray((LONG_PTR*)ulPointsIDs);
+		return;
+	}
+
+	QTextStream out(&csvFile);
+	// 写入CSV头部
+	out << "PointIndex,X,Y,Z,Qw,Qx,Qy,Qz,Velocity,Instruction\n";
+
+	// 遍历所有路径点并获取信息
+	for (int i = 0; i < nPointsCount; i++) {
+		ULONG ulPointID = ulPointsIDs[i];
+
+		PQPostureType nPostureType = QUATERNION; // 改为四元数
+		INT nPostureCount = 0;
+		double* dPointPosture = nullptr;
+		double dVelocity = 0.0;
+		double dSpeedPercent = 0.0; // 移除输出
+		PQPointInstruction nInstruct = PQ_LINE;
+		INT nApproach = 0; // 移除输出
+
+		// 获取路径点信息
+		hr = m_ptrKit->PQAPIGetPointInfo(
+			ulPointID,
+			nPostureType,
+			&nPostureCount,
+			&dPointPosture,
+			&dVelocity,
+			&dSpeedPercent,
+			&nInstruct,
+			&nApproach
+		);
+
+		if (SUCCEEDED(hr) && dPointPosture) {
+			// 处理路径点信息
+			double x = dPointPosture[0];
+			double y = dPointPosture[1];
+			double z = dPointPosture[2];
+
+			// 如果姿态类型是四元数
+			if (nPostureType == QUATERNION && nPostureCount >= 7) {
+				double qw = dPointPosture[3];
+				double qx = dPointPosture[4];
+				double qy = dPointPosture[5];
+				double qz = dPointPosture[6];
+
+				// 输出到CSV
+				out << i << ","
+					<< x << "," << y << "," << z << ","
+					<< qw << "," << qx << "," << qy << "," << qz << ","
+					<< dVelocity << "," << static_cast<int>(nInstruct) << "\n";
+
+				qDebug() << QString("路径点 %1: 位置=(%2, %3, %4), 四元数=(%5, %6, %7, %8), 速度=%9, 指令=%10")
+					.arg(i)
+					.arg(x).arg(y).arg(z)
+					.arg(qw).arg(qx).arg(qy).arg(qz)
+					.arg(dVelocity).arg(nInstruct);
+			}
+			else if (nPostureType == EULERANGLEXYZ && nPostureCount >= 6) {
+				// 如果姿态类型是欧拉角，转换为四元数输出
+				double rx = dPointPosture[3];
+				double ry = dPointPosture[4];
+				double rz = dPointPosture[5];
+
+				// 将欧拉角转换为四元数 (ZYX顺序)
+				double roll = rx * M_PI / 180.0;
+				double pitch = ry * M_PI / 180.0;
+				double yaw = rz * M_PI / 180.0;
+
+				double cy = cos(yaw * 0.5);
+				double sy = sin(yaw * 0.5);
+				double cp = cos(pitch * 0.5);
+				double sp = sin(pitch * 0.5);
+				double cr = cos(roll * 0.5);
+				double sr = sin(roll * 0.5);
+
+				double qw = cy * cp * cr + sy * sp * sr;
+				double qx = cy * cp * sr - sy * sp * cr;
+				double qy = sy * cp * sr + cy * sp * cr;
+				double qz = sy * cp * cr - cy * sp * sr;
+
+				// 输出到CSV
+				out << i << ","
+					<< x << "," << y << "," << z << ","
+					<< qw << "," << qx << "," << qy << "," << qz << ","
+					<< dVelocity << "," << static_cast<int>(nInstruct) << "\n";
+
+				qDebug() << QString("路径点 %1: 位置=(%2, %3, %4), 四元数=(%5, %6, %7, %8), 速度=%9, 指令=%10")
+					.arg(i)
+					.arg(x).arg(y).arg(z)
+					.arg(qw).arg(qx).arg(qy).arg(qz)
+					.arg(dVelocity).arg(nInstruct);
+			}
+			else {
+				// 位置信息，没有姿态数据时使用单位四元数
+				out << i << ","
+					<< x << "," << y << "," << z << ","
+					<< 1.0 << "," << 0.0 << "," << 0.0 << "," << 0.0 << ","
+					<< dVelocity << "," << static_cast<int>(nInstruct) << "\n";
+
+				qDebug() << QString("路径点 %1: 位置=(%2, %3, %4), 速度=%5, 指令=%6")
+					.arg(i)
+					.arg(x).arg(y).arg(z)
+					.arg(dVelocity).arg(nInstruct);
+			}
+
+			// 释放内存
+			m_ptrKit->PQAPIFree((LONG_PTR*)dPointPosture);
+		}
+		else {
+			// 输出空数据到CSV
+			out << i << ",,,,,,,,,\n";
+			qDebug() << QString("获取路径点 %1 的信息失败").arg(i);
+		}
+	}
+
+	// 释放路径点ID数组
+	m_ptrKit->PQAPIFreeArray((LONG_PTR*)ulPointsIDs);
+
+	// 关闭文件
+	csvFile.close();
+
+	// 显示成功消息
+	QMessageBox::information(this, tr("完成"),
+		tr("路径点信息已导出到文件: %1\n共导出 %2 个路径点").arg(fileName).arg(nPointsCount));
 }
 
 void posCal::onConfirm()
@@ -870,6 +1127,78 @@ std::vector<double> posCal::calculateAverageNormal(ULONG pathID)
 	}
 
 	return averageNormal;
+}
+
+std::vector<double> posCal::calculateAveragePathDirection(ULONG pathID)
+{
+	std::vector<double> averageDir{ 0.0, 0.0, 1.0 };
+
+	int nCount = 0;
+	ULONG* ulPtIDs = nullptr;
+	HRESULT hr = m_ptrKit->Path_get_point_id(pathID, &nCount, &ulPtIDs);
+	if (FAILED(hr) || nCount <= 1 || !ulPtIDs) {
+		return averageDir;
+	}
+
+	std::vector<double> points;
+	points.reserve(nCount * 3);
+
+	for (int i = 0; i < nCount; ++i) {
+		PQPostureType postureType = QUATERNION;
+		INT postureCount = 0;
+		double* dPosture = nullptr;
+		double vel = 0.0;
+		double sp = 0.0;
+		PQPointInstruction instruct = PQ_LINE;
+		INT approach = 0;
+
+		if (SUCCEEDED(m_ptrKit->PQAPIGetPointInfo(
+			ulPtIDs[i], postureType, &postureCount, &dPosture,
+			&vel, &sp, &instruct, &approach)) && dPosture) {
+			points.push_back(dPosture[0]);
+			points.push_back(dPosture[1]);
+			points.push_back(dPosture[2]);
+			m_ptrKit->PQAPIFree((LONG_PTR*)dPosture);
+		}
+	}
+
+	m_ptrKit->PQAPIFreeArray((LONG_PTR*)ulPtIDs);
+
+	if (points.size() < 6) {
+		return averageDir;
+	}
+
+	double sx = 0.0;
+	double sy = 0.0;
+	double sz = 0.0;
+	int segCount = 0;
+
+	for (size_t i = 3; i + 2 < points.size(); i += 3) {
+		const double dx = points[i] - points[i - 3];
+		const double dy = points[i + 1] - points[i - 2];
+		const double dz = points[i + 2] - points[i - 1];
+		const double len = std::sqrt(dx * dx + dy * dy + dz * dz);
+		if (len <= 1e-6) {
+			continue;
+		}
+		sx += dx / len;
+		sy += dy / len;
+		sz += dz / len;
+		++segCount;
+	}
+
+	if (segCount == 0) {
+		return averageDir;
+	}
+
+	const double norm = std::sqrt(sx * sx + sy * sy + sz * sz);
+	if (norm > 1e-9) {
+		averageDir[0] = sx / norm;
+		averageDir[1] = sy / norm;
+		averageDir[2] = sz / norm;
+	}
+
+	return averageDir;
 }
 
 std::vector<double> posCal::calculataRelativePos(ULONG robotID, std::vector<double> robotJoints)

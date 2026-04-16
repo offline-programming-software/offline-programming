@@ -905,6 +905,12 @@ void AGVpath::onCalculate() {
 	const QVector3D startProjected = projectOntoPlane(QVector3D(startInfo.x, startInfo.y, startInfo.z));
 	const QVector3D endProjected = projectOntoPlane(QVector3D(endInfo.x, endInfo.y, endInfo.z));
 
+	QVector3D startFixed = startProjected;
+	startFixed.setZ(startInfo.z);
+
+	QVector3D endFixed = endProjected;
+	endFixed.setZ(endInfo.z);
+
 	int insertRow = ui->tableWidget->rowCount();
 	for (int row = 0; row < ui->tableWidget->rowCount(); ++row) {
 		const QTableWidgetItem* groupItem = ui->tableWidget->item(row, 0);
@@ -921,7 +927,7 @@ void AGVpath::onCalculate() {
 
 	const QString firstLabel = nextTransitionLabel();
 	const int firstRow = insertTransitionRow(0, startGroup, startPath,
-		firstLabel, startProjected, startInfo.theta);
+		firstLabel, startFixed, startInfo.theta);
 	if (firstRow < 0) {
 		return;
 	}
@@ -936,6 +942,10 @@ void AGVpath::onCalculate() {
 
 void AGVpath::onConfirm()
 {
+	//取消绘制
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_end_module(cmd);
+
 	// 表格 -> JSON内存 -> JSON文件
 	commitAgvStations();
 
@@ -950,23 +960,14 @@ void AGVpath::onConfirm()
 		QMessageBox::warning(this, tr("提示"), tr("JSON已保存，但项目中重建pos点失败。"));
 		return;
 	}
-
-	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
-	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
-	if (SUCCEEDED(hr)) {
-		this->setModal(false);
-		this->setWindowModality(Qt::NonModal);
-		qDebug() << "曲面拾取模块已启动，请在3D窗口中点击元素";
-	}
-	else {
-		QMessageBox::warning(this, "错误", "启动曲面拾取模块失败！");
-	}
-
 	reject();
 }
 
 void AGVpath::onCancel()
 {
+    //取消绘制
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_end_module(cmd);
 	reject();    
 }
 
@@ -1510,6 +1511,24 @@ void AGVpath::onAddSimulationEvent()
 		m_ptrKit->PQAPIFreeArray((LONG_PTR*)pointIDs);
 		return true;
 		};
+	const auto fetchPointList = [&](ULONG pathId, QVector<ULONG>& points) -> bool {
+		points.clear();
+		int pointCount = 0;
+		ULONG* pointIDs = nullptr;
+		const HRESULT hr = m_ptrKit->Path_get_point_id(pathId, &pointCount, &pointIDs);
+		if (FAILED(hr) || pointCount <= 0 || !pointIDs) {
+			if (pointIDs) {
+				m_ptrKit->PQAPIFreeArray((LONG_PTR*)pointIDs);
+			}
+			return false;
+		}
+		points.reserve(pointCount);
+		for (int i = 0; i < pointCount; ++i) {
+			points.push_back(pointIDs[i]);
+		}
+		m_ptrKit->PQAPIFreeArray((LONG_PTR*)pointIDs);
+		return !points.isEmpty();
+		};
 
 	// ---------- AGV 站位事件 ----------
 	const QString startStationKey = buildStationKey(startGroup, startPath, startStation);
@@ -1576,23 +1595,96 @@ void AGVpath::onAddSimulationEvent()
 		return;
 	}
 
+	QVector<ULONG> startTrackPoints;
+	if (!fetchPointList(trackStartPathID, startTrackPoints)) {
+		QMessageBox::warning(this, tr("提示"), tr("获取起始轨迹点失败。"));
+		return;
+	}
+
 	ULONG startTrackFirstPointID = 0;
 	ULONG startTrackLastPointID = 0;
+	ULONG startTrackPrePointID = 0;
+
+	startTrackFirstPointID = startTrackPoints.first();
+	startTrackLastPointID = startTrackPoints.last();
+
+	// 约定：路径点数>=2时，point[0] 为前置点，point[1] 为首工艺点
+	if (startTrackPoints.size() >= 2) {
+		startTrackFirstPointID = startTrackPoints.at(1);
+	}
+
+	// 1) 优先尝试“同组上一段轨迹末点”
+	{
+		VARIANT vGroupNames;
+		VARIANT vGroupIds;
+		VariantInit(&vGroupNames);
+		VariantInit(&vGroupIds);
+		vGroupNames.parray = NULL;
+		vGroupIds.parray = NULL;
+
+		std::wstring wsGroup = startGroup.toStdWString();
+		BSTR bstrGroup = SysAllocString(wsGroup.c_str());
+
+		const HRESULT hrGroup = m_ptrKit->Path_get_group_path(robotID, bstrGroup, &vGroupNames, &vGroupIds);
+		SysFreeString(bstrGroup);
+
+		if (SUCCEEDED(hrGroup)) {
+			const QStringList groupPathNames = extractStringArrayFromVariant(vGroupNames);
+			const QList<long> groupPathIds = extractLongArrayFromVariant(vGroupIds);
+			const int usableCount = qMin(groupPathNames.size(), groupPathIds.size());
+
+			int currentIndex = -1;
+			for (int i = 0; i < usableCount; ++i) {
+				if (groupPathNames.at(i).trimmed() == startPath) {
+					currentIndex = i;
+					break;
+				}
+			}
+
+			if (currentIndex > 0) {
+				const ULONG prevPathID = static_cast<ULONG>(groupPathIds.at(currentIndex - 1));
+				ULONG prevPathLastPointID = 0;
+				if (prevPathID != 0 && fetchBoundaryPoint(prevPathID, false, prevPathLastPointID)) {
+					startTrackPrePointID = prevPathLastPointID;
+				}
+			}
+		}
+
+		VariantClear(&vGroupNames);
+		VariantClear(&vGroupIds);
+	}
+
+	// 2) 若没有上一段轨迹末点，再尝试“轨迹内部前置点”
+	if (startTrackPrePointID == 0 && startTrackPoints.size() >= 2) {
+		startTrackPrePointID = startTrackPoints.at(0);
+	}
+
+	// 2) 若没有上一段轨迹末点，再尝试“轨迹内部前置点”
+	// 约定：当路径点数>=2时，point[0] 为前置点，point[1] 为首工艺点
+	if (startTrackPrePointID == 0 && startTrackPoints.size() >= 2) {
+		startTrackPrePointID = startTrackPoints.at(0);
+		startTrackFirstPointID = startTrackPoints.at(1);
+	}
+
 	ULONG endTrackFirstPointID = 0;
-	if (!fetchBoundaryPoint(trackStartPathID, true, startTrackFirstPointID)
-		|| !fetchBoundaryPoint(trackStartPathID, false, startTrackLastPointID)
-		|| !fetchBoundaryPoint(trackEndPathID, true, endTrackFirstPointID)) {
+	if (!fetchBoundaryPoint(trackEndPathID, true, endTrackFirstPointID)) {
 		QMessageBox::warning(this, tr("提示"), tr("获取轨迹端点失败。"));
 		return;
 	}
 
+	const QString e0Name = QStringLiteral("%1_%2_%3_e0").arg(robotName, startGroup, startStation);
 	const QString e1Name = QStringLiteral("%1_%2_%3_e1").arg(robotName, startGroup, startStation);
 	const QString e2Name = QStringLiteral("%1_%2_%3_e2").arg(robotName, startGroup, startPath);
 	const QString e3Name = QStringLiteral("%1_%2_%3_e3").arg(robotName, endGroup, endStation);
 
+	const QString e0WaitName = e0Name + QStringLiteral("_wait");
 	const QString e1WaitName = e1Name + QStringLiteral("_wait");
 	const QString e2WaitName = e2Name + QStringLiteral("_wait");
 	const QString e3WaitName = e3Name + QStringLiteral("_wait");
+
+	CComBSTR e0SendBstr(e0Name.toStdWString().c_str());
+	CComBSTR e0WaitEventBstr(e0WaitName.toStdWString().c_str());
+	CComBSTR e0WaitContentBstr(e0Name.toStdWString().c_str());
 
 	CComBSTR e1SendBstr(e1Name.toStdWString().c_str());
 	CComBSTR e1WaitEventBstr(e1WaitName.toStdWString().c_str());
@@ -1606,19 +1698,11 @@ void AGVpath::onAddSimulationEvent()
 	CComBSTR e3WaitEventBstr(e3WaitName.toStdWString().c_str());
 	CComBSTR e3WaitContentBstr(e3Name.toStdWString().c_str());
 
-	/*if (FAILED(m_ptrKit->Path_add_send_event(&stationStartPointID, 1, agvID, 0, e1SendBstr))
-		|| FAILED(m_ptrKit->Path_add_wait_event(&startTrackFirstPointID, 1, robotID, 1, e1WaitEventBstr, e1WaitContentBstr))
-		|| FAILED(m_ptrKit->Path_add_send_event(&startTrackLastPointID, 1, robotID, 0, e2SendBstr))
-		|| FAILED(m_ptrKit->Path_add_wait_event(&stationEndPointID, 1, agvID, 1, e2WaitEventBstr, e2WaitContentBstr))
-		|| FAILED(m_ptrKit->Path_add_send_event(&stationEndPointID, 1, agvID, 0, e3SendBstr))
-		|| FAILED(m_ptrKit->Path_add_wait_event(&endTrackFirstPointID, 1, robotID, 1, e3WaitEventBstr, e3WaitContentBstr))) {
-		QMessageBox::warning(this, tr("提示"), tr("写入发送/等待事件失败，请检查配置。"));
+	ULONG preOrLastPointID = (startTrackPrePointID != 0) ? startTrackPrePointID : startTrackLastPointID;
+	if (preOrLastPointID == 0) {
+		QMessageBox::warning(this, tr("提示"), tr("无法确定轨迹发送点。"));
 		return;
 	}
-
-	QMessageBox::information(this, tr("提示"),
-		tr("站位与喷涂轨迹的三段信号链路已全部建立。"));*/
-
 
 	// ---------- 中间过渡点等待事件（与终点前等待事件一致） ----------
 	auto findRowByTriple = [&](const QString& g, const QString& p, const QString& s) -> int {
@@ -1679,7 +1763,9 @@ void AGVpath::onAddSimulationEvent()
 	}
 
 	const bool baseEventsOk =
-		SUCCEEDED(m_ptrKit->Path_add_send_event(&stationStartPointID, 1, agvID, 0, e1SendBstr))
+		SUCCEEDED(m_ptrKit->Path_add_send_event(&preOrLastPointID, 1, robotID, 0, e0SendBstr))
+		&& SUCCEEDED(m_ptrKit->Path_add_wait_event(&stationStartPointID, 1, agvID, 1, e0WaitEventBstr, e0WaitContentBstr))
+		&& SUCCEEDED(m_ptrKit->Path_add_send_event(&stationStartPointID, 1, agvID, 0, e1SendBstr))
 		&& SUCCEEDED(m_ptrKit->Path_add_wait_event(&startTrackFirstPointID, 1, robotID, 1, e1WaitEventBstr, e1WaitContentBstr))
 		&& SUCCEEDED(m_ptrKit->Path_add_send_event(&startTrackLastPointID, 1, robotID, 0, e2SendBstr))
 		&& SUCCEEDED(m_ptrKit->Path_add_wait_event(&stationEndPointID, 1, agvID, 1, e2WaitEventBstr, e2WaitContentBstr))
@@ -1705,10 +1791,9 @@ void AGVpath::onAddSimulationEvent()
 		QMessageBox::information(
 			this,
 			tr("提示"),
-			tr("事件添加成功，共添加基础事件6条，中间过渡点等待事件%1条。")
+			tr("事件添加成功，共添加基础事件8条，中间过渡点等待事件%1条。")
 			.arg(transitionWaitPointIDs.size()));
 	}
-
 }
 
 void AGVpath::onPreview()
@@ -2156,15 +2241,8 @@ void AGVpath::OnDraw()
 		return;
 	}
 
-	// 优先使用当前机器人基坐标系；失败则使用0（默认坐标系）
-	ULONG ulCoordinateID = 0;
-	const QString robotName = ui->comboBox_1 ? ui->comboBox_1->currentText().trimmed() : QString();
-	if (!robotName.isEmpty()) {
-		ULONG robotID = m_robotMap.key(robotName, 0);
-		if (robotID != 0) {
-			m_ptrKit->Robot_get_base_coordinate(robotID, &ulCoordinateID);
-		}
-	}
+	// 使用世界坐标系绘制 AGV 路线
+	const ULONG ulCoordinateID = 0;
 
 	auto parseDouble = [](const QTableWidgetItem* item, double defaultValue) -> double {
 		if (!item) {

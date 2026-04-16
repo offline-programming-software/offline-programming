@@ -215,7 +215,7 @@
          <item>
           <widget class="QLabel" name="label_5">
            <property name="text">
-            <string>避让距离</string>
+            <string>安全平面</string>
            </property>
           </widget>
          </item>

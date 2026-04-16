@@ -51,6 +51,9 @@ private:
 	void setupTableView(); // 初始化表格视图
 	void updateTableView(); // 更新表格显示
 	void loadRobotData(const QString& robotName); // 新增：加载特定机器人的数据
+	void OnDraw(); //绘制划分曲线
+	void OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
+		double i_dPointX, double i_dPointY, double i_dPointZ);
 
 	//获取主法矢量
 	std::vector<double>getDir(ULONG coordinateID, QString mainDir);

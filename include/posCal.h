@@ -65,6 +65,9 @@ private:
 	//计算出平均法向
 	std::vector<double> calculateAverageNormal(ULONG pathID);
 
+	//计算轨迹点平均方向
+	std::vector<double> calculateAveragePathDirection(ULONG pathID);
+
 	//计算出机器人在零点时，末端到达机器人基座标系的值
 	std::vector<double> calculataRelativePos(ULONG robotID, std::vector<double> robotJoints);
 

@@ -1,5 +1,5 @@
 #pragma once
-
+#pragma execution_character_set("utf-8")
 #include <QDialog>
 #include <QTreeWidget>
 #include <QTextEdit>
@@ -13,7 +13,10 @@
 #include <QFileDialog>
 #include <QDir>
 #include <QMessageBox>
+#include "PQKitCallback.h"
 #include "ui_postProcessing.h"
+
+#import "RPC.tlb" no_namespace, named_guids, raw_interfaces_only, raw_native_types
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class postProcessingClass; };
@@ -24,8 +27,13 @@ class postProcessing : public QDialog
 	Q_OBJECT
 
 public:
-	postProcessing(QWidget *parent = nullptr);
+	postProcessing(QWidget *parent = nullptr,
+		CComPtr<IPQPlatformComponent> ptrKit = nullptr,
+		CPQKitCallback* ptrKitCallback = nullptr);
+
 	~postProcessing();
+
+	bool loadRobotAndPathData();
 
 	// 设置机器人名称
 	void setRobotName(const QString &name) { robotName = name; };
@@ -67,6 +75,9 @@ private slots:
 
 private:
 	Ui::postProcessingClass *ui;
+	CComPtr<IPQPlatformComponent> m_ptrKit;
+	CPQKitCallback* m_ptrKitCallback;
+
 	QSplitter *mainSplitter;      // 主分割窗口
 	QTreeWidget *treeWidget;      // 树控件
 	QTextEdit *textEdit;          // 文本编辑器
@@ -97,4 +108,18 @@ private:
 	QString generateTrajectoryContentForGroup(int groupNodeId);
 	// 新增私有方法：为组生成位置内容
 	QString generatePositionContentForGroup(int groupNodeId);
+
+	QList<ULONG> extractULongArrayFromVariant(const VARIANT& variant) const;
+	QString buildSprayEventSection(ULONG robotId, const QString& pathGroupName) const;
+	QString buildAgvStationSection(const QString& robotName, const QString& pathGroupName) const;
+	// 原：QString buildAgvStationEventSection(ULONG robotId, const QString& robotName, const QString& pathGroupName) const;
+	QString buildAgvStationEventSection(ULONG agvId, const QString& robotName, const QString& pathGroupName) const;
+	// 新增：根据机器人名找到对应AGV ID
+	ULONG getAgvIdForRobot(const QString& robotName) const;
+	QMap<ULONG, QString> getObjectsByType(PQDataType objType) const;
+	QStringList extractStringArrayFromVariant(const VARIANT& variant) const;
+	QList<long> extractLongArrayFromVariant(const VARIANT& variant) const;
+	ULONG getObjIdByName(PQDataType objType, const QString& objName) const;
+	QString generatePathGroupPostContentInternal(ULONG robotId, BSTR pathGroupId,
+		const QString& robotName, const QString& pathGroupName) const;
 };

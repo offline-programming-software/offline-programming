@@ -43,6 +43,9 @@ robotSpaceDefine::robotSpaceDefine(QWidget *parent,
 	connect(ui->comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
 		this, &robotSpaceDefine::onRobotChanged);
 
+	connect(m_ptrKitCallback, &CPQKitCallback::signalDraw, this, &robotSpaceDefine::OnDraw);//绘制划分区域分界线
+	connect(m_ptrKitCallback, &CPQKitCallback::signalElementPickup, this, &robotSpaceDefine::OnElementPickup);//拾取
+
 	m_io = new RobxIO();
 
 	// 加载所有机器人的数据
@@ -399,11 +402,28 @@ void robotSpaceDefine::onConfirm()
 	QString filename = QString("workSpaceInformation_%1.json").arg(robotName);
 	m_io->writeData(m_spaceInformation[robotName], filename.toStdString().c_str());
 
+
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+	if (SUCCEEDED(hr)) {
+
+		this->setModal(false);
+		this->setWindowModality(Qt::NonModal);
+		qDebug() << "曲面拾取模块已启动，请在3D窗口中点击元素";
+	}
+	else {
+		QMessageBox::warning(this, "错误", "启动曲面拾取模块失败！");
+	}
+
 	this->reject();
 }
 
 void robotSpaceDefine::onClose()
 {
+
+	CComBSTR cmd = "Doc_stop_pickup_element";
+	HRESULT hr = m_ptrKit->Doc_start_module(cmd);
+
 	this->reject();
 }
 
@@ -433,6 +453,188 @@ void robotSpaceDefine::loadRobotData(const QString& robotName)
 
 	// 更新表格显示
 	updateTableView();
+}
+
+void robotSpaceDefine::OnDraw()
+{
+	// 获取当前选中的机器人名称
+	QString currentRobot = ui->comboBox->currentText();
+
+	// 检查该机器人是否有工作空间数据
+	if (!m_list.contains(currentRobot) || m_list[currentRobot].isEmpty()) {
+		qDebug() << "当前机器人没有工作空间数据";
+		return;
+	}
+
+	// ========== 查找厚度=150 且角度=0 的工作空间 ==========
+	int targetIndex = -1;
+	double targetThickness = 150.0;
+	double targetTheta = 0.0;
+	double tolerance = 0.01;  // 浮点数比较容差
+
+	for (int i = 0; i < m_list[currentRobot].size(); i++) {
+		if (qAbs(m_list[currentRobot][i].thickness - targetThickness) < tolerance &&
+			qAbs(m_list[currentRobot][i].theta - targetTheta) < tolerance) {
+			targetIndex = i;
+			break;
+		}
+	}
+
+	// 如果没有找到指定的工作空间，提示用户
+	if (targetIndex == -1) {
+		qDebug() << "未找到厚度=" << targetThickness << "角度=" << targetTheta << "的工作空间";
+		qDebug() << "可用的工作空间列表:";
+		for (int i = 0; i < m_list[currentRobot].size(); i++) {
+			qDebug() << QString("  [%1] 厚度=%2, 角度=%3")
+				.arg(i)
+				.arg(m_list[currentRobot][i].thickness)
+				.arg(m_list[currentRobot][i].theta);
+		}
+		return;
+	}
+
+	// 获取目标工作空间边界数据
+	RobotWorkspaceBoundary ws = m_list[currentRobot][targetIndex];
+
+	// 检查点数据是否有效（长方体需要 8 个顶点，每 3 个值表示一个点）
+	if (ws.points.size() < 24) {
+		qDebug() << "工作空间点数据不足，需要 8 个顶点";
+		return;
+	}
+
+	// 获取坐标系 ID（使用机器人基坐标系）
+	ULONG robotID = 0;
+	GetObjIDByName(PQ_ROBOT, currentRobot.toStdWString(), robotID);
+	ULONG ulCoordinateID = 0;
+	m_ptrKit->Robot_get_base_coordinate(robotID, &ulCoordinateID);
+
+	// ========== 提取 8 个顶点坐标 ==========
+	struct Vertex {
+		double x, y, z;
+		int originalIndex;
+	};
+
+	QVector<Vertex> vertices(8);
+	for (int i = 0; i < 8; i++) {
+		vertices[i].x = ws.points[i * 3];
+		vertices[i].y = ws.points[i * 3 + 1];
+		vertices[i].z = ws.points[i * 3 + 2];
+		vertices[i].originalIndex = i;
+	}
+
+	// ========== 调试输出：打印所有顶点坐标 ==========
+	qDebug() << "===== 工作空间顶点坐标 (厚度=" << ws.thickness << ", 角度=" << ws.theta << ") =====";
+	for (int i = 0; i < 8; i++) {
+		qDebug() << QString("顶点%1: (%2, %3, %4)")
+			.arg(i)
+			.arg(vertices[i].x)
+			.arg(vertices[i].y)
+			.arg(vertices[i].z);
+	}
+
+	// ========== 根据 Z 坐标排序，区分底面和顶面 ==========
+	std::sort(vertices.begin(), vertices.end(), [](const Vertex& a, const Vertex& b) {
+		return a.z < b.z;
+		});
+
+	QVector<Vertex> bottomVertices = vertices.mid(0, 4);
+	QVector<Vertex> topVertices = vertices.mid(4, 4);
+
+	// ========== 底面 4 个点按角度排序 ==========
+	double bottomCenterX = 0, bottomCenterY = 0;
+	for (const auto& v : bottomVertices) {
+		bottomCenterX += v.x;
+		bottomCenterY += v.y;
+	}
+	bottomCenterX /= 4;
+	bottomCenterY /= 4;
+
+	std::sort(bottomVertices.begin(), bottomVertices.end(),
+		[bottomCenterX, bottomCenterY](const Vertex& a, const Vertex& b) {
+			double angleA = atan2(a.y - bottomCenterY, a.x - bottomCenterX);
+			double angleB = atan2(b.y - bottomCenterY, b.x - bottomCenterX);
+			return angleA < angleB;
+		});
+
+	// ========== 顶面 4 个点按角度排序 ==========
+	double topCenterX = 0, topCenterY = 0;
+	for (const auto& v : topVertices) {
+		topCenterX += v.x;
+		topCenterY += v.y;
+	}
+	topCenterX /= 4;
+	topCenterY /= 4;
+
+	std::sort(topVertices.begin(), topVertices.end(),
+		[topCenterX, topCenterY](const Vertex& a, const Vertex& b) {
+			double angleA = atan2(a.y - topCenterY, a.x - topCenterX);
+			double angleB = atan2(b.y - topCenterY, b.x - topCenterX);
+			return angleA < angleB;
+		});
+
+	// ========== 绘制 8 个顶点 ==========
+	LONG lptSize = 12;
+	LONG lptColor = RGB(255, 255, 0);     // 黄色点
+	LPWSTR whText = nullptr;
+	LONG ltextColor = 15073228;
+
+	QVector<Vertex> sortedVertices = bottomVertices + topVertices;
+	for (int i = 0; i < 8; i++) {
+		double dPosition[3] = { sortedVertices[i].x, sortedVertices[i].y, sortedVertices[i].z };
+		m_ptrKit->View_draw_point(dPosition, ulCoordinateID, lptSize, lptColor, whText, ltextColor);
+	}
+
+	// ========== 绘制长方体的 12 条边 ==========
+	double dRGB[3] = { 255, 0, 0 };       // 红色直线
+	ULONG o_uCylinderID = 0;
+	double cylinderRadius = 2.0;
+
+	const int edges[12][2] = {
+		// 底面 4 条边
+		{0, 1}, {1, 2}, {2, 3}, {3, 0},
+		// 顶面 4 条边
+		{4, 5}, {5, 6}, {6, 7}, {7, 4},
+		// 垂直 4 条边
+		{0, 4}, {1, 5}, {2, 6}, {3, 7}
+	};
+
+	for (int i = 0; i < 12; i++) {
+		int startIdx = edges[i][0];
+		int endIdx = edges[i][1];
+
+		double start[3] = {
+			sortedVertices[startIdx].x,
+			sortedVertices[startIdx].y,
+			sortedVertices[startIdx].z
+		};
+		double dEnd[3] = {
+			sortedVertices[endIdx].x,
+			sortedVertices[endIdx].y,
+			sortedVertices[endIdx].z
+		};
+
+		m_ptrKit->Doc_draw_cylinder(start, 3, dEnd, 3, cylinderRadius,
+			dRGB, 3, ulCoordinateID, &o_uCylinderID, false);
+	}
+
+	// 输出调试信息
+	qDebug() << "===== 排序后顶点顺序 =====";
+	for (int i = 0; i < 8; i++) {
+		qDebug() << QString("排序后顶点%1 (原%2): (%3, %4, %5)")
+			.arg(i)
+			.arg(sortedVertices[i].originalIndex)
+			.arg(sortedVertices[i].x)
+			.arg(sortedVertices[i].y)
+			.arg(sortedVertices[i].z);
+	}
+	qDebug() << "已绘制机器人" << currentRobot << "的工作空间 (厚度=" << ws.thickness << ", 角度=" << ws.theta << ")";
+}
+
+
+void robotSpaceDefine::OnElementPickup(ULONG i_ulObjID, LPWSTR i_lEntityID, int i_nEntityType,
+	double i_dPointX, double i_dPointY, double i_dPointZ) 
+{
+
 }
 
 std::vector<double> robotSpaceDefine::getDir(ULONG coordinateID, QString mainDir)
