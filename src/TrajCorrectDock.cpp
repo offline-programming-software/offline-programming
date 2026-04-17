@@ -312,6 +312,7 @@ void TrajCorrectDock::setupConnections()
 	connect(listFlagPoints, &pickWidget::deleteSignal, this, &TrajCorrectDock::testSignal);
 	connect(this, &TrajCorrectDock::blankAreaClicked, this, &TrajCorrectDock::on_this_blankAreaClicked);
 	connect(ui->btnDelCor, SIGNAL(clicked()), this, SLOT(on_btnDeleteCorrection_clicked()));
+	connect(ui->btnGetTBO, SIGNAL(clicked()), this, SLOT(on_btnGetTBO_clicked()));
 	
 	connect(ui->cmbBeamDir, QOverload<int>::of(&QComboBox::currentIndexChanged),
 		this, &TrajCorrectDock::on_cmbBeamDir_currentIndexChanged);
@@ -961,6 +962,13 @@ void TrajCorrectDock::on_tabInput_currentChanged(int index)
 		ui->btnSave->move(ui->btnSave->pos().x(), btnSaveY);
 	}
 		//ui->tabInput->setFixedHeight(260);
+}
+
+void TrajCorrectDock::on_btnGetTBO_clicked()
+{
+	int row = ui->listCorrections->currentRow();
+	Correction cor = m_correctionList[row];
+	cor.m_coeffs = cor.calCoeffs();
 }
 
 void TrajCorrectDock::setEdit()

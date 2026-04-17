@@ -123,6 +123,7 @@ void Correction::constructBeamFrame()
 	// ¼ÆËãÄæ±ä»»¾ØÕó
 	Eigen::Matrix4d TBO = TOB.inverse();
 	//printTBO
+	std::cout << "TOB :\n" << TOB << std::endl;
 	std::cout << "TBO: \n" << TBO << std::endl;
 	m_TBO = TBO;
 	m_TOB = TOB;

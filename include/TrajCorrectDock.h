@@ -148,6 +148,7 @@ public slots:
 	void setEdit();
 	void setView();
 	void on_tabInput_currentChanged(int index);
+	void on_btnGetTBO_clicked();
 	/*-------------------------≤‚ ‘≤€----------------------------*/
 	void testConnection()
 	{

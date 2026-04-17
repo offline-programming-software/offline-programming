@@ -84,6 +84,10 @@ void BendingManagerWidget::closeEvent(QCloseEvent* event)
 
 void BendingManagerWidget::showEvent(QShowEvent* event)
 {
+	m_manager->initPathIDMap();
+	m_manager->initIncludedPathForCorrections();
+	initTreeWidget();
+	ui->treeCorrection->blockSignals(false);
 }
 
 void BendingManagerWidget::initTreeWidget()
