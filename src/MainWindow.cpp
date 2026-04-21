@@ -66,19 +66,19 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 		SARibbonPannel*  path = sence->addPannel("轨迹规划");
 			QAction* pathGen = path->addAction("轨迹生成", QIcon(":/image/resource/24.png"),QToolButton::InstantPopup);
 				connect(pathGen, SIGNAL(triggered()), this, SLOT(on_create_path()));
-			QAction* action69 = path->addAction("区域划分", QIcon(":/image/resource/33.png"), QToolButton::InstantPopup);
-				connect(action69, SIGNAL(triggered()), this, SLOT(on_curse_part()));//喷涂区域划分
+			//QAction* action69 = path->addAction("区域划分", QIcon(":/image/resource/33.png"), QToolButton::InstantPopup);
+			//	connect(action69, SIGNAL(triggered()), this, SLOT(on_curse_part()));//喷涂区域划分
 			QAction* action10 = path->addAction("喷涂路径生成", QIcon(":/image/resource/30.png"), QToolButton::InstantPopup);
 				connect(action10, SIGNAL(triggered()), this, SLOT(on_campath_flat_surface()));//随形喷涂
 
 		//|轨迹修正|
-		SARibbonPannel* correction = sence->addPannel("轨迹修正");
-			QAction* action101 = correction->addAction("变形修正设置", QIcon(":/image/resource/bendingFunc.png"), QToolButton::InstantPopup);
-				connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
-			QAction* action102 = correction->addAction("对象变形修正", QIcon(":/image/resource/bendingmanager .png"), QToolButton::InstantPopup);
-				connect(action102, &QAction::triggered, this, &MainWindow::on_bendingManagerWidget_open);
-			QAction* action103 = correction->addAction("对象偏移修正", QIcon(":/image/resource/positioncorrect.png"), QToolButton::InstantPopup);
-				connect(action103, &QAction::triggered, this, &MainWindow::on_PositionCorrectWidget_open);
+		//SARibbonPannel* correction = sence->addPannel("轨迹修正");
+		//	QAction* action101 = correction->addAction("变形修正设置", QIcon(":/image/resource/bendingFunc.png"), QToolButton::InstantPopup);
+		//		connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
+		//	QAction* action102 = correction->addAction("对象变形修正", QIcon(":/image/resource/bendingmanager .png"), QToolButton::InstantPopup);
+		//		connect(action102, &QAction::triggered, this, &MainWindow::on_bendingManagerWidget_open);
+		//	QAction* action103 = correction->addAction("对象偏移修正", QIcon(":/image/resource/positioncorrect.png"), QToolButton::InstantPopup);
+		//		connect(action103, &QAction::triggered, this, &MainWindow::on_PositionCorrectWidget_open);
 
 		//|仿真|
 		SARibbonPannel*  complie = sence->addPannel("仿真调试");
@@ -116,14 +116,15 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 		//|零件|
 		SARibbonPannel* part = definition->addPannel("零件");
 			QAction* action21 = part->addAction("定义零件", QIcon(":/image/resource/icons8-tool.png"), QToolButton::InstantPopup);
-			QAction* action47 = part->addAction("定义AGV", QIcon(":/image/resource/icons8-agv-32.png"), QToolButton::InstantPopup);
+			//QAction* action47 = part->addAction("定义AGV", QIcon(":/image/resource/icons8-agv-32.png"), QToolButton::InstantPopup);
 
 		//|工具|
 		SARibbonPannel* tool = definition->addPannel("工具");
+			//QAction 定义工具
 			QAction* action25 =tool->addAction("定义喷涂工具", QIcon(":/image/resource/pentu.png"), QToolButton::InstantPopup);
 					connect(action25, SIGNAL(triggered()), this, SLOT(on_rocreate_sprayingtool()));//定义喷涂工具
 
-				QAction* action26 = tool->addAction("喷刷管理", QIcon(":/image/resource/icons8-spray.png"), QToolButton::InstantPopup);
+			QAction* action26 = tool->addAction("喷刷管理", QIcon(":/image/resource/icons8-spray.png"), QToolButton::InstantPopup);
 					connect(action26, SIGNAL(triggered()), this, SLOT(on_roobjassistor_manage()));//喷刷管理
 
 
@@ -173,44 +174,44 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 	//******************//
 	//添加在线控制**菜单**//
 	//******************//
-	SARibbonCategory* online = bar->addCategoryPage("在线模块(开发中)");
+	//SARibbonCategory* online = bar->addCategoryPage("在线模块(开发中)");
 
-		//|在线修正|
-		SARibbonPannel* online_adjust = online->addPannel("在线修正");
+	//	//|在线修正|
+	//	SARibbonPannel* online_adjust = online->addPannel("在线修正");
 
-			QAction* action58 = online_adjust->addAction("在线修正", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
-				connect(action58, SIGNAL(triggered()), this, SLOT(on_action()));//在线修正
+	//		QAction* action58 = online_adjust->addAction("在线修正", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
+	//			connect(action58, SIGNAL(triggered()), this, SLOT(on_action()));//在线修正
 
 
-		//|在线修正配置|
-		SARibbonPannel* online_setup = online->addPannel("在线设置");
+	//	//|在线修正配置|
+	//	SARibbonPannel* online_setup = online->addPannel("在线设置");
 
-			QAction* action56 = online_setup->addAction("加工进度同步", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
-				connect(action56, SIGNAL(triggered()), this, SLOT(on_sync()));//加工进度同步
+	//		QAction* action56 = online_setup->addAction("加工进度同步", QIcon(":/image/resource/icons8-cloud-sync-32.png"), QToolButton::InstantPopup);
+	//			connect(action56, SIGNAL(triggered()), this, SLOT(on_sync()));//加工进度同步
 
-			QAction* actionConnectSetting = online_setup->addAction("连接设置", QIcon(""), QToolButton::InstantPopup);
-				connect(actionConnectSetting, SIGNAL(triggered()), this, SLOT(on_connectSetting_open()));
+	//		QAction* actionConnectSetting = online_setup->addAction("连接设置", QIcon(""), QToolButton::InstantPopup);
+	//			connect(actionConnectSetting, SIGNAL(triggered()), this, SLOT(on_connectSetting_open()));
 
 	//******************//
 	//添加 其他 **菜单**//
 	//******************//
-	SARibbonCategory* otherCate = bar->addCategoryPage(tr("Other"));
-		//|设备库|
-		SARibbonPannel* pannel2 = otherCate->addPannel(tr("导入"));
-			QAction* action59 = pannel2->addAction("机器人库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-				connect(action59, SIGNAL(triggered()), this, SLOT(on_choose_robot()));//机器人库
-			QAction* action60 = pannel2->addAction("设备库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-				connect(action60, SIGNAL(triggered()), this, SLOT(on_choosetool()));//工具库
-			QAction* action61 = pannel2->addAction("机器人求解",QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-				connect(action61, SIGNAL(triggered()), this, SLOT(on_kinematics()));//机器人逆解
-			QAction* action62 = pannel2->addAction("联动求解求解", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-				connect(action62, SIGNAL(triggered()), this, SLOT(on_linkage()));//机器人联动求解
-			QAction* action63 = pannel2->addAction("输出动画到本地", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-				connect(action63, SIGNAL(triggered()), this, SLOT(on_animation()));//输出视频到本地
-			QAction* action64 = pannel2->addAction("输出视频", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-				connect(action64, SIGNAL(triggered()), this, SLOT(on_video()));//输出动画
-			QAction* openRobxFileIOManagerAction = pannel2->addAction("Robx文件管理器", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
-				connect(openRobxFileIOManagerAction, SIGNAL(triggered()), this,SLOT(on_robxFileIOManager_open()));//Robx文件管理器
+	//SARibbonCategory* otherCate = bar->addCategoryPage(tr("Other"));
+	//	//|设备库|
+	//	SARibbonPannel* pannel2 = otherCate->addPannel(tr("导入"));
+			//QAction* action59 = pannel2->addAction("机器人库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+			//	connect(action59, SIGNAL(triggered()), this, SLOT(on_choose_robot()));//机器人库
+			//QAction* action60 = pannel2->addAction("设备库", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+			//	connect(action60, SIGNAL(triggered()), this, SLOT(on_choosetool()));//工具库
+			//QAction* action61 = pannel2->addAction("机器人求解",QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+			//	connect(action61, SIGNAL(triggered()), this, SLOT(on_kinematics()));//机器人逆解
+			//QAction* action62 = pannel2->addAction("联动求解求解", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+			//	connect(action62, SIGNAL(triggered()), this, SLOT(on_linkage()));//机器人联动求解
+			//QAction* action63 = pannel2->addAction("输出动画到本地", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+			//	connect(action63, SIGNAL(triggered()), this, SLOT(on_animation()));//输出视频到本地
+			//QAction* action64 = pannel2->addAction("输出视频", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+			//	connect(action64, SIGNAL(triggered()), this, SLOT(on_video()));//输出动画
+			//QAction* openRobxFileIOManagerAction = pannel2->addAction("Robx文件管理器", QIcon(":/image/icon/action.svg"), QToolButton::InstantPopup);
+			//	connect(openRobxFileIOManagerAction, SIGNAL(triggered()), this,SLOT(on_robxFileIOManager_open()));//Robx文件管理器
 	resize(800, 600);
 
 	InitPQKit();
