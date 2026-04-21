@@ -11,6 +11,7 @@
 #include<cstdio>
 #include <thread>
 #include <chrono>
+#include <tuple>
 using json = nlohmann::json;
 
 RobxIO::RobxIO()
@@ -60,23 +61,28 @@ void RobxIO::writeData(const QVector<Correction>& list,
 	ofs.close();
 }
 
-void RobxIO::writeData(const QVector<workSpace>& list, const std::string & fileName)
+void RobxIO::writeData(const QVector<RobotWorkspaceBoundary>& list, const std::string& fileName)
 {
 	json j = json::array();
 
 	for (const auto& ws : list) {
+		// 手动构建 JSON 对象，避免初始化列表与 QString 的兼容性问题
 		json jws;
-		jws = {
-			{"robotID", ws.robotID},
-			{"thickness", ws.thickness},
-			{"theta", ws.theta},
-			{"points", ws.points}
-		};
+		jws["robotID"] = ws.robotID;
+		jws["thickness"] = ws.thickness;
+		jws["theta"] = ws.theta;
+		jws["CoordinateName"] = ws.CoordinateName.toStdString();
+		jws["DirectionName"] = ws.DirectionName.toStdString();
+		jws["points"] = ws.points;
+
 		j.push_back(jws);
 	}
 
 	std::string fullPath = m_tempDir + "/" + fileName;
 	std::ofstream ofs(fullPath);
+	if (!ofs.is_open()) {
+		throw std::runtime_error("Cannot open file for writing: " + fullPath);
+	}
 	ofs << j.dump(4);
 	ofs.close();
 }
@@ -93,8 +99,6 @@ void RobxIO::writeData(const QVector<workSpaceInformation>& list,
 			{"number", wsInfo.number},
 			{"coodinate", wsInfo.coodinate.toStdString()},
 			{"mainDir", wsInfo.mainDir.toStdString()},
-			{"isLink",wsInfo.isLink},
-			{"railName", wsInfo.railName.toStdString()}
 		};
 		j.push_back(jws);
 	}
@@ -103,6 +107,59 @@ void RobxIO::writeData(const QVector<workSpaceInformation>& list,
 	std::ofstream ofs(fullPath);
 	ofs << j.dump(5);
 	ofs.close();
+}
+
+void RobxIO::writeData(QVector<std::tuple<QString, QString, QString>>& list,
+	const std::string& fileName)
+{
+	nlohmann::json j = nlohmann::json::array();
+
+	for (const auto& tuple : list) {
+		// 将QString转换为std::string后创建JSON数组
+		nlohmann::json tupleJson = {
+			std::get<0>(tuple).toStdString(),  // 第一个QString转换为std::string
+			std::get<1>(tuple).toStdString(),  // 第二个QString转换为std::string
+			std::get<2>(tuple).toStdString()   // 第三个QString转换为std::string
+		};
+		j.push_back(tupleJson);
+	}
+
+	std::string fullPath = m_tempDir + "/" + fileName;
+
+	std::ofstream ofs(fullPath);
+	if (ofs.is_open()) {
+		ofs << j.dump(4);
+		ofs.close();
+	}
+	else {
+		std::cerr << "无法打开文件进行写入: " << fullPath << std::endl;
+	}
+}
+
+void RobxIO::writeData(const QVector<AgvStationInfo>& list,
+	const std::string& fileName)
+{
+	json j = json::array();
+
+	for (const auto& info : list) {
+		json item;
+		item["robotName"] = info.robotName;
+		item["groupName"] = info.groupName;
+		item["pathName"] = info.pathName;
+		item["stationName"] = info.stationName;
+		item["x"] = info.x;
+		item["y"] = info.y;
+		item["z"] = info.z;
+		item["theta"] = info.theta;
+		j.push_back(std::move(item));
+	}
+
+	const std::string fullPath = m_tempDir + "/" + fileName;
+	std::ofstream ofs(fullPath);
+	if (!ofs.is_open()) {
+		throw std::runtime_error("Cannot open file for writing: " + fullPath);
+	}
+	ofs << j.dump(4);
 }
 
 // ========================
@@ -176,27 +233,36 @@ void RobxIO::updateData(QVector<Correction>& list,
 	}
 }
 
-void RobxIO::updateData(QVector<workSpace>& list, const std::string & fileName)
+void RobxIO::updateData(QVector<RobotWorkspaceBoundary>& list, const std::string& fileName)
 {
 	std::string fullPath = m_tempDir + "/" + fileName;
-	std::ifstream ifs(fullPath); if (!ifs.is_open())
+	std::ifstream ifs(fullPath);
+	if (!ifs.is_open()) {
 		return;
+	}
+
 	json j;
 	ifs >> j;
 	ifs.close();
 
 	list.clear();
 	for (const auto& item : j) {
-		workSpace ws;
+		RobotWorkspaceBoundary ws;
 
 		ws.robotID = item.at("robotID").get<ULONG>();
 		ws.thickness = item.at("thickness").get<double>();
 		ws.theta = item.at("theta").get<double>();
+
+		// 反序列化 QString 字段
+		ws.CoordinateName = QString::fromStdString(item.value("CoordinateName", std::string{}));
+		ws.DirectionName = QString::fromStdString(item.value("DirectionName", std::string{}));
+
 		ws.points = item.at("points").get<std::vector<double>>();
+
 		list.push_back(ws);
 	}
-		
 }
+
 
 void RobxIO::updateData(QVector<workSpaceInformation>& list,
 	const std::string& fileName)
@@ -219,11 +285,102 @@ void RobxIO::updateData(QVector<workSpaceInformation>& list,
 		wsInfo.number = item.at("number").get<int>();
 		wsInfo.coodinate = QString::fromStdString(item.at("coodinate").get<std::string>());
 		wsInfo.mainDir = QString::fromStdString(item.at("mainDir").get<std::string>());
-		wsInfo.isLink = item.at("isLink").get<bool>();
-		wsInfo.railName = QString::fromStdString(item.at("railName").get<std::string>());
 		list.push_back(wsInfo);
 	}
 }
+
+
+void RobxIO::updateData(QVector<std::tuple<QString, QString, QString>>& list,
+	const std::string& fileName)
+{
+	std::string fullPath = m_tempDir + "/" + fileName;
+
+	std::ifstream ifs(fullPath);
+	if (!ifs.is_open()) {
+		std::cerr << "无法打开文件: " << fullPath << std::endl;
+		return;
+	}
+
+	nlohmann::json j;
+	ifs >> j;
+	ifs.close();
+
+	list.clear();
+	for (const auto& item : j) {
+		if (item.is_array() && item.size() == 3) {
+			std::tuple<QString, QString, QString> tuple = {
+				QString::fromStdString(item[0].get<std::string>()),  // 第一个转换为QString
+				QString::fromStdString(item[1].get<std::string>()),  // 第二个转换为QString
+				QString::fromStdString(item[2].get<std::string>())   // 第三个转换为QString
+			};
+			list.push_back(tuple);
+		}
+	}
+}
+
+void RobxIO::updateData(QVector<AgvStationInfo>& list,
+	const std::string& fileName)
+{
+	const std::string fullPath = m_tempDir + "/" + fileName;
+	std::ifstream ifs(fullPath);
+	if (!ifs.is_open()) {
+		return;
+	}
+
+	json j;
+	ifs >> j;
+
+	list.clear();
+	for (const auto& item : j) {
+		AgvStationInfo info;
+		info.robotName = item.value("robotName", std::string{});
+		info.groupName = item.value("groupName", std::string{});
+		info.pathName = item.value("pathName", std::string{});
+		info.stationName = item.value("stationName", std::string{});
+		info.x = item.value("x", 0.0);
+		info.y = item.value("y", 0.0);
+		info.z = item.value("z", 0.0);
+		info.theta = item.value("theta", 0.0);
+		list.push_back(info);
+	}
+}
+
+//void RobxIO::flushTempToRobx()
+//{
+//	struct archive* a = archive_write_new();
+//	archive_write_set_format_zip(a);
+//	archive_write_open_filename(a, m_robxPath.c_str());
+//
+//	for (const auto& entry :
+//		std::filesystem::directory_iterator(m_tempDir))
+//	{
+//		struct archive_entry* e = archive_entry_new();
+//
+//		std::string filePath = entry.path().string();
+//		std::string fileName = entry.path().filename().string();
+//
+//		archive_entry_set_pathname(e, fileName.c_str());
+//		archive_entry_set_size(e, std::filesystem::file_size(entry));
+//		archive_entry_set_filetype(e, AE_IFREG);
+//		archive_entry_set_perm(e, 0644);
+//
+//		archive_write_header(a, e);
+//
+//		std::ifstream ifs(filePath, std::ios::binary);
+//		std::string buffer(
+//			(std::istreambuf_iterator<char>(ifs)),
+//			std::istreambuf_iterator<char>());
+//
+//		archive_write_data(a, buffer.data(), buffer.size());
+//
+//		archive_entry_free(e);
+//	}
+//
+//	archive_write_close(a);
+//	archive_write_free(a);
+//}
+
+
 
 namespace fs = std::filesystem;
 

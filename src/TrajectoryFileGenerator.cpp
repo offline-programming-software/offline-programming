@@ -48,7 +48,7 @@ void TrajectoryFileGenerator::addTrajectoryPoint(const TrajectoryPointInfo& poin
 		instructions_.push_back(motionInstruction);
 	}
 
-	// 创建事件
+	// 创建事件指令（默认在运动后）
 	std::vector<std::string> eventInstructions = createEventInstructions(pointInfo.event);
 	for (const auto& instr : eventInstructions) {
 		validateInstructionLength(instr);
@@ -143,7 +143,13 @@ std::vector<std::string> TrajectoryFileGenerator::createEventInstructions(
 		instr << "DELAY " << content;
 		instructions.push_back(instr.str());
 	}
-	// 可以继续添加其他事件类型...
+	else {
+		std::string eventLabel = std::string(CW2A(event.name));
+		std::string content = std::string(CW2A(event.content));
+		std::ostringstream instr;
+		instr << "; SPRAY_EVENT NAME=" << eventLabel << " " << content;
+		instructions.push_back(instr.str());
+	}
 
 	return instructions;
 }

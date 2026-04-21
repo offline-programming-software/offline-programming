@@ -17,16 +17,11 @@ public:
 
 	void setRobotName(const QString &robotName);
 	void setCoordinate(const QStringList &coordList);
-	void setRail(const QStringList &railList);
 
 	QString getCoordinate();
 	QString getMainDir();
-	QString getRail();
-
-	bool isLink();
 
 private slots:
-	void onLinkRail(int state);
 	void onCancelButtonClicked();
 	void onCalculateButtonClicked();  // 添加计算按钮的槽函数
 
