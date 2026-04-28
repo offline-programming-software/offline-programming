@@ -5,6 +5,49 @@
 #include <iomanip>
 #include <comdef.h>
 #include <algorithm>
+#include <cwctype>
+
+namespace {
+	std::wstring trimWString(const std::wstring& input) {
+		size_t begin = 0;
+		while (begin < input.size() && iswspace(input[begin])) {
+			++begin;
+		}
+
+		size_t end = input.size();
+		while (end > begin && iswspace(input[end - 1])) {
+			--end;
+		}
+
+		return input.substr(begin, end - begin);
+	}
+
+	std::wstring toLowerWString(std::wstring value) {
+		std::transform(value.begin(), value.end(), value.begin(),
+			[](wchar_t ch) { return static_cast<wchar_t>(towlower(ch)); });
+		return value;
+	}
+
+	bool shouldPlaceEventBeforeMOVD(const event_information& eventInfo) {
+		if (!eventInfo.hasEvent) {
+			return false;
+		}
+
+		const wchar_t* rawPos = static_cast<const wchar_t*>(eventInfo.position);
+		if (rawPos == nullptr) {
+			return false;
+		}
+
+		std::wstring position = toLowerWString(trimWString(std::wstring(rawPos)));
+
+		// 兼容中英文配置
+		return position == L"前"
+			|| position == L"点前"
+			|| position == L"before"
+			|| position == L"pre"
+			|| position == L"front";
+	}
+}
 
 // 构造函数
 TrajectoryFileGenerator::TrajectoryFileGenerator(const std::string& filename,
@@ -41,18 +84,35 @@ void TrajectoryFileGenerator::addTrajectoryPoint(const TrajectoryPointInfo& poin
 	PositionPoint posPoint = createPositionPointFromTrajectoryInfo(pointInfo);
 	positions_.push_back(posPoint);
 
-	// 创建运动指令
-	std::string motionInstruction = createMotionInstructionFromTrajectoryInfo(pointInfo);
-	if (!motionInstruction.empty()) {
-		validateInstructionLength(motionInstruction);
-		instructions_.push_back(motionInstruction);
-	}
+	// 创建运动与事件指令
+	const std::string motionInstruction = createMotionInstructionFromTrajectoryInfo(pointInfo);
+	const std::vector<std::string> eventInstructions = createEventInstructions(pointInfo.event);
 
-	// 创建事件指令（默认在运动后）
-	std::vector<std::string> eventInstructions = createEventInstructions(pointInfo.event);
-	for (const auto& instr : eventInstructions) {
-		validateInstructionLength(instr);
-		instructions_.push_back(instr);
+	auto appendInstruction = [this](const std::string& instr) {
+		if (!instr.empty()) {
+			validateInstructionLength(instr);
+			instructions_.push_back(instr);
+		}
+	};
+
+	auto appendEventInstructions = [this](const std::vector<std::string>& instrs) {
+		for (const auto& instr : instrs) {
+			validateInstructionLength(instr);
+			instructions_.push_back(instr);
+		}
+	};
+
+	// 需求：MOVD 的喷涂事件按“点前/点后”放置
+	const bool isMOVD = (pointInfo.motionType == "MOVD");
+	const bool eventBeforeMOVD = shouldPlaceEventBeforeMOVD(pointInfo.event);
+
+	if (isMOVD && eventBeforeMOVD) {
+		appendEventInstructions(eventInstructions);
+		appendInstruction(motionInstruction);
+	}
+	else {
+		appendInstruction(motionInstruction);
+		appendEventInstructions(eventInstructions);
 	}
 }
 
@@ -121,8 +181,20 @@ std::vector<std::string> TrajectoryFileGenerator::createEventInstructions(
 		return instructions;
 	}
 
-	// 事件名称转换
-	std::string eventName = std::string(CW2A(event.name));
+	const std::string eventName = std::string(CW2A(event.name));
+
+	// 规则优先：Brush -> 开枪；关枪 -> 关枪
+	if (eventName.find("Brush") != std::string::npos ||
+		eventName.find("BRUSH") != std::string::npos ||
+		eventName.find("brush") != std::string::npos) {
+		instructions.push_back("OUT GUN1 TRUE");
+		return instructions;
+	}
+
+	if (eventName.find("关枪") != std::string::npos) {
+		instructions.push_back("OUT GUN1 FALSE");
+		return instructions;
+	}
 
 	if (eventName.find("OUT") != std::string::npos) {
 		std::string content = std::string(CW2A(event.content));
