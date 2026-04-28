@@ -387,11 +387,11 @@ cursePart::cursePart(QWidget *parent,
 
 	//预览按钮
 	QPushButton* previewButton = ui->pushButton_3;
-	connect(previewButton, &QPushButton::clicked, this, &cursePart::on_confirm_clicked);
+	connect(previewButton, &QPushButton::clicked, this, &cursePart::on_previewButton_clicked);
 
 	//确认按钮
 	QPushButton* confirmButton = ui->pushButton_4;
-	connect(confirmButton, &QPushButton::clicked, this, &cursePart::on_cancel_clicked);
+	connect(confirmButton, &QPushButton::clicked, this, &cursePart::on_confirm_clicked);
 	ui->pushButton_4->setEnabled(false);
 
 	//取消按钮
@@ -407,7 +407,7 @@ cursePart::cursePart(QWidget *parent,
 	connect(ui->pushButton, &QPushButton::clicked, this, &cursePart::on_pickupPoint_clicked);//拾取按钮
 	connect(ui->textEdit_6, &QTextEdit::textChanged, this, &cursePart::on_finishButton_clicked);//关闭拾取模式
 
-	connect(ui->pushButton_3, &QPushButton::clicked, this, &cursePart::on_previewButton_clicked);//预览
+	//connect(ui->pushButton_3, &QPushButton::clicked, this, &cursePart::on_previewButton_clicked);//预览
 	connect(ui->pushButton_9, &QPushButton::clicked, this, &cursePart::on_spaceSettingButton_clicked);//计算最大偏差角和厚度
 
 	connect(ui->pushButton_10, &QPushButton::clicked, this, &cursePart::on_calculate_workspace);//计算出划分区域长和宽
@@ -838,6 +838,13 @@ void cursePart::on_coordanateTextChanged()
 void cursePart::on_confirm_clicked()
 {
 	// 确认按钮逻辑
+	CComBSTR cmd = "RO_CMD_PICKUP_ELEMENT";
+	HRESULT hr = m_ptrKit->Doc_end_module(cmd);
+	if (SUCCEEDED(hr)) {
+		isPreview = false;
+		isPickupActive = false; // 关闭拾取模式
+	}
+
 	done(QDialog::Rejected);
 	this->close();
 
@@ -2966,13 +2973,17 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 			}
 		}
 		points.push_back(candidate);
-	};
+		};
 
 	double boxX = mergedBox.maxPoint.x - mergedBox.minPoint.x;
 	double boxY = mergedBox.maxPoint.y - mergedBox.minPoint.y;
 	double boxZ = mergedBox.maxPoint.z - mergedBox.minPoint.z;
 	double minBoxDim = std::min(std::min(std::abs(boxX), std::abs(boxY)), std::abs(boxZ));
 	double pointTolerance = std::max(1e-4, minBoxDim * 1e-4);
+
+	// 清理调试点缓存，避免重复累计
+	aabbPosition.clear();
+	jiaodians.clear();
 
 	// 1) 以AABB最小轴作为direction，不使用曲面顶点
 	std::vector<double> direction = { 1.0, 0.0, 0.0 };
@@ -3000,7 +3011,7 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 		addUniquePoint(samplePoints, p, pointTolerance);
 	}
 
-	for (int i = 0; i < samplePoints.size(); i++) {
+	for (size_t i = 0; i < samplePoints.size(); ++i) {
 		aabbPosition.push_back(samplePoints[i].x);
 		aabbPosition.push_back(samplePoints[i].y);
 		aabbPosition.push_back(samplePoints[i].z);
@@ -3024,7 +3035,6 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 			return std::vector<double>{ direction[0], direction[1], direction[2] };
 		}
 
-		// Choose the axis direction closest to rayDirection, then orient toward the center.
 		std::vector<double> rayDir = { rayDirection.x, rayDirection.y, rayDirection.z };
 		normalizeVector(rayDir);
 		if (std::abs(rayDir[0]) < 1e-9 && std::abs(rayDir[1]) < 1e-9 && std::abs(rayDir[2]) < 1e-9) {
@@ -3059,41 +3069,86 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 		}
 
 		return bestAxis;
-	};
+		};
 
-	auto collectIntersections = [&]() {
-		for (const auto& pair : pickupMap) {
-			const std::vector<std::wstring>& surfaces = pair.second;
-			for (const auto& surfaceName : surfaces) {
-				CComBSTR bstrSurfaceName(surfaceName.c_str());
-				for (const auto& sample : samplePoints) {
-					double dPosition[3] = { sample.x, sample.y, sample.z };
-					std::vector<double> rayVec = getAxisDirTowardCenter(sample);
-					double* dIntersectionPoint = nullptr;
-					int nArrsize = 0;
+	for (const auto& pair : pickupMap) {
+		const std::vector<std::wstring>& surfaces = pair.second;
+		for (const auto& surfaceName : surfaces) {
+			CComBSTR bstrSurfaceName(surfaceName.c_str());
+			for (const auto& sample : samplePoints) {
+				double dPosition[3] = { sample.x, sample.y, sample.z };
+				std::vector<double> rayVec = getAxisDirTowardCenter(sample);
+				double* dIntersectionPoint = nullptr;
+				int nArrsize = 0;
 
-					HRESULT hr = m_ptrKit->Part_get_ray_surface_intersetion(
-						bstrSurfaceName, dPosition, const_cast<double*>(rayVec.data()),
-						&dIntersectionPoint, &nArrsize);
+				HRESULT hr = m_ptrKit->Part_get_ray_surface_intersetion(
+					bstrSurfaceName, dPosition, const_cast<double*>(rayVec.data()),
+					&dIntersectionPoint, &nArrsize);
 
-					if (SUCCEEDED(hr) && dIntersectionPoint != nullptr && nArrsize >= 1) {
-						Point3D hit(dIntersectionPoint[0], dIntersectionPoint[1], dIntersectionPoint[2]);
-						addUniquePoint(rayIntersectionPoints, hit, pointTolerance);
+				if (SUCCEEDED(hr) && dIntersectionPoint != nullptr && nArrsize >= 1) {
+					Point3D hit(dIntersectionPoint[0], dIntersectionPoint[1], dIntersectionPoint[2]);
+					addUniquePoint(rayIntersectionPoints, hit, pointTolerance);
+				}
 
-					}
-
-					if (dIntersectionPoint != nullptr) {
-						m_ptrKit->PQAPIFree((LONG_PTR*)dIntersectionPoint);
-					}
+				if (dIntersectionPoint != nullptr) {
+					m_ptrKit->PQAPIFree((LONG_PTR*)dIntersectionPoint);
 				}
 			}
 		}
-	};
-	collectIntersections();
+	}
 
-	// 4) 仅使用射线交点作为OBB候选点
+	// 4) 读取工件顶点，并判断顶点是否在所选曲面上
+	const double dTol = 2.3;
+	std::vector<Point3D> surfaceVerticesFromPart;
+	for (const auto& pair : pickupMap) {
+		ULONG ulPartID = pair.first;
+		const std::vector<std::wstring>& selectedSurfaces = pair.second;
+
+		LONG lCount = 0;
+		HRESULT hrCount = m_ptrKit->PQAPIGetWorkPartVertexCount(ulPartID, &lCount);
+		if (FAILED(hrCount) || lCount <= 0) {
+			continue;
+		}
+
+		std::vector<double> vertexBuffer(static_cast<size_t>(lCount) * 3, 0.0);
+		HRESULT hrVertex = m_ptrKit->PQAPIGetWorkPartVertex(ulPartID, 0, lCount, vertexBuffer.data());
+		if (FAILED(hrVertex)) {
+			continue;
+		}
+
+		for (LONG i = 0; i < lCount; ++i) {
+			const double vx = vertexBuffer[3 * i];
+			const double vy = vertexBuffer[3 * i + 1];
+			const double vz = vertexBuffer[3 * i + 2];
+
+			double position[3] = { vx, vy, vz };
+			bool onSelectedSurface = false;
+
+			for (const auto& surfaceName : selectedSurfaces) {
+				CComBSTR whSurfaceName(surfaceName.c_str());
+				LONG bPointOnSurface = 0;
+
+				HRESULT hrOnSurface = m_ptrKit->Part_cheak_point_on_surface(
+					whSurfaceName, position, dTol, &bPointOnSurface);
+
+				if (SUCCEEDED(hrOnSurface) && bPointOnSurface != 0) {
+					onSelectedSurface = true;
+					break;
+				}
+			}
+
+			if (onSelectedSurface) {
+				addUniquePoint(surfaceVerticesFromPart, Point3D(vx, vy, vz), pointTolerance);
+			}
+		}
+	}
+
+	// 5) 使用“交点 + 曲面顶点”共同构建最小包围盒
 	std::vector<Point3D> selectedSurfaceVertices;
 	for (const auto& p : rayIntersectionPoints) {
+		addUniquePoint(selectedSurfaceVertices, p, pointTolerance);
+	}
+	for (const auto& p : surfaceVerticesFromPart) {
 		addUniquePoint(selectedSurfaceVertices, p, pointTolerance);
 	}
 
@@ -3102,13 +3157,12 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 		return resultPositions;
 	}
 
-	for (int i = 0; i < selectedSurfaceVertices.size(); i++) {
+	for (size_t i = 0; i < selectedSurfaceVertices.size(); ++i) {
 		jiaodians.push_back(selectedSurfaceVertices[i].x);
 		jiaodians.push_back(selectedSurfaceVertices[i].y);
 		jiaodians.push_back(selectedSurfaceVertices[i].z);
 	}
 
-	// 5) 使用所有角点候选创建OBB并输出8个角点
 	OBB obb = OBB::calculateOBB(selectedSurfaceVertices);
 	std::vector<Point3D> obbCorners = obb.getCorners();
 
@@ -3121,6 +3175,7 @@ std::vector<double> cursePart::calculateOBBCornersFromPickupMap(const std::map<u
 
 	qDebug() << "calculateOBBCornersFromPickupMap: 采样点=" << samplePoints.size()
 		<< "交点=" << rayIntersectionPoints.size()
+		<< "曲面顶点=" << surfaceVerticesFromPart.size()
 		<< "顶点候选=" << selectedSurfaceVertices.size()
 		<< "输出角点=" << obbCorners.size();
 

@@ -122,4 +122,6 @@ private:
 	ULONG getObjIdByName(PQDataType objType, const QString& objName) const;
 	QString generatePathGroupPostContentInternal(ULONG robotId, BSTR pathGroupId,
 		const QString& robotName, const QString& pathGroupName) const;
+	// 新增：根据机器人名找到对应导轨 ID
+	ULONG getRailIdForRobot(const QString& robotName) const;
 };

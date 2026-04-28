@@ -94,8 +94,8 @@ bool postProcessing::loadRobotAndPathData()
 						QString baseContent = generatePathGroupPostContentInternal(
 							robotId, pathGroupId, robotName, pathGroupName);
 
-						QString sprayContent = buildSprayEventSection(robotId, pathGroupName.trimmed());
-						QString finalTrajectoryContent = baseContent + sprayContent;
+						// 不再把喷涂事件统一追加到文件末尾
+						QString finalTrajectoryContent = baseContent;
 
 						int groupNodeId = static_cast<int>(robotId * 1000 + pgIndex);
 						addChildNode(parentNodeId, pathGroupName, groupNodeId, "");
@@ -287,10 +287,14 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 	// 获取机器人名称
 	QString robotName = getNodeName(robotNodeId);
 	if (robotName.isEmpty()) {
-		QMessageBox::warning(this, QString ("警告"),
-			QString ("无法获取机器人名称"));
+		QMessageBox::warning(this, QString("警告"),
+			QString("无法获取机器人名称"));
 		return false;
 	}
+
+	// 判断该机器人是否关联AGV：无AGV则不生成位置后置文件
+	const ULONG agvId = getAgvIdForRobot(robotName);
+	const bool shouldGeneratePositionFile = (agvId != 0);
 
 	// 判断是否为AGV小车
 	bool isAGV = robotName.contains("AGV", Qt::CaseInsensitive);
@@ -301,8 +305,8 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 
 	// 检查保存路径
 	if (savePath.isEmpty()) {
-		QMessageBox::warning(this, QString ("警告"),
-			QString ("请选择保存路径"));
+		QMessageBox::warning(this, QString("警告"),
+			QString("请选择保存路径"));
 		return false;
 	}
 
@@ -353,23 +357,20 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 		// 生成轨迹内容
 		QString trajectoryContent = generateTrajectoryContentForGroup(groupId);
 
-		// 生成位置内容（原始树节点内容）
-		QString positionContent = generatePositionContentForGroup(groupId);
-
 		// 创建组文件夹
 		QString groupFolderName = robotName + "_" + groupName;
 		QString groupFolderPath = robotFolderPath + "/" + groupFolderName;
-		
+
 		QDir groupDir(groupFolderPath);
 		if (!groupDir.mkpath(".")) {
-			QMessageBox::critical(this, QString ("错误"),
+			QMessageBox::critical(this, QString("错误"),
 				QString("无法创建组文件夹: %1").arg(groupFolderPath));
 			allSuccess = false;
 			continue;
 		}
 
 		// 写入轨迹文件
-		QString trajectoryFilePath = groupFolderPath + "/" + groupFolderName + "_trajectory.txt";
+		QString trajectoryFilePath = groupFolderPath + "/" + groupFolderName + "_trajectory.";
 		QFile trajectoryFile(trajectoryFilePath);
 		if (!trajectoryFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
 			QMessageBox::critical(this, QString("错误"),
@@ -383,20 +384,24 @@ bool postProcessing::generateRobotPostFiles(int robotNodeId)
 		trajectoryStream << trajectoryContent;
 		trajectoryFile.close();
 
-		// 写入位置文件
-		QString positionFilePath = groupFolderPath + "/" + groupFolderName + "_position" + positionFileSuffix;
-		QFile positionFile(positionFilePath);
-		if (!positionFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-			QMessageBox::critical(this, QString ("错误"),
-				QString ("无法创建位置文件: %1").arg(positionFilePath));
-			allSuccess = false;
-			continue;
-		}
+		// 仅当有关联AGV时，写入位置文件
+		if (shouldGeneratePositionFile) {
+			QString positionContent = generatePositionContentForGroup(groupId);
 
-		QTextStream positionStream(&positionFile);
-		positionStream.setCodec("UTF-8");
-		positionStream << positionContent;
-		positionFile.close();
+			QString positionFilePath = groupFolderPath + "/" + groupFolderName + "_position" + positionFileSuffix;
+			QFile positionFile(positionFilePath);
+			if (!positionFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+				QMessageBox::critical(this, QString("错误"),
+					QString("无法创建位置文件: %1").arg(positionFilePath));
+				allSuccess = false;
+				continue;
+			}
+
+			QTextStream positionStream(&positionFile);
+			positionStream.setCodec("UTF-8");
+			positionStream << positionContent;
+			positionFile.close();
+		}
 
 		generatedFiles << groupFolderPath;
 	}
@@ -446,47 +451,57 @@ QString postProcessing::generatePositionContentForGroup(int groupNodeId)
 	QString positionContent;
 	int positionCount = 0;
 
-	// 检查是否有子节点（位置信息节点）
+	// 组节点不存在，返回默认内容
 	if (!childIdToItemMap.contains(groupNodeId)) {
-		// 如果没有子节点，返回默认的位置文件内容
-		return QString ("; 位置信息文件\n; 该组没有配置具体的位置点\n");
+		return QString("; 位置信息文件\n; 该组没有配置具体的位置点\n");
 	}
 
-	QTreeWidgetItem *groupItem = childIdToItemMap[groupNodeId];
+	QTreeWidgetItem* groupItem = childIdToItemMap[groupNodeId];
 
-	// 遍历子节点（位置信息节点）
-	for (int i = 0; i < groupItem->childCount(); i++) {
-		QTreeWidgetItem *positionItem = groupItem->child(i);
-		int positionId = positionItem->data(0, Qt::UserRole).toInt();
-		QString positionText = getNodeContent(positionId);
+	// 仅收集“位置”子节点，排除“轨迹”子节点
+	for (int i = 0; i < groupItem->childCount(); ++i) {
+		QTreeWidgetItem* subItem = groupItem->child(i);
+		const QString subName = subItem->text(0).trimmed();
 
-		if (!positionText.isEmpty()) {
-			positionContent += QString ("; 位置信息 %1\n").arg(++positionCount);
-			positionContent += positionText + "\n\n";
+		// 例如：位置_xxx；防止把“轨迹_xxx”写入位置文件
+		if (!subName.startsWith("位置_") && !subName.contains("位置")) {
+			continue;
 		}
+
+		const int subNodeId = subItem->data(0, Qt::UserRole).toInt();
+		const QString subContent = getNodeContent(subNodeId).trimmed();
+		if (subContent.isEmpty()) {
+			continue;
+		}
+
+		positionContent += QString("; 位置信息 %1\n").arg(++positionCount);
+		positionContent += subContent + "\n\n";
 	}
 
-	// 如果没有位置信息，返回默认内容
 	if (positionContent.isEmpty()) {
-		positionContent = QString ("; 位置信息文件\n; 该组没有配置具体的位置点\n");
+		positionContent = QString("; 位置信息文件\n; 该组没有配置具体的位置点\n");
 	}
 
 	return positionContent;
 }
 
-bool postProcessing::savePostFile(const QString &trajectoryContent, const QString &positionContent)
+bool postProcessing::savePostFile(const QString& trajectoryContent, const QString& positionContent)
 {
 	if (robotName.isEmpty() || pathGroupName.isEmpty()) {
-		QMessageBox::warning(this, QString ("警告"),
-			QString ("机器人名称或路径组名称未设置，无法生成文件"));
+		QMessageBox::warning(this, QString("警告"),
+			QString("机器人名称或路径组名称未设置，无法生成文件"));
 		return false;
 	}
 
 	if (savePath.isEmpty()) {
-		QMessageBox::warning(this, QString ("警告"),
-			QString ("请选择保存路径"));
+		QMessageBox::warning(this, QString("警告"),
+			QString("请选择保存路径"));
 		return false;
 	}
+
+	// 判断该机器人是否关联AGV：无AGV则不生成位置后置文件
+	const ULONG agvId = getAgvIdForRobot(robotName);
+	const bool shouldGeneratePositionFile = (agvId != 0);
 
 	// 根据机器人名称判断是否为AGV小车
 	bool isAGV = robotName.contains("AGV", Qt::CaseInsensitive);
@@ -497,8 +512,8 @@ bool postProcessing::savePostFile(const QString &trajectoryContent, const QStrin
 	QDir robotDir(robotFolderPath);
 	if (!robotDir.exists()) {
 		if (!robotDir.mkpath(".")) {
-			QMessageBox::critical(this, QString ("错误"),
-				QString ("无法创建机器人文件夹: %1").arg(robotFolderPath));
+			QMessageBox::critical(this, QString("错误"),
+				QString("无法创建机器人文件夹: %1").arg(robotFolderPath));
 			return false;
 		}
 	}
@@ -511,16 +526,16 @@ bool postProcessing::savePostFile(const QString &trajectoryContent, const QStrin
 	// 删除已存在的路径组文件夹（清理旧文件）
 	if (groupDir.exists()) {
 		if (!groupDir.removeRecursively()) {
-			QMessageBox::critical(this, QString ("错误"),
-				QString ("无法删除旧文件: %1").arg(groupFolderPath));
+			QMessageBox::critical(this, QString("错误"),
+				QString("无法删除旧文件: %1").arg(groupFolderPath));
 			return false;
 		}
 	}
 
 	// 重新创建路径组文件夹
 	if (!groupDir.mkpath(".")) {
-		QMessageBox::critical(this, QString ("错误"),
-			QString ("无法创建路径组文件夹: %1").arg(groupFolderPath));
+		QMessageBox::critical(this, QString("错误"),
+			QString("无法创建路径组文件夹: %1").arg(groupFolderPath));
 		return false;
 	}
 
@@ -528,8 +543,8 @@ bool postProcessing::savePostFile(const QString &trajectoryContent, const QStrin
 	QString trajectoryFilePath = groupFolderPath + "/" + groupFolderName + "_trajectory.txt";
 	QFile trajectoryFile(trajectoryFilePath);
 	if (!trajectoryFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-		QMessageBox::critical(this, QString ("错误"),
-			QString ("无法创建轨迹文件: %1").arg(trajectoryFilePath));
+		QMessageBox::critical(this, QString("错误"),
+			QString("无法创建轨迹文件: %1").arg(trajectoryFilePath));
 		return false;
 	}
 
@@ -538,22 +553,25 @@ bool postProcessing::savePostFile(const QString &trajectoryContent, const QStrin
 	trajectoryStream << trajectoryContent;
 	trajectoryFile.close();
 
-	// 创建位置信息文件（根据是否为AGV决定后缀）
-	QString positionFilePath = groupFolderPath + "/" + groupFolderName + "_position" + positionFileSuffix;
-	QFile positionFile(positionFilePath);
-	if (!positionFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-		QMessageBox::critical(this, QString ("错误"),
-			QString ("无法创建位置文件: %1").arg(positionFilePath));
-		return false;
-	}
+	// 仅当有关联AGV时，创建位置信息文件
+	if (shouldGeneratePositionFile) {
+		QString positionFilePath = groupFolderPath + "/" + groupFolderName + "_position" + positionFileSuffix;
+		QFile positionFile(positionFilePath);
+		if (!positionFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+			QMessageBox::critical(this, QString("错误"),
+				QString("无法创建位置文件: %1").arg(positionFilePath));
+			return false;
+		}
 
-	QTextStream positionStream(&positionFile);
-	positionStream.setCodec("UTF-8");
-	positionStream << positionContent;
-	positionFile.close();
+		QTextStream positionStream(&positionFile);
+		positionStream.setCodec("UTF-8");
+		positionStream << positionContent;
+		positionFile.close();
+	}
 
 	return true;
 }
+
 
 int postProcessing::addParentNode(const QString &name, int id)
 {
@@ -944,7 +962,7 @@ QString postProcessing::buildAgvStationEventSection(ULONG agvId, const QString& 
 	}
 	keys.removeDuplicates();
 
-	stream << QString::fromStdString("\n; ===== AGV站位点事件（发送/等待） =====\n");
+	stream << QString::fromStdString("\n; ===== AGV站位点事件（发送/等待）===== \n");
 
 	int nEventTemplateLen = 0;
 	if (FAILED(m_ptrKit->Doc_get_event_template_count(agvId, &nEventTemplateLen)) || nEventTemplateLen <= 0) {
@@ -1191,8 +1209,8 @@ QString postProcessing::generatePathGroupPostContentInternal(
 		return content;
 	}
 
-	// 外部轴（导轨）
-	ULONG externalId = getObjIdByName(PQ_ROBOT, robotName + "_rail");
+	// 外部轴（导轨）：优先走连接关系
+	ULONG externalId = getRailIdForRobot(robotName);
 	int railCount = 0;
 	if (externalId != 0) {
 		m_ptrKit->Doc_get_obj_joint_count(externalId, &railCount);
@@ -1295,6 +1313,46 @@ QString postProcessing::generatePathGroupPostContentInternal(
 						}
 					}
 
+					// 读取当前点的喷涂事件，注入到 pointInfo.event
+					{
+						WCHAR* wsName = nullptr;
+						ULONG executeDeviceId = 0;
+						LONG pointForward = 1; // 非0视为点前，0视为点后
+						WCHAR* wsEventTemplate = nullptr;
+						WCHAR* wsEventContent = nullptr;
+						LONG bUnion = 0;
+						ULONG* nozzleIds = nullptr;
+						ULONG* assistorIds = nullptr;
+						INT assistorCount = 0;
+
+						HRESULT hrEvent = m_ptrKit->Point_get_spray_event_content(
+							pointId, &wsName, &executeDeviceId, &pointForward,
+							&wsEventTemplate, &wsEventContent, &bUnion,
+							&nozzleIds, &assistorIds, &assistorCount);
+
+						if (SUCCEEDED(hrEvent)) {
+							const QString eventName = wsName
+								? QString::fromWCharArray(wsName)
+								: QString();
+							const QString eventContent = wsEventContent
+								? QString::fromWCharArray(wsEventContent)
+								: QString();
+
+							if (!eventName.trimmed().isEmpty() || !eventContent.trimmed().isEmpty()) {
+								pointInfo.event.hasEvent = true;
+								pointInfo.event.name = CComBSTR(eventName.toStdWString().c_str());
+								pointInfo.event.content = CComBSTR(eventContent.toStdWString().c_str());
+								pointInfo.event.position = CComBSTR(pointForward != 0 ? L"before" : L"after");
+							}
+						}
+
+						if (wsName) m_ptrKit->PQAPIFree((LONG_PTR*)wsName);
+						if (wsEventTemplate) m_ptrKit->PQAPIFree((LONG_PTR*)wsEventTemplate);
+						if (wsEventContent) m_ptrKit->PQAPIFree((LONG_PTR*)wsEventContent);
+						if (nozzleIds) m_ptrKit->PQAPIFreeArray((LONG_PTR*)nozzleIds);
+						if (assistorIds) m_ptrKit->PQAPIFreeArray((LONG_PTR*)assistorIds);
+					}
+
 					generator.addTrajectoryPoint(pointInfo);
 
 					if (dPointPosture) {
@@ -1327,6 +1385,56 @@ QString postProcessing::generatePathGroupPostContentInternal(
 	}
 
 	return content;
+}
+
+ULONG postProcessing::getRailIdForRobot(const QString& robotName) const
+{
+	auto tryFile = [&](const QString& filePath) -> ULONG {
+		QFile f(filePath);
+		if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+			return 0;
+		}
+
+		const QByteArray data = f.readAll();
+		f.close();
+
+		QJsonParseError err;
+		QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+		if (err.error != QJsonParseError::NoError || !doc.isArray()) {
+			return 0;
+		}
+
+		const QJsonArray arr = doc.array();
+		for (const QJsonValue& v : arr) {
+			if (!v.isArray()) {
+				continue;
+			}
+
+			const QJsonArray row = v.toArray();
+			// 关系格式: [robotName, railName, agvName]
+			if (row.size() < 2) {
+				continue;
+			}
+
+			const QString rName = row.at(0).toString().trimmed();
+			const QString railName = row.at(1).toString().trimmed();
+
+			if (rName == robotName.trimmed() &&
+				!railName.isEmpty() &&
+				railName != QStringLiteral("无")) {
+				return getObjIdByName(PQ_ROBOT, railName);
+			}
+		}
+
+		return 0;
+		};
+
+	ULONG id = tryFile("./temp/jsons/relations.json");
+	if (id != 0) {
+		return id;
+	}
+
+	return tryFile("relations.json");
 }
 
 ULONG postProcessing::getAgvIdForRobot(const QString& robotName) const
