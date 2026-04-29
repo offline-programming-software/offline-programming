@@ -17,6 +17,7 @@
 #include"robxFileIO.h"
 #include "test\RobxFileIOManagerWidget.h"
 #include "OnlineProcess\ConnectSetting.h"
+#include "JointCsvTrajectoryDialog.h"
 
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
@@ -66,19 +67,21 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 		SARibbonPannel*  path = sence->addPannel("轨迹规划");
 			QAction* pathGen = path->addAction("轨迹生成", QIcon(":/image/resource/24.png"),QToolButton::InstantPopup);
 				connect(pathGen, SIGNAL(triggered()), this, SLOT(on_create_path()));
+			QAction* jointCsvTrajectory = path->addAction(QString::fromUtf8(u8"关节CSV生成轨迹"), QIcon(":/image/resource/24.png"), QToolButton::InstantPopup);
+				connect(jointCsvTrajectory, &QAction::triggered, this, &MainWindow::on_joint_csv_trajectory);
 			//QAction* action69 = path->addAction("区域划分", QIcon(":/image/resource/33.png"), QToolButton::InstantPopup);
 			//	connect(action69, SIGNAL(triggered()), this, SLOT(on_curse_part()));//喷涂区域划分
 			QAction* action10 = path->addAction("喷涂路径生成", QIcon(":/image/resource/30.png"), QToolButton::InstantPopup);
 				connect(action10, SIGNAL(triggered()), this, SLOT(on_campath_flat_surface()));//随形喷涂
 
 		//|轨迹修正|
-		//SARibbonPannel* correction = sence->addPannel("轨迹修正");
-		//	QAction* action101 = correction->addAction("变形修正设置", QIcon(":/image/resource/bendingFunc.png"), QToolButton::InstantPopup);
-		//		connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
-		//	QAction* action102 = correction->addAction("对象变形修正", QIcon(":/image/resource/bendingmanager .png"), QToolButton::InstantPopup);
-		//		connect(action102, &QAction::triggered, this, &MainWindow::on_bendingManagerWidget_open);
-		//	QAction* action103 = correction->addAction("对象偏移修正", QIcon(":/image/resource/positioncorrect.png"), QToolButton::InstantPopup);
-		//		connect(action103, &QAction::triggered, this, &MainWindow::on_PositionCorrectWidget_open);
+		SARibbonPannel* correction = sence->addPannel("轨迹修正");
+			QAction* action101 = correction->addAction("变形修正设置", QIcon(":/image/resource/bendingFunc.png"), QToolButton::InstantPopup);
+				connect(action101, SIGNAL(triggered()), this, SLOT(on_trajCorrectdock_open()));//输出动画
+			QAction* action102 = correction->addAction("对象变形修正", QIcon(":/image/resource/bendingmanager .png"), QToolButton::InstantPopup);
+				connect(action102, &QAction::triggered, this, &MainWindow::on_bendingManagerWidget_open);
+			QAction* action103 = correction->addAction("对象偏移修正", QIcon(":/image/resource/positioncorrect.png"), QToolButton::InstantPopup);
+				connect(action103, &QAction::triggered, this, &MainWindow::on_PositionCorrectWidget_open);
 
 		//|仿真|
 		SARibbonPannel*  complie = sence->addPannel("仿真调试");
@@ -402,6 +405,12 @@ void MainWindow::on_create_path()
 	}
 	wchar_t whMoudle[] = _T("RO_CMD_GENERATE_PATH");
 	m_ptrKit->Doc_start_module((LPWSTR)whMoudle);
+}
+
+void MainWindow::on_joint_csv_trajectory()
+{
+	JointCsvTrajectoryDialog dialog(m_ptrKit, this);
+	dialog.exec();
 }
 
 void MainWindow::OnCompile()
@@ -1374,8 +1383,8 @@ void MainWindow::InitPQKit()
 void MainWindow::OnInitializeKitThread()
 {
 	//initialize pqkit
-	CComBSTR bsName = L"ra_tsinghua_whk03";
-	CComBSTR bsPWD = L"tsinghua_whk03";
+	CComBSTR bsName = L"ra_tsinghua_whk01";
+	CComBSTR bsPWD = L"tsinghua_whk01";
 	//CComBSTR bsName = L"";
 	//CComBSTR bsPWD = L"";
 	HRESULT hr = m_ptrKit->pq_InitPlatformComponent(m_ptrKitCallback, (int)(this->winId()), bsName, bsPWD);
@@ -1612,4 +1621,6 @@ void MainWindow::OnDraw()
 {
 	
 }
+
+
 

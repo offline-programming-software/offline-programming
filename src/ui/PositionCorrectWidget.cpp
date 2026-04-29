@@ -1,4 +1,5 @@
 #include "ui\PositionCorrectWidget.h"
+#include <iostream>
 #include <QDebug>
 
 PositionCorrectWidget::PositionCorrectWidget(CComPtr<IPQPlatformComponent> ptrKit, CPQKitCallback* ptrKitCallback, QWidget* parent)
@@ -252,4 +253,66 @@ void PositionCorrectWidget::on_btnApply_clicked()
 
 	qDebug() << "Position correction applied for Object ID:" << m_currentObjID
 		<< "in Coordinate ID:" << m_currentCoordID;
+}
+
+void PositionCorrectWidget::on_btnTest_clicked()
+{
+	std::cout << "btnTestClicked" << std::endl;
+	CComBSTR bsName;
+	CComBSTR bsID;
+	m_ptrKit->pq_GetAllDataObjectsByType(PQ_ROBOT, &bsName, &bsID);
+	ulong railID;
+	ulong robotID;
+	const QString idText = QString::fromWCharArray(bsID);
+	const QStringList idParts = idText.split(QChar('#'), QString::SkipEmptyParts);
+	if (idParts.size() >= 2)
+	{
+		railID = idParts[0].toULong();
+		robotID = idParts[1].toULong();
+	}
+	DOUBLE dRobJoints[18] = { 0.1745,0.1745,0.1745,0.1745,0.1745,0.1745,0,0,0,0,0,0,0,0,0,0,0,0};
+	INT nRJointsCount = 18;
+	DOUBLE dGuideJoints[9] = { 0,0,0,1000,0,0,2000,0,0 };
+	INT nRGuideCount = 9;
+	DOUBLE dPositionorJoints[1] = {0};
+	INT nPJointsCount = 1;
+	DOUBLE dVel[1] = { 50 };
+	DOUBLE dSpeedPercent[1] = { 50 };
+	INT nApproach[1] = { 50 };
+	INT PointCOunt = 3;
+	ULONG uiPathID = 0;
+	PQPointInstruction eInstruct[1] = { PQ_ABSJOINT };
+	INT instruct[1] = {PQ_ABSJOINT};
+	ULONG uoPathID = 0;
+	CComBSTR pathName = L"testPath";
+	std::wstring groupName = L"testGrp";
+	ULONG uCorID = 0;
+	ULONG uPathID = 0;
+	m_ptrKit->Path_insert_from_joint(robotID,dRobJoints,nRJointsCount,
+	dGuideJoints,nRGuideCount,dPositionorJoints, 0,PointCOunt,
+	eInstruct,dVel, dSpeedPercent, nApproach, pathName, CComBSTR(groupName.c_str()),
+	uCorID, &uPathID,true);
+
+
+	//i_ulRobotID    指定生成的轨迹归属于哪个机器人
+	//i_dRobotJoints 各个点位机器人的关节角数据（旋转轴传弧度，平移轴传距离）
+	//i_nRobotJointsSize 关节角数据数组大小
+	//i_dGuideJoints 关联的导轨关节角数据（旋转轴传弧度，平移轴传距离）
+	//i_nGuideJointsSize 导轨数据数组大小
+	//i_dPositionerJoints 关联的变位机关节角数据（旋转轴传弧度，平移轴传距离）
+	//i_nPositionerJoints
+	//Size
+	//变位机数据数组大小
+	//i_nPointCount 输入的轨迹点个数
+	//i_eInstruct 各个点处的轨迹点指令（PQ_JOINT：关节角 PQ_ABSJOINT：AbsJ）
+	//i_dVelocity 轨迹点速度，按序排列
+	//i_dSpeedPercent 轨迹点速度百分比，按序排列
+	//i_nApproach    轨迹点轨迹逼近，按序排列
+	//i_PathName    生成的轨迹名称
+	//i_GroupName    生成的轨迹所属轨迹组名称
+	//i_uCoordinateID 参考坐标系ID
+	//o_PathID 返回生成的轨迹ID
+	//i_bIsUpdate 插入点后是否更新，如果多次循环调用将i_bIsUpdate设置为False，
+	//在完成所有轨迹点插入后调用Doc_update_view更新一次即可
+
 }

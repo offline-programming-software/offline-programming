@@ -63,6 +63,7 @@ private slots:
 	void cmbObj_currentIndexChanged(int index);
 	void cmbCoord_currentIndexChanged(int index);
 	void on_btnApply_clicked();
+	void on_btnTest_clicked();
 
 };
 //需要用到的接口说明：

@@ -120,6 +120,7 @@ protected slots:
 	void on_measurement();
 	void on_create_frame();
 	void on_create_path();
+	void on_joint_csv_trajectory();
 	void OnCompile();
 	void on_simulate();
 	void on_post();
@@ -181,3 +182,6 @@ protected slots:
 
 };
 #endif 
+
+
+
