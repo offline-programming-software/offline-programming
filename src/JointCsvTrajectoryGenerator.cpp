@@ -474,6 +474,7 @@ JointCsvTrajectoryGenerator::GenerateResult JointCsvTrajectoryGenerator::callAdd
 	CComBSTR pathName(request.trajectoryName.toStdWString().c_str());
 	CComBSTR groupName(L"testGrp");
 	const ULONG coordinateId = 0;
+	
 	const long isUpdate = TRUE;
 
 	ULONG generatedPathId = 0;
@@ -492,7 +493,7 @@ JointCsvTrajectoryGenerator::GenerateResult JointCsvTrajectoryGenerator::callAdd
 		approaches.data(),
 		pathName,
 		groupName,
-		coordinateId,
+		PQ_COORINATE_WORLD,
 		&generatedPathId,
 		isUpdate);
 
