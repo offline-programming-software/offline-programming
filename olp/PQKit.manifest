@@ -1,0 +1,492 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity type="win32" name="PQKit" version="9.0.0.0" processorArchitecture="amd64"/>
+  <file name="PQKit\bin\RobotArt\bin\RPC.dll" hashalg="SHA1">
+    <comClass
+        description="PQPlatformComponent Class"
+        clsid="{32087F6B-AABF-420F-AFEB-5B1EAF4D88F2}"
+        threadingModel="Apartment"
+        tlbid="{250D49B7-0A0E-42CF-9DBD-55E017531566}" />
+    <comClass
+        description="PQComponentOption Class"
+        clsid="{A04A7678-FCEA-4BA3-8189-7E23199EB040}"
+        threadingModel="Apartment"
+        tlbid="{250D49B7-0A0E-42CF-9DBD-55E017531566}" />
+    <comClass
+        description="PQComponentUtility Class"
+        clsid="{E9B90F9C-9D0E-4A83-B73B-D48819F10A2D}"
+        threadingModel="Apartment"
+        tlbid="{250D49B7-0A0E-42CF-9DBD-55E017531566}" />
+  </file>
+  <file name="PQKit\bin\RobotArt\bin\RobotArtPQ.dll" hashalg="SHA1">
+    <comClass
+        description="RobotArtPQ Class"
+        clsid="{6b8c6c1c-db64-4fd2-b058-9b873ac2b98b}"
+        threadingModel="Apartment"
+        progid="RobotCAXALib.RobotCAXAAddin"
+        tlbid="{823713a8-5a23-4d13-adbf-e650f43aede8}" />
+    <comClass
+		    description="RoDmEDOProxy Class"
+		    clsid="{F9D469EE-4F09-4C8F-A793-1C1300F4518C}"
+		    threadingModel="Apartment"
+		    progid="RobotCAXALib.RoDmEDOProxy"
+		    tlbid="{823713a8-5a23-4d13-adbf-e650f43aede8}" />
+  </file>
+  <file name="PQKit\bin\UPApiBase.dll" hashalg="SHA1">
+    <comClass
+        description="ZMathMatrix Class"
+        clsid="{2F15BC7B-A236-4214-A270-B6F47ACEF746}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="DDEventsObj Class"
+        clsid="{B2EE8C6C-853B-4B03-A945-B6DD6523E326}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZSceneDoc Class"
+        clsid="{7104DF52-DDE2-47C3-BCD3-371A02B22B6E}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZDrawEvents Class"
+        clsid="{D53D5F7C-0732-472E-8A5D-C4610D3DB178}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZBaseApp Class"
+        clsid="{0F725035-AECA-4966-B376-96348EB87DF3}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ExtensionMgr Class"
+        clsid="{D0591CE9-185B-4874-AD4E-5A9A740DFC03}"
+        threadingModel="Both"
+        tlbid="{0E026C75-2163-4D71-9900-25F679D07795}" />
+    <comClass
+        description="ZAddinSite Class"
+        clsid="{96D563BE-D44B-4EC8-AD62-186FA07E6507}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZAppEventsObj Class"
+        clsid="{2D2D9CA9-7E61-4904-8675-CA9358FB70A6}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZArray Class"
+        clsid="{CD1D25D4-8903-4765-BC10-8E675F5F6921}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZAssembly Class"
+        clsid="{5DBB8180-4B31-421B-AC34-CDD0A4734F1C}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZBody Class"
+        clsid="{A5061DD8-5088-423E-B3FC-B1E9D15D854B}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZOrthographicCamera Class"
+        clsid="{505629A2-F711-41A5-82D3-5E8FB71F867A}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZPerspectiveCamera Class"
+        clsid="{7183A3C9-7113-445C-8A9F-4F5058321F9B}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZCameraMgr Class"
+        clsid="{50936159-D011-4831-8411-072BCB3DBD15}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZCommandHandler Class"
+        clsid="{0E3634E0-62ED-4B78-930C-EC95CE3C229A}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZControlDescriptor Class"
+        clsid="{5BDC1968-047B-48D5-9771-64C3407712C0}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZDockingBar Class"
+        clsid="{6EE7B7B8-28CA-42BF-9C86-03B251D73711}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZEnvironment Class"
+        clsid="{F9E5FFE4-078E-4467-B774-E04CA20B42A4}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZEnvironmentMgr Class"
+        clsid="{0A712825-1937-4E25-BEDF-3D2FD5322155}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZFrame Class"
+        clsid="{0D89BD59-6391-4294-A511-F6A3E4BEEF1B}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZHandle Class"
+        clsid="{08E04820-D8F7-4DA0-B7AD-B19F8E7D27D5}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZHandleEvents Class"
+        clsid="{C1555AF4-7E92-4E7E-8709-56B02A8EEF8C}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZInteractor Class"
+        clsid="{FD1A5372-A0DE-44AD-A5CD-82690911E894}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZSelectEvents Class"
+        clsid="{61EAB977-83DC-44FF-8250-FB9187F0C3A8}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZMathPoint Class"
+        clsid="{5053EFAD-7925-470B-BB34-E87DD7F8BB81}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZMathVector Class"
+        clsid="{2AA29365-69E5-4306-A0DB-15DFB411716E}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZMenu Class"
+        clsid="{B4AD73BC-A36E-4870-B59E-1AEDA53FB53C}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZMouseEvents Class"
+        clsid="{416884B5-AE28-4FA0-BA7D-DD065ED67F98}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZObjExportSetup Class"
+        clsid="{7E5446B6-58CA-421F-8438-7033A11F9955}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZBodyPartGen Class"
+        clsid="{6A6705E4-CEFA-46DE-99F8-758DDC2111D6}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZPolyMesh Class"
+        clsid="{D6BCFABD-81C0-4229-89EB-EBC14C277AB5}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZRayTestResult Class"
+        clsid="{33C814C0-E9B5-4A3D-8F48-0C01CF4A36BE}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZRender Class"
+        clsid="{F8EF69E7-220B-400D-9EEB-46543839B6BE}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZRibbonBar Class"
+        clsid="{8743BC5D-17E4-4C34-AA05-DA157A27F1D7}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZSelectionMgr Class"
+        clsid="{991AAC7B-4037-462C-BA8D-4FF28EBB47F7}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZSurfaceFinish Class"
+        clsid="{8CA7FEA9-CA1E-49A2-BF8E-4FBE11F455E9}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZWindowMgr Class"
+        clsid="{9866B7FD-74BF-4F4E-BDF5-CDE65A14674D}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZWire Class"
+        clsid="{661C2F1C-0DB4-4EA7-8EE3-338975C88C12}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZStream Class"
+        clsid="{D456060C-620D-4345-B4FB-51D3391733FA}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZWindow Class"
+        clsid="{FC03B6F4-491B-4C2B-AA3D-6AE35D7B79AF}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZPane Class"
+        clsid="{CE70DC2E-374D-4C70-BF61-F5257E2EE122}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZOptionMgr Class"
+        clsid="{8D63EF3B-6ADC-4A3D-A5B0-410D7BE0929C}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZStatusBar Class"
+        clsid="{DA81A880-AD84-4769-B28E-FDDB9EADD832}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZFloor Class"
+        clsid="{927DC1B6-3A98-46A0-A728-F59C443A904D}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZFacetPart Class"
+        clsid="{A84C061C-4B90-4F95-B192-44F290CF2267}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZPointPart Class"
+        clsid="{6DE22B76-B746-44FD-AEA7-6E7AC90521BA}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+          description="ZPoint Class"
+          clsid="{DC571418-8DB9-4C39-B0AB-45D042D781C4}"
+          threadingModel="Both"
+          tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZPickedPoint Class"
+        clsid="{6932850B-12AB-4F9E-BBEE-9F2BC3C03BE2}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZCollisionDetector Class"
+        clsid="{1BAF8F7E-D859-4983-9798-55A936E93237}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZTexture Class"
+        clsid="{BD3FB9D6-2F21-44E3-A986-6A5B19BAB7AB}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZProjection Class"
+        clsid="{2CF87140-DA79-4982-B2F3-2AC2A65B5CDB}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZBSplineCurve3D Class"
+        clsid="{C8F75A17-62BB-4ECA-A179-9214304FD8CD}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZProfile Class"
+        clsid="{A62A7D34-C1DE-4D36-B27E-4992FC05F542}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZBSplineSurface Class"
+        clsid="{E872C1ED-1BFD-46E4-B089-2431D7A12030}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZBSplineCurve2D Class"
+        clsid="{13AB754F-33CA-4AC0-B3B2-A9E668B6062C}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZRenderNodeMesh Class"
+        clsid="{93E8E4CA-3AF0-4B9D-A256-06F189A406F1}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZRenderNodeMgr Class"
+        clsid="{3EE62412-E372-4264-81E2-C53F2E3AB10C}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZTextAnnotation Class"
+        clsid="{1E34FECD-D135-49C3-9223-106E5B47F4C5}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZFeatureExtrusion Class"
+        clsid="{629CF901-CF4B-41F9-8232-F5237BB06463}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZFeatureRevolution Class"
+        clsid="{9580137D-CA06-4202-B8BA-EFD3D03E54A7}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZConstraint Class"
+        clsid="{44CD0C2F-2FDE-4D89-A8EE-D42B9EA61AB6}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZFeatureLoft Class"
+        clsid="{90869BCB-5E56-48CB-8084-757303B957E5}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZBoxSelectionHandler Class"
+        clsid="{3B6CE713-D411-4622-8DAB-A913D2483E60}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="IZGPTriangulationReconstruction Class"
+        clsid="{1659F34C-67A5-4CF5-A7F6-830DDACD31EF}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZLineSegment Class"
+        clsid="{39FABE4E-044D-40FD-8BA8-5DB4205D86EE}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZPartCompare Class"
+        clsid="{5150F307-BAF7-4267-A8E8-4529A34C1CF9}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZVisibleFacesFilter Class"
+        clsid="{373E1513-E0A7-4509-82E0-2206168097B7}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZPointCloudEdgeExtraction Class"
+        clsid="{BBEEE30B-03F2-47EC-9C68-A8AE9E0F56E9}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZAShapesEdgeExtraction Class"
+        clsid="{B813319C-839B-424B-AF83-3887850EF09E}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZCylinder Class"
+        clsid="{64286B53-DD3A-4B04-9D8F-D1312AE0922F}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZTangentialDeflection Class"
+        clsid="{C09C4DF8-F40D-45D3-AFAC-161E62958A3A}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZSphere Class"
+        clsid="{DC69F4AA-C18B-42F2-84E0-615BCCBC436F}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZTube Class"
+        clsid="{17A79B2F-B346-4850-947D-65F8EAC116A8}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZTorus Class"
+        clsid="{CCCC51DA-7FB7-45A7-9B1C-A629C247FD53}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZWirePart Class"
+        clsid="{E9A570F2-CE57-4530-B503-378891B16C8F}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+        description="ZImportSetup Class"
+        clsid="{E27AA408-382A-47B0-954C-0C09DFAE467A}"
+        threadingModel="Both"
+        tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <comClass
+	    description="ZStepExportSetup Class"
+	    clsid="{5580509C-532B-4EE2-9710-B545CADD4138}"
+	    threadingModel="Both"
+	    tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}" />
+    <typelib tlbid="{D0487663-36E1-44A7-A645-BE354DF33629}"
+        version="1.0"
+        helpdir=""
+        flags=""/>
+  </file>
+  <file name="PQKit\bin\UPApiRawData.dll" hashalg="SHA1">
+    <comClass
+        description="UniversalID Class"
+        clsid="{C45DEF7E-2390-4328-B8D1-80581396AADC}"
+        threadingModel="Both"
+        tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+        description="SolidSupport Class"
+        clsid="{63ef3fd6-38c1-41ad-b6bf-23e8c06b3f0f}"
+        threadingModel="Both"
+        tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+        description="Shape Class"
+        clsid="{ce73d937-7c33-45de-a4a9-2fe7cb6af05d}"
+        threadingModel="Both"
+        tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+         description="PKBody3 Class"
+         clsid="{9b53e7cf-0922-42e2-b8b2-2a83fe8b9434}"
+         threadingModel="Both"
+         tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+          description="DependencySupport Class"
+          clsid="{46f5b678-839b-4db2-9888-0868b12eb27a}"
+          threadingModel="Both"
+          tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+          description="ShapeSupport Class"
+          clsid="{a4ac9eba-ce8c-4e57-9131-010a717f9b2d}"
+          threadingModel="Both"
+          tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+          description="UIAppUtil Class"
+          clsid="{580a6f24-7fe3-4d15-9685-7e12b8a41951}"
+          threadingModel="Both"
+          tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+          description="PageObject Class"
+          clsid="{76fda41f-1d35-459a-9cd8-317e92dde3e2}"
+          threadingModel="Both"
+          tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+          description="PathComponent Class"
+          clsid="{3CBB1982-575E-4686-9F63-77CE3CFB9255}"
+          threadingModel="Both"
+          tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+          description="Cuvre2d Class"
+          clsid="{AF69E09F-EC04-4709-BFA3-2DFAC1D7AB3E}"
+          threadingModel="Both"
+          tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+         description="CUIHandle Class"
+         clsid="{520302A7-04D0-482C-9AB3-975391367A5F}"
+         threadingModel="Both"
+         tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <comClass
+          description="CUIContext Class"
+          clsid="{C4BB11A2-2EA1-4552-A44D-D961AFF54DD5}"
+          threadingModel="Both"
+          tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}" />
+    <typelib tlbid="{ED0ABC68-7905-4215-85C7-66E85EDD01D9}"
+        version="1.0"
+        helpdir=""
+        flags=""/>
+  </file>
+</assembly>

@@ -1,0 +1,427 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>qml;cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Translation Files">
+      <UniqueIdentifier>{639EADAA-A684-42e4-A9AD-28FC9BCB8F7C}</UniqueIdentifier>
+      <Extensions>ts</Extensions>
+    </Filter>
+    <Filter Include="Source Files\core">
+      <UniqueIdentifier>{3fc4781b-c6ef-42d8-9a1d-a0c9a8de0243}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\onlilneProcess">
+      <UniqueIdentifier>{6c447ca5-aad4-47f0-977e-850bf95c62c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\test">
+      <UniqueIdentifier>{570d8913-6e64-45b5-a192-88ddd0f20d65}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ui">
+      <UniqueIdentifier>{80da7661-c8f6-4eb6-9c2b-52f703dc2d72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\utils">
+      <UniqueIdentifier>{a8284383-c56c-4919-9bc6-923fd6608a1b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\model">
+      <UniqueIdentifier>{a7479738-f6f3-41f7-b84f-42be00df2251}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\onlilneProcess\worker">
+      <UniqueIdentifier>{5cace61e-f048-4d05-8aa1-b0b036ee4ee7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\onlilneProcess\model">
+      <UniqueIdentifier>{9bc9ce2a-34a4-460f-b140-82802549c607}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NewFilter1">
+      <UniqueIdentifier>{abc742c9-b658-4a2a-9734-edb649874a03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testWidget">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>qrc;rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="..\include\addRobotSpace.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\AGVpath.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\cursePart.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\deformation_correction.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\effectiveness_analysis.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\InsertPathDlg.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\kinetic_analysis.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\loginwindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\MainWindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\mydialog.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\path_edit.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\path_optimize.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\path_partion.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\path_set_up.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\path_sort.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\PickSpinBox.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\pickWidget.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\posCal.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\postProcessing.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\PQKitCallback.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\PQKitInitThread.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\robotSpaceDefine.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\SARibbon.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\include\TrajCorrectDock.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\model\CorrectionModel.h">
+      <Filter>Source Files\model</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\OnlineProcess\ConnectSetting.h">
+      <Filter>Source Files\onlilneProcess</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\OnlineProcess\model\clientModel.h">
+      <Filter>Source Files\onlilneProcess\model</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\OnlineProcess\worker\zmqWorker.h">
+      <Filter>Source Files\onlilneProcess\worker</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\test\RobxFileIOManagerWidget.h">
+      <Filter>Source Files\test</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\ui\BendingManagerWidget.h">
+      <Filter>Source Files\ui</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\ui\PositionCorrectWidget.h">
+      <Filter>Source Files\ui</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\testWidget.h">
+      <Filter>testWidget</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="..\include\addRobotSpace.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\AGVpath.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\cursePart.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\deformation_correction.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\effectiveness_analysis.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\InsertPathDlg.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\kinetic_analysis.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\loginwindow.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\MainWindow.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\mydialog.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\path_edit.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\path_optimize.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\path_partion.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\path_set_up.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\path_sort.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\posCal.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\postProcessing.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\robotSpaceDefine.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\include\TrajCorrectDock.ui">
+      <Filter>Header Files</Filter>
+    </QtUic>
+    <QtUic Include="..\src\OnlineProcess\ConnectSetting.ui">
+      <Filter>Source Files\onlilneProcess</Filter>
+    </QtUic>
+    <QtUic Include="..\src\test\RobxFileIOManagerWidget.ui">
+      <Filter>Source Files\test</Filter>
+    </QtUic>
+    <QtUic Include="..\src\ui\BendingManagerWidget.ui">
+      <Filter>Source Files\ui</Filter>
+    </QtUic>
+    <QtUic Include="..\src\ui\PositionCorrectWidget.ui">
+      <Filter>Source Files\ui</Filter>
+    </QtUic>
+    <QtUic Include="..\src\testWidget.ui">
+      <Filter>testWidget</Filter>
+    </QtUic>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\boundBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\CommonStructs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\JointCsvTrajectoryDialog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\JointCsvTrajectoryGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\parseJSON.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\PQKitCallBackBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\PQKitError.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\robxFileIO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\spaceCalculate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\trajectory_processor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\TrajectoryFileGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\BendingManager.h">
+      <Filter>Source Files\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Correction.h">
+      <Filter>Source Files\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\utils.h">
+      <Filter>Source Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\OnlineProcess\Client.h">
+      <Filter>Source Files\onlilneProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\OnlineProcess\Device.h">
+      <Filter>Source Files\onlilneProcess</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\include\RPC.tlb">
+      <Filter>Header Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\addRobotSpace.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AGVpath.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\boundBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cursePart.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\deformation_correction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\effectiveness_analysis.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\InsertPathDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\JointCsvTrajectoryDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\JointCsvTrajectoryGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\kinetic_analysis.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\loginwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MainWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mydialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\parseJSON.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\path_edit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\path_optimize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\path_partion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\path_set_up.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\path_sort.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PickSpinBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pickWidget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\posCal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\postProcessing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PQKitCallback.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PQKitInitThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\robotSpaceDefine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\robxFileIO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SARibbon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\spaceCalculate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\TrajCorrectDock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\trajectory_processor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\TrajectoryFileGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\core\BendingManager.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\core\Correction.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\model\CorrectionModel.cpp">
+      <Filter>Source Files\model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\utils.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\OnlineProcess\Client.cpp">
+      <Filter>Source Files\onlilneProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\OnlineProcess\ConnectSetting.cpp">
+      <Filter>Source Files\onlilneProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\OnlineProcess\Device.cpp">
+      <Filter>Source Files\onlilneProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\OnlineProcess\model\clientModel.cpp">
+      <Filter>Source Files\onlilneProcess\model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\OnlineProcess\worker\zmqWorker.cpp">
+      <Filter>Source Files\onlilneProcess\worker</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\test\RobxFileIOManagerWidget.cpp">
+      <Filter>Source Files\test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ui\BendingManagerWidget.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ui\PositionCorrectWidget.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\testWidget.cpp">
+      <Filter>testWidget</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="..\resource.qrc">
+      <Filter>testWidget</Filter>
+    </QtRcc>
+  </ItemGroup>
+</Project>

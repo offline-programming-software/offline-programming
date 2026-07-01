@@ -1,0 +1,23 @@
+# VS缓存文件夹（几百MB ipch 在这里）
+.vs/
+*.ipch
+
+# 编译调试文件
+*.pdb
+*.ilk
+*.obj
+*.exp
+*.lib
+
+# 64位Debug输出（一堆超100MB dll）
+olp/x64/Debug/
+olp/x64/Release/
+
+# 第三方库二进制
+olp/x64/Debug/PQKit/bin/
+olp/x64/Debug/PQKit/bin/RobotArt/bin/
+
+# 临时、日志
+*.log
+*.tmp
+*.cache
