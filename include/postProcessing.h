@@ -124,4 +124,7 @@ private:
 		const QString& robotName, const QString& pathGroupName) const;
 	// 新增：根据机器人名找到对应导轨 ID
 	ULONG getRailIdForRobot(const QString& robotName) const;
+
+	//计算机器人每节点实际运动时间
+   double calculatetime(const double timeValue , std::vector<double>poseDataLast, std::vector<double>poseDataNow,double velocity) const;
 };

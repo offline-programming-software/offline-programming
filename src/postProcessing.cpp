@@ -1234,6 +1234,8 @@ QString postProcessing::generatePathGroupPostContentInternal(
 	struct RawPointData {
 		std::vector<double> robotJoints;
 		std::vector<double> externalAxes;
+		//获取点坐标
+		std::vector<double> poseData;
 		double velocity = 0.0;
 		int speedPercent = 100;
 		bool isPathStart = false;
@@ -1331,6 +1333,16 @@ QString postProcessing::generatePathGroupPostContentInternal(
 						}
 					}
 
+					//末端点坐标
+					if (dPointPosture != nullptr&& nPostureCount > 0)
+					{
+						ULONG poseTotal = static_cast<ULONG>(nPostureCount);
+						for (ULONG i = 0; i < poseTotal; ++i)
+						{
+							rawPoint.poseData.push_back(dPointPosture[i]);
+						}
+					}
+
 					// 读取当前点的喷涂事件，注入到 pointInfo.event
 					{
 						WCHAR* wsName = nullptr;
@@ -1376,13 +1388,16 @@ QString postProcessing::generatePathGroupPostContentInternal(
 						const double timeValue = static_cast<double>(rawPoints.size() - 1);
 						if (timeValue==0)
 						{
-							//当输入第一个i关节信息时，时间为0
+							//当输入第一个关节信息时，时间为0
                             rawTimes.push_back(timeValue);
 						}
 						else
 						{
 							//这里没有计算仿真的实际时间
-							rawTimes.push_back(timeValue);
+							int idx = (int)timeValue;
+							const double timeValuenowchanged = postProcessing::calculatetime(timeValue, rawPoints[idx-1].poseData, rawPoints[idx].poseData, rawPoints[idx].velocity);
+							const double timeValuenow = rawTimes[idx - 1] + timeValuenowchanged;
+							rawTimes.push_back(timeValuenow);
 						}
 						
 						if (rawPoint.isPathStart) {
@@ -1640,6 +1655,8 @@ ULONG postProcessing::getRailIdForRobot(const QString& robotName) const
 	return tryFile("relations.json");
 }
 
+
+
 ULONG postProcessing::getAgvIdForRobot(const QString& robotName) const
 {
 	auto tryFile = [&](const QString& filePath) -> ULONG {
@@ -1679,4 +1696,34 @@ ULONG postProcessing::getAgvIdForRobot(const QString& robotName) const
 		return id;
 	}
 	return tryFile("relations.json");
+}
+
+double postProcessing::calculatetime(const double timeValue, std::vector<double>poseDataLast, std::vector<double>poseDataNow,double velocity) const
+{
+	//安全验证
+	if (poseDataLast.size() < 7 || poseDataNow.size() < 7 || velocity <= 1e-6)
+	{
+		return 0.0; // 数据异常/速度为0，返回0
+	}
+
+	//提取前点位置
+	double x1 = poseDataLast[0];
+	double y1 = poseDataLast[1];
+	double z1 = poseDataLast[2];
+
+	//提取现在点数据
+	double x2 = poseDataNow[0];
+	double y2 = poseDataNow[1];
+	double z2 = poseDataNow[2];
+
+	double dx = x1 - x2;
+	double dy = y1 - y2;
+	double dz = z1 - z2;
+
+	double distSq = dx * dx + dy * dy + dz * dz;
+	double distance = std::sqrt(distSq);
+
+	double timeValuenow = distance / velocity;
+
+	return timeValuenow;
 }
