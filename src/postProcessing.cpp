@@ -1236,6 +1236,8 @@ QString postProcessing::generatePathGroupPostContentInternal(
 		std::vector<double> externalAxes;
 		//获取点坐标
 		std::vector<double> poseData;
+		//获取运动方式
+		PQPointInstruction iInstruct = PQ_LINE;
 		double velocity = 0.0;
 		int speedPercent = 100;
 		bool isPathStart = false;
@@ -1303,6 +1305,7 @@ QString postProcessing::generatePathGroupPostContentInternal(
 					rawPoint.velocity = dVelocity;
 					rawPoint.speedPercent = static_cast<int>(dSpeedPercent);
 					rawPoint.isPathStart = (ptIndex == 0);
+					rawPoint.iInstruct = iInstruct;
 
 					// 机器人关节
                     if (jointDataVariant.parray && jointDataVariant.parray->cDims == 1) {
@@ -1393,11 +1396,20 @@ QString postProcessing::generatePathGroupPostContentInternal(
 						}
 						else
 						{
-							//这里没有计算仿真的实际时间
+							//计算仿真的实际时间
 							int idx = (int)timeValue;
-							const double timeValuenowchanged = postProcessing::calculatetime(timeValue, rawPoints[idx-1].poseData, rawPoints[idx].poseData, rawPoints[idx].velocity);
-							const double timeValuenow = rawTimes[idx - 1] + timeValuenowchanged;
-							rawTimes.push_back(timeValuenow);
+							//只计算直线运动
+							if (iInstruct == PQ_LINE)
+							{
+                                const double timeValuenowchanged = postProcessing::calculatetime(timeValue, rawPoints[idx-1].poseData, rawPoints[idx].poseData, rawPoints[idx].velocity);
+							    const double timeValuenow = rawTimes[idx - 1] + timeValuenowchanged;
+							    rawTimes.push_back(timeValuenow);
+							}
+							else
+							{
+								const double timeValuenow = rawTimes[idx - 1] + 1.0;
+								rawTimes.push_back(timeValuenow);
+							}
 						}
 						
 						if (rawPoint.isPathStart) {
@@ -1535,6 +1547,7 @@ QString postProcessing::generatePathGroupPostContentInternal(
 				jointInformation info;
 				info.robotJoint = rawPoints[i].robotJoints;
 				info.pathVel = rawPoints[i].velocity;
+				info.iInstruct = rawPoints[i].iInstruct;
 				info.railPos = rawPoints[i].externalAxes;
 				info.railVel = railVelocities.empty() ? std::vector<double>() : railVelocities[i];
 				info.railAcc = railAccelerations.empty() ? std::vector<double>() : railAccelerations[i];
@@ -1545,6 +1558,7 @@ QString postProcessing::generatePathGroupPostContentInternal(
 			TrajectoryGenerator interpolator;
 			interpolator.initstate(jointInfos);
 			const double interpolationDt = 0.004;
+
 			interpolator.Generate(interpolationDt);
 
 			const auto positions = interpolator.get_positions();

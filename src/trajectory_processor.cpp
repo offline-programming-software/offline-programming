@@ -50,6 +50,7 @@ void TrajectoryGenerator::initstate(const std::vector<jointInformation>& jointIn
 	railJoints_.clear();
 	railVels_.clear();
 	railAccs_.clear();
+	iInstruct_.clear();
 	times_.clear();
 
 	// 检查输入是否为空
@@ -90,6 +91,7 @@ void TrajectoryGenerator::initstate(const std::vector<jointInformation>& jointIn
 		railJoints_.push_back(info.railPos);
 		railVels_.push_back(info.railVel);
 		railAccs_.push_back(info.railAcc);
+		iInstruct_.push_back(info.iInstruct);
 		times_.push_back(info.time);
 	}
 
@@ -200,7 +202,8 @@ void TrajectoryGenerator::Generate(double dt) {
 		double duration = times_[k] - times_[k - 1];
 
 		// 计算所有关节的系数（使用五次多项式）
-		for (size_t i = 0; i < num_joints_; ++i) {
+		for (size_t i = 0; i < num_joints_; ++i) 
+		{
 			joints_[i].ComputeCoefficients(
 				robotJoints_[k - 1][i], robotJoints_[k][i],
 				joint_velocities_[k - 1][i], joint_velocities_[k][i],
@@ -210,7 +213,8 @@ void TrajectoryGenerator::Generate(double dt) {
 		}
 
 		// 计算所有导轨的系数
-		for (size_t rail_idx = 0; rail_idx < num_rails_; rail_idx++) {
+		for (size_t rail_idx = 0; rail_idx < num_rails_; rail_idx++) 
+		{
 			rail_[rail_idx].ComputeCoefficients(
 				railJoints_[k - 1][rail_idx], railJoints_[k][rail_idx],
 				railVels_[k - 1][rail_idx], railVels_[k][rail_idx],
@@ -220,30 +224,57 @@ void TrajectoryGenerator::Generate(double dt) {
 		}
 
 		// 生成轨迹点
-		for (double t_physical = times_[k - 1];
-			t_physical <= times_[k] + 1e-6;  // 添加容差
-			t_physical += dt)
+		// 判断机器人运动类型
+		if (iInstruct_[k] == PQ_LINE)
 		{
-			double t_offset = t_physical - times_[k - 1];
-			if (t_offset > duration) t_offset = duration;
+			for (double t_physical = times_[k - 1];
+				t_physical <= times_[k] + 1e-6;  // 添加容差
+				t_physical += dt)
+			{
+				double t_offset = t_physical - times_[k - 1];
+				if (t_offset > duration) t_offset = duration;
 
-			// 计算所有关节的位置、速度、加速度
+				// 计算所有关节的位置、速度、加速度
+				std::vector<double> pos(num_joints_), vel(num_joints_), acc(num_joints_);
+				for (size_t j = 0; j < num_joints_; ++j) {
+					pos[j] = joints_[j].Position(t_offset);
+					vel[j] = joints_[j].Velocity(t_offset);
+					acc[j] = joints_[j].Acceleration(t_offset);
+				}
+
+				// 计算所有导轨的位置、速度、加速度
+				std::vector<double> rail_pos(num_rails_), rail_vel(num_rails_), rail_acc(num_rails_);
+				for (size_t rail_idx = 0; rail_idx < num_rails_; rail_idx++) {
+					rail_pos[rail_idx] = rail_[rail_idx].Position(t_offset);
+					rail_vel[rail_idx] = rail_[rail_idx].Velocity(t_offset);
+					rail_acc[rail_idx] = rail_[rail_idx].Acceleration(t_offset);
+				}
+
+				// 存储结果
+				time_steps_.push_back(t_physical);
+				positions_.push_back(pos);
+				velocities_.push_back(vel);
+				accelerations_.push_back(acc);
+				rail_positions_.push_back(rail_pos);
+				rail_velocities_.push_back(rail_vel);
+				rail_accelerations_.push_back(rail_acc);
+			}
+		}
+		else
+		{
+			double t_physical = times_[k] - times_[k - 1];
+			//输入机器人的位置、速度、加速度
 			std::vector<double> pos(num_joints_), vel(num_joints_), acc(num_joints_);
-			for (size_t j = 0; j < num_joints_; ++j) {
-				pos[j] = joints_[j].Position(t_offset);
-				vel[j] = joints_[j].Velocity(t_offset);
-				acc[j] = joints_[j].Acceleration(t_offset);
-			}
-
-			// 计算所有导轨的位置、速度、加速度
+			pos = robotJoints_[k - 1];
+			joint_velocities_[k - 1];
+			joint_accelerations_[k - 1];
+			
+			//输入导轨的位置、速度、加速度
 			std::vector<double> rail_pos(num_rails_), rail_vel(num_rails_), rail_acc(num_rails_);
-			for (size_t rail_idx = 0; rail_idx < num_rails_; rail_idx++) {
-				rail_pos[rail_idx] = rail_[rail_idx].Position(t_offset);
-				rail_vel[rail_idx] = rail_[rail_idx].Velocity(t_offset);
-				rail_acc[rail_idx] = rail_[rail_idx].Acceleration(t_offset);
-			}
+			rail_pos = railJoints_[k - 1];
+			rail_vel = railVels_[k - 1];
+			rail_acc = railAccs_[k - 1];
 
-			// 存储结果
 			time_steps_.push_back(t_physical);
 			positions_.push_back(pos);
 			velocities_.push_back(vel);

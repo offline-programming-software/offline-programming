@@ -13,6 +13,7 @@
 #include <cmath>
 #include <iomanip>
 #include <algorithm>
+#include "PQKitCallback.h"
 #include "CommonStructs.h"
 
 class QuinticPolynomial {
@@ -110,6 +111,7 @@ private:
 	std::vector<RailJoint> railJoints_;
 	std::vector<RailVel> railVels_;
 	std::vector<RailAcc> railAccs_;
+	std::vector<PQPointInstruction> iInstruct_;
 	std::vector<double> times_;
 
 	// 存储关节速度和加速度

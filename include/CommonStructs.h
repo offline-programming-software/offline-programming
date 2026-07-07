@@ -70,6 +70,7 @@ struct RobotPoint {
 struct jointInformation {
 	RobotJoint	robotJoint;
 	double		pathVel;
+	PQPointInstruction iInstruct = PQ_LINE;
 	RailJoint	railPos;
 	RailVel		railVel;
 	RailAcc		railAcc;
