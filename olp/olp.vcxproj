@@ -202,7 +202,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>D:\offline-programming\olp;D:\offline-programming\olp\x64\Debug\qt\uic;D:\vcpkg\vcpkg\installed\x64-windows\include\eigen3;D:\offline-programming\olp\x64\Debug\qt;D:\offline-programming\include;D:\offline-programming\olp\x64\Debug;D:\offline-programming\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\offline-programming\olp;D:\vcpkg\installed\x64-windows\include\eigen3\Eigen\src;D:\offline-programming\olp\x64\Debug\qt\uic;D:\vcpkg\installed\x64-windows\include\eigen3\Eigen;D:\vcpkg\installed\x64-windows\include\eigen3;D:\offline-programming\olp\x64\Debug\qt;D:\offline-programming\include;D:\offline-programming\olp\x64\Debug;D:\offline-programming\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>

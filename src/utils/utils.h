@@ -2,7 +2,7 @@
 #include<comdef.h>
 #include<qstring.h>
 #include<qstringlist.h>
-#include<Eigen/dense>
+#include<Eigen/Dense>
 #include<vector>
 #include "PQKitInitThread.h"
 #include "core/Correction.h"

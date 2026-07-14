@@ -1507,9 +1507,7 @@ std::vector<double> posCal::calculateJointValues(const std::vector<double>& move
 		}
 	}
 
-	Eigen::BDCSVD<Eigen::MatrixXd> svd(
-		Jacobian,
-		Eigen::ComputeThinU | Eigen::ComputeThinV);
+	Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU | Eigen::ComputeThinV> svd(Jacobian);
 
 	Eigen::VectorXd deltaJoints = svd.solve(targetDisplacement);
 	// 将结果转换回 std::vector

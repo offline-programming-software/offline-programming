@@ -3,7 +3,7 @@
 #include<array>
 #include<vector>
 #include <nlohmann/json.hpp>
-#include<Eigen/dense>
+#include<Eigen/Dense>
 #include <Windows.h>
 #include <qstringlist.h>
 
