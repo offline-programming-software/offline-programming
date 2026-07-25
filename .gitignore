@@ -10,8 +10,7 @@
 *.lib
 
 # 64位Debug输出（一堆超100MB dll）
-olp/x64/Debug/
-olp/x64/Release/
+olp/x64/
 
 #不同电脑配置不同
 olp/
