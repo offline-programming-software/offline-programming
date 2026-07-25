@@ -13,6 +13,9 @@
 olp/x64/Debug/
 olp/x64/Release/
 
+#不同电脑配置不同
+olp/
+
 # 第三方库二进制
 olp/x64/Debug/PQKit/bin/
 olp/x64/Debug/PQKit/bin/RobotArt/bin/

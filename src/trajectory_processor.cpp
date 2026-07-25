@@ -228,11 +228,21 @@ void TrajectoryGenerator::Generate(double dt) {
 		if (iInstruct_[k] == PQ_LINE)
 		{
 			for (double t_physical = times_[k - 1];
-				t_physical <= times_[k] + 1e-6;  // 添加容差
+				t_physical <= times_[k] + 1e-4;  // 添加容差
 				t_physical += dt)
 			{
-				double t_offset = t_physical - times_[k - 1];
-				if (t_offset > duration) t_offset = duration;
+				double t_offset = 0.00;
+
+				if (k != 1)
+				{
+					t_offset = t_physical - times_[k - 1] + dt;
+				}
+				else
+				{
+					t_offset = t_physical - times_[k - 1];
+				}
+				
+				if (t_offset > duration + 0.001) break;
 
 				// 计算所有关节的位置、速度、加速度
 				std::vector<double> pos(num_joints_), vel(num_joints_), acc(num_joints_);

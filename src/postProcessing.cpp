@@ -18,6 +18,7 @@
 #include <QJsonArray>
 #include <QJsonValue>
 #include <QFile>
+#include <cmath>
 
 postProcessing::postProcessing(QWidget* parent,
 	CComPtr<IPQPlatformComponent> ptrKit ,
@@ -1738,6 +1739,12 @@ double postProcessing::calculatetime(const double timeValue, std::vector<double>
 	double distance = std::sqrt(distSq);
 
 	double timeValuenow = distance / velocity;
+
+	double period = 0.004;
+
+	double remainder = std::fmod(timeValuenow, period);
+
+	timeValuenow = timeValuenow - remainder + period;
 
 	return timeValuenow;
 }
