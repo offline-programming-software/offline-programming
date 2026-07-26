@@ -126,5 +126,5 @@ private:
 	ULONG getRailIdForRobot(const QString& robotName) const;
 
 	//计算机器人每节点实际运动时间
-   double calculatetime(const double timeValue , std::vector<double>poseDataLast, std::vector<double>poseDataNow,double velocity) const;
+   double calculatetime(int ptIndex,int pointCount, std::vector<double>poseDataLast, std::vector<double>poseDataNow,double velocity) const;
 };

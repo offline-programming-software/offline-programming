@@ -114,7 +114,8 @@ void TrajectoryGenerator::computeJointVelocitiesAndAccelerations() {
 			double dt = times_[1] - times_[0];
 			if (dt > 1e-6) {
 				for (size_t j = 0; j < num_joints_; j++) {
-					joint_velocities_[i][j] = (robotJoints_[1][j] - robotJoints_[0][j]) / dt;
+					//joint_velocities_[i][j] = (robotJoints_[1][j] - robotJoints_[0][j]) / dt;
+					joint_velocities_[i][j] = 0;
 				}
 			}
 		}
@@ -132,7 +133,8 @@ void TrajectoryGenerator::computeJointVelocitiesAndAccelerations() {
 			double dt = times_[i + 1] - times_[i - 1];
 			if (dt > 1e-6) {
 				for (size_t j = 0; j < num_joints_; j++) {
-					joint_velocities_[i][j] = (robotJoints_[i + 1][j] - robotJoints_[i - 1][j]) /  dt;
+					//joint_velocities_[i][j] = (robotJoints_[i + 1][j] - robotJoints_[i - 1][j]) /  dt;
+					joint_velocities_[i][j] = 0 ;
 				}
 			}
 		}

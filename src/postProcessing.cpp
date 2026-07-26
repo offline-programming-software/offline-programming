@@ -1402,7 +1402,7 @@ QString postProcessing::generatePathGroupPostContentInternal(
 							//只计算直线运动
 							if (iInstruct == PQ_LINE)
 							{
-                                const double timeValuenowchanged = postProcessing::calculatetime(timeValue, rawPoints[idx-1].poseData, rawPoints[idx].poseData, rawPoints[idx].velocity);
+                                const double timeValuenowchanged = postProcessing::calculatetime(ptIndex, pointCount, rawPoints[idx-1].poseData, rawPoints[idx].poseData, rawPoints[idx].velocity);
 							    const double timeValuenow = rawTimes[idx - 1] + timeValuenowchanged;
 							    rawTimes.push_back(timeValuenow);
 							}
@@ -1479,7 +1479,8 @@ QString postProcessing::generatePathGroupPostContentInternal(
 				double dt = times[1] - times[0];
 				if (dt > 1e-6) {
 					for (size_t j = 0; j < axes; ++j) {
-						velocities[i][j] = (positions[1][j] - positions[0][j]) / dt;
+						//velocities[i][j] = (positions[1][j] - positions[0][j]) / dt;
+						velocities[i][j] = 0;
 					}
 				}
 			}
@@ -1487,15 +1488,16 @@ QString postProcessing::generatePathGroupPostContentInternal(
 				double dt = times[i] - times[i - 1];
 				if (dt > 1e-6) {
 					for (size_t j = 0; j < axes; ++j) {
-						velocities[i][j] = (positions[i][j] - positions[i - 1][j]) / dt;
+						//velocities[i][j] = (positions[i][j] - positions[i - 1][j]) / dt;
+						velocities[i][j] = 0;
 					}
 				}
 			}
 			else {
-				double dt = times[i + 1] - times[i - 1];
+				double dt = times[i] - times[i - 1];
 				if (dt > 1e-6) {
 					for (size_t j = 0; j < axes; ++j) {
-						velocities[i][j] = (positions[i + 1][j] - positions[i - 1][j]) / dt;
+						velocities[i][j] = (positions[i][j] - positions[i - 1][j]) / dt;
 					}
 				}
 			}
@@ -1506,7 +1508,8 @@ QString postProcessing::generatePathGroupPostContentInternal(
 				double dt = times[1] - times[0];
 				if (dt > 1e-6) {
 					for (size_t j = 0; j < axes; ++j) {
-						accelerations[i][j] = (velocities[1][j] - velocities[0][j]) / dt;
+						//accelerations[i][j] = (velocities[1][j] - velocities[0][j]) / dt;
+						accelerations[i][j] = 0;
 					}
 				}
 			}
@@ -1514,7 +1517,8 @@ QString postProcessing::generatePathGroupPostContentInternal(
 				double dt = times[i] - times[i - 1];
 				if (dt > 1e-6) {
 					for (size_t j = 0; j < axes; ++j) {
-						accelerations[i][j] = (velocities[i][j] - velocities[i - 1][j]) / dt;
+						//accelerations[i][j] = (velocities[i][j] - velocities[i - 1][j]) / dt;
+						accelerations[i][j] = 0;
 					}
 				}
 			}
@@ -1713,7 +1717,7 @@ ULONG postProcessing::getAgvIdForRobot(const QString& robotName) const
 	return tryFile("relations.json");
 }
 
-double postProcessing::calculatetime(const double timeValue, std::vector<double>poseDataLast, std::vector<double>poseDataNow,double velocity) const
+double postProcessing::calculatetime(int ptIndex,int pointCount, std::vector<double>poseDataLast, std::vector<double>poseDataNow,double velocity) const
 {
 	//安全验证
 	if (poseDataLast.size() < 7 || poseDataNow.size() < 7 || velocity <= 1e-6)
@@ -1745,6 +1749,11 @@ double postProcessing::calculatetime(const double timeValue, std::vector<double>
 	double remainder = std::fmod(timeValuenow, period);
 
 	timeValuenow = timeValuenow - remainder + period;
+
+	if (ptIndex == 0 || ptIndex == pointCount - 1)
+	{
+		timeValuenow = timeValuenow + 1;
+	}
 
 	return timeValuenow;
 }
