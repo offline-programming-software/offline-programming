@@ -15,6 +15,7 @@
 #include <algorithm>
 #include "PQKitCallback.h"
 #include "CommonStructs.h"
+#include <Qstring>
 
 class QuinticPolynomial {
 public:
@@ -44,6 +45,11 @@ public:
 
 	// 生成轨迹
 	void Generate(double dt = 0.01);
+
+	//获取运动命令
+	std::vector<std::string> get_iInstructs_() const {
+		return iInstructs_;
+	}
 
 	// 获取位置数组
 	std::vector<std::vector<double>> get_positions() const {
@@ -97,6 +103,9 @@ private:
 	std::vector<QuinticPolynomial> joints_;
 	std::vector<QuinticPolynomial> rail_;
 	std::vector<double> time_steps_;
+
+	std::vector<std::string> iInstructs_;
+
 	std::vector<std::vector<double>> positions_;
 	std::vector<std::vector<double>> velocities_;
 	std::vector<std::vector<double>> accelerations_;

@@ -9,17 +9,25 @@ void QuinticPolynomial::ComputeCoefficients(double q0, double q1,
 	double T) {
 	if (T <= 0) throw std::invalid_argument("Time duration must be positive");
 
-	Eigen::MatrixXd A(6, 6);
-	Eigen::VectorXd B(6);
+	//Eigen::MatrixXd A(6, 6);
+	Eigen::MatrixXd A(4, 4);
+	//Eigen::VectorXd B(6);
+	Eigen::VectorXd B(4);
 
-	A << 1, 0, 0, 0, 0, 0,
-		0, 1, 0, 0, 0, 0,
-		0, 0, 2, 0, 0, 0,
-		1, T, T*T, T*T*T, T*T*T*T, T*T*T*T*T,
-		0, 1, 2 * T, 3 * T*T, 4 * T*T*T, 5 * T*T*T*T,
-		0, 0, 2, 6 * T, 12 * T*T, 20 * T*T*T;
+	//A << 1, 0, 0, 0, 0, 0,
+	//	0, 1, 0, 0, 0, 0,
+	//	0, 0, 2, 0, 0, 0,
+	//	1, T, T*T, T*T*T, T*T*T*T, T*T*T*T*T,
+	//	0, 1, 2 * T, 3 * T*T, 4 * T*T*T, 5 * T*T*T*T,
+	//	0, 0, 2, 6 * T, 12 * T*T, 20 * T*T*T;
 
-	B << q0, v0, a0, q1, v1, a1;
+	A << 1, 0, 0, 0,
+		0, 1, 0, 0,
+		1, T, T*T, T*T*T,
+		0, 1, 2 * T, 3 * T*T;
+
+	//B << q0, v0, a0, q1, v1, a1;
+	B << q0, v0, q1, v1;
 
 	Eigen::VectorXd coeffs = A.colPivHouseholderQr().solve(B);
 
@@ -27,20 +35,23 @@ void QuinticPolynomial::ComputeCoefficients(double q0, double q1,
 	a1_ = coeffs[1];
 	a2_ = coeffs[2];
 	a3_ = coeffs[3];
-	a4_ = coeffs[4];
-	a5_ = coeffs[5];
+	//a4_ = coeffs[4];
+	//a5_ = coeffs[5];
 }
 
 double QuinticPolynomial::Position(double t) const {
-	return a0_ + a1_ * t + a2_ * t*t + a3_ * t*t*t + a4_ * t*t*t*t + a5_ * t*t*t*t*t;
+	//return a0_ + a1_ * t + a2_ * t*t + a3_ * t*t*t + a4_ * t*t*t*t + a5_ * t*t*t*t*t;
+	return a0_ + a1_ * t + a2_ * t*t + a3_ * t*t*t;
 }
 
 double QuinticPolynomial::Velocity(double t) const {
-	return a1_ + 2 * a2_*t + 3 * a3_*t*t + 4 * a4_*t*t*t + 5 * a5_*t*t*t*t;
+	//return a1_ + 2 * a2_*t + 3 * a3_*t*t + 4 * a4_*t*t*t + 5 * a5_*t*t*t*t;
+	 return a1_ + 2 * a2_*t + 3 * a3_*t*t;
 }
 
 double QuinticPolynomial::Acceleration(double t) const {
-	return 2 * a2_ + 6 * a3_*t + 12 * a4_*t*t + 20 * a5_*t*t*t;
+	//return 2 * a2_ + 6 * a3_*t + 12 * a4_*t*t + 20 * a5_*t*t*t;
+	return 2 * a2_ + 6 * a3_*t;
 }
 
 void TrajectoryGenerator::initstate(const std::vector<jointInformation>& jointInfos) {
@@ -124,17 +135,23 @@ void TrajectoryGenerator::computeJointVelocitiesAndAccelerations() {
 			double dt = times_[i] - times_[i - 1];
 			if (dt > 1e-6) {
 				for (size_t j = 0; j < num_joints_; j++) {
-					joint_velocities_[i][j] = (robotJoints_[i][j] - robotJoints_[i - 1][j]) / dt;
+					//joint_velocities_[i][j] = (robotJoints_[i][j] - robotJoints_[i - 1][j]) / dt;
+					joint_velocities_[i][j] = 0;
 				}
 			}
 		}
 		else {
 			// 中间点使用中心差分
 			double dt = times_[i + 1] - times_[i - 1];
-			if (dt > 1e-6) {
+			if (dt > 1e-6  && iInstruct_[i + 1] != PQ_JOINT) {
 				for (size_t j = 0; j < num_joints_; j++) {
-					//joint_velocities_[i][j] = (robotJoints_[i + 1][j] - robotJoints_[i - 1][j]) /  dt;
-					joint_velocities_[i][j] = 0 ;
+					joint_velocities_[i][j] = (robotJoints_[i + 1][j] - robotJoints_[i - 1][j]) /  dt;
+				}
+			}
+			else
+			{
+				for (size_t j = 0; j < num_joints_; j++) {
+					joint_velocities_[i][j] = 0;
 				}
 			}
 		}
@@ -235,16 +252,16 @@ void TrajectoryGenerator::Generate(double dt) {
 			{
 				double t_offset = 0.00;
 
-				if (k != 1)
+				if (k == 1 || iInstruct_[k - 1] != PQ_LINE)
 				{
-					t_offset = t_physical - times_[k - 1] + dt;
+					t_offset = t_physical - times_[k - 1] ;
 				}
 				else
 				{
-					t_offset = t_physical - times_[k - 1];
+					t_offset = t_physical - times_[k - 1] + dt;
+					if (t_offset > duration + 0.001) break;
 				}
 				
-				if (t_offset > duration + 0.001) break;
 
 				// 计算所有关节的位置、速度、加速度
 				std::vector<double> pos(num_joints_), vel(num_joints_), acc(num_joints_);
@@ -270,30 +287,38 @@ void TrajectoryGenerator::Generate(double dt) {
 				rail_positions_.push_back(rail_pos);
 				rail_velocities_.push_back(rail_vel);
 				rail_accelerations_.push_back(rail_acc);
+				iInstructs_.push_back("MOVD");
 			}
 		}
 		else
 		{
 			double t_physical = times_[k] - times_[k - 1];
-			//输入机器人的位置、速度、加速度
-			std::vector<double> pos(num_joints_), vel(num_joints_), acc(num_joints_);
-			pos = robotJoints_[k - 1];
-			joint_velocities_[k - 1];
-			joint_accelerations_[k - 1];
-			
-			//输入导轨的位置、速度、加速度
-			std::vector<double> rail_pos(num_rails_), rail_vel(num_rails_), rail_acc(num_rails_);
-			rail_pos = railJoints_[k - 1];
-			rail_vel = railVels_[k - 1];
-			rail_acc = railAccs_[k - 1];
 
-			time_steps_.push_back(t_physical);
-			positions_.push_back(pos);
-			velocities_.push_back(vel);
-			accelerations_.push_back(acc);
-			rail_positions_.push_back(rail_pos);
-			rail_velocities_.push_back(rail_vel);
-			rail_accelerations_.push_back(rail_acc);
+			//输入机器人的位置、速度、加速度
+
+
+			for (size_t i = 0; i < 2; i++)
+			{
+				std::vector<double> pos(num_joints_), vel(num_joints_), acc(num_joints_);
+				pos = robotJoints_[k ];
+				joint_velocities_[k ];
+				joint_accelerations_[k ];
+
+				//输入导轨的位置、速度、加速度
+				std::vector<double> rail_pos(num_rails_), rail_vel(num_rails_), rail_acc(num_rails_);
+				rail_pos = railJoints_[k ];
+				rail_vel = railVels_[k ];
+				rail_acc = railAccs_[k ];
+
+				time_steps_.push_back(t_physical);
+				positions_.push_back(pos);
+				velocities_.push_back(vel);
+				accelerations_.push_back(acc);
+				rail_positions_.push_back(rail_pos);
+				rail_velocities_.push_back(rail_vel);
+				rail_accelerations_.push_back(rail_acc);
+				iInstructs_.push_back("MOVJ");
+			}
 		}
 	}
 

@@ -375,13 +375,15 @@ void TrajectoryFileGenerator::calculateAndSetNposParams() {
 	int ptpMovjCount = 0;
 	int ptpMovjMovdCount = 0;
 
+	ptpMovjCount = positions_.size();
+
 	// 遍历所有指令，统计不同类型
 	for (const auto& instruction : instructions_) {
 		// 检查指令类型
-		if (instruction.find("PTP") != std::string::npos ||
-			instruction.find("MOVJ") != std::string::npos) {
-			ptpMovjCount++;
-		}
+		//if (instruction.find("PTP") != std::string::npos ||
+		//	instruction.find("MOVJ") != std::string::npos) {
+		//	ptpMovjCount++;
+		//}
 
 		if (instruction.find("PTP") != std::string::npos ||
 			instruction.find("MOVJ") != std::string::npos ||

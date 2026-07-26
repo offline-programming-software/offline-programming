@@ -127,4 +127,7 @@ private:
 
 	//计算机器人每节点实际运动时间
    double calculatetime(int ptIndex,int pointCount, std::vector<double>poseDataLast, std::vector<double>poseDataNow,double velocity) const;
+
+   //计算减速时间
+   double calculatedowntime(std::vector<double>poseDataLast, std::vector<double>poseDataNow, double velocityLast) const;
 };

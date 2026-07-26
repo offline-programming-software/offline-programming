@@ -1408,8 +1408,10 @@ QString postProcessing::generatePathGroupPostContentInternal(
 							}
 							else
 							{
-								const double timeValuenow = rawTimes[idx - 1] + 1.0;
+								const double timeValuenow = rawTimes[idx - 1] + 1000.0;
 								rawTimes.push_back(timeValuenow);
+								const double timeValuenowchanged = postProcessing::calculatedowntime(rawPoints[idx - 2].poseData, rawPoints[idx - 1].poseData, rawPoints[idx - 2].velocity);
+								rawTimes[idx - 1] = rawTimes[idx - 2] + timeValuenowchanged + 5.0;
 							}
 						}
 						
@@ -1464,7 +1466,8 @@ QString postProcessing::generatePathGroupPostContentInternal(
 	auto computeDerivatives = [](const std::vector<std::vector<double>>& positions,
 		const std::vector<double>& times,
 		std::vector<std::vector<double>>& velocities,
-		std::vector<std::vector<double>>& accelerations) {
+		std::vector<std::vector<double>>& accelerations,
+		std::vector<PQPointInstruction>& iInstruct_r) {
 		const size_t count = positions.size();
 		const size_t axes = count == 0 ? 0 : positions.front().size();
 		velocities.assign(count, std::vector<double>(axes, 0.0));
@@ -1495,9 +1498,15 @@ QString postProcessing::generatePathGroupPostContentInternal(
 			}
 			else {
 				double dt = times[i] - times[i - 1];
-				if (dt > 1e-6) {
+				if (dt > 1e-6  && iInstruct_r[i+1] != PQ_JOINT) {
 					for (size_t j = 0; j < axes; ++j) {
 						velocities[i][j] = (positions[i][j] - positions[i - 1][j]) / dt;
+					}
+				}
+				else
+				{
+					for (size_t j = 0; j < axes; ++j) {
+						velocities[i][j] = 0;
 					}
 				}
 			}
@@ -1517,6 +1526,7 @@ QString postProcessing::generatePathGroupPostContentInternal(
 				double dt = times[i] - times[i - 1];
 				if (dt > 1e-6) {
 					for (size_t j = 0; j < axes; ++j) {
+						
 						//accelerations[i][j] = (velocities[i][j] - velocities[i - 1][j]) / dt;
 						accelerations[i][j] = 0;
 					}
@@ -1526,7 +1536,8 @@ QString postProcessing::generatePathGroupPostContentInternal(
 				double dt = times[i + 1] - times[i - 1];
 				if (dt > 1e-6) {
 					for (size_t j = 0; j < axes; ++j) {
-						accelerations[i][j] = (velocities[i + 1][j] - velocities[i - 1][j]) / dt;
+						//accelerations[i][j] = (velocities[i + 1][j] - velocities[i - 1][j]) / dt;
+						accelerations[i][j] = 0;
 					}
 				}
 			}
@@ -1537,14 +1548,17 @@ QString postProcessing::generatePathGroupPostContentInternal(
 	if (rawPoints.size() >= 2) {
 		try {
 			std::vector<std::vector<double>> railPositions;
+			std::vector<PQPointInstruction> iInstruct_r;
 			railPositions.reserve(rawPoints.size());
+			iInstruct_r.reserve(rawPoints.size());
 			for (const auto& rawPoint : rawPoints) {
 				railPositions.push_back(rawPoint.externalAxes);
+				iInstruct_r.push_back(rawPoint.iInstruct);
 			}
 
 			std::vector<std::vector<double>> railVelocities;
 			std::vector<std::vector<double>> railAccelerations;
-			computeDerivatives(railPositions, rawTimes, railVelocities, railAccelerations);
+			computeDerivatives(railPositions, rawTimes, railVelocities, railAccelerations, iInstruct_r);
 
 			std::vector<jointInformation> jointInfos;
 			jointInfos.reserve(rawPoints.size());
@@ -1569,6 +1583,7 @@ QString postProcessing::generatePathGroupPostContentInternal(
 			const auto positions = interpolator.get_positions();
 			const auto railPositionsInterp = interpolator.get_railpos();
 			const auto timeSteps = interpolator.get_timesteps();
+			const auto iInstructs_ = interpolator.get_iInstructs_();
 
 			if (!positions.empty() && positions.size() == timeSteps.size()) {
 				const double timeEps = interpolationDt * 0.5 + 1e-6;
@@ -1586,8 +1601,15 @@ QString postProcessing::generatePathGroupPostContentInternal(
 					const double currentTime = timeSteps[i];
 					const size_t rawIndex = getRawIndexForTime(currentTime);
 					const int eventIndex = findTimeMatchIndex(rawTimes, currentTime, timeEps);
-					const int pathStartIndex = findTimeMatchIndex(pathStartTimes, currentTime, timeEps);
-					pointInfo.motionType = pathStartIndex >= 0 ? "MOVJ" : "MOVD";
+					if (i == 0)
+					{
+						const int pathStartIndex = findTimeMatchIndex(pathStartTimes, currentTime, timeEps);
+						pointInfo.motionType = pathStartIndex >= 0 ? "MOVJ" : "MOVD";
+					}
+					else 
+					{
+						pointInfo.motionType = iInstructs_[i];
+					}
 					pointInfo.motionPercentage = rawPoints[rawIndex].speedPercent;
 					pointInfo.velocity = rawPoints[rawIndex].velocity;
 					pointInfo.robotJoints = positions[i];
@@ -1754,6 +1776,39 @@ double postProcessing::calculatetime(int ptIndex,int pointCount, std::vector<dou
 	{
 		timeValuenow = timeValuenow + 1;
 	}
+
+	return timeValuenow;
+}
+
+double postProcessing::calculatedowntime(std::vector<double>poseDataLast, std::vector<double>poseDataNow, double velocityLast) const
+{
+	if (poseDataLast.size() < 7 || poseDataNow.size() < 7 || velocityLast <= 1e-6)
+	{
+		return 0.0; 
+	}
+
+	double a = velocityLast;
+
+	//提取前点位置
+	double x1 = poseDataLast[0];
+	double y1 = poseDataLast[1];
+	double z1 = poseDataLast[2];
+
+	//提取现在点数据
+	double x2 = poseDataNow[0];
+	double y2 = poseDataNow[1];
+	double z2 = poseDataNow[2];
+
+	double dx = x1 - x2;
+	double dy = y1 - y2;
+	double dz = z1 - z2;
+
+	double distSq = dx * dx + dy * dy + dz * dz;
+	double distance = std::sqrt(distSq);
+
+	double tt = 2 * distance / a;
+
+	double timeValuenow = std::sqrt(tt);
 
 	return timeValuenow;
 }
