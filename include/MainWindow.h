@@ -179,6 +179,7 @@ protected slots:
 	void on_PositionCorrectWidget_open();
 	void on_robxFileIOManager_open();
 	void on_connectSetting_open();
+	void on_export_end();
 
 };
 #endif 
