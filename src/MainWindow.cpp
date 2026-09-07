@@ -18,6 +18,7 @@
 #include "OnlineProcess\ConnectSetting.h"
 #include "JointCsvTrajectoryDialog.h"
 #include "on_export_end.h"
+#include "on_num_export_end.h"
 
 
 MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
@@ -93,7 +94,7 @@ MainWindow::MainWindow(QWidget* parent) : SARibbonMainWindow(parent)
 			QAction* action104 = exportPannel->addAction("单个输出", QIcon(":/image/resource/26.png"), QToolButton::InstantPopup);
 				connect(action104, SIGNAL(triggered()), this, SLOT(on_export_end()));//单个输出
 			QAction* action105 = exportPannel->addAction("批量输出", QIcon(":/image/resource/26.png"), QToolButton::InstantPopup);
-				//connect(action105, SIGNAL(triggered()), this, SLOT(on_num_export_end()));//批量输出
+				connect(action105, SIGNAL(triggered()), this, SLOT(on_num_export_end()));//批量输出
 
 	
 	//******************//
@@ -998,6 +999,14 @@ void MainWindow::on_connectSetting_open()
 void MainWindow::on_export_end()
 {
 	export_end* dlg = new export_end(this, m_ptrKit, m_ptrKitCallback);
+	dlg->setModal(false);
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->show();
+}
+
+void MainWindow::on_num_export_end()
+{
+	num_export_end* dlg = new num_export_end(this, m_ptrKit, m_ptrKitCallback);
 	dlg->setModal(false);
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
 	dlg->show();

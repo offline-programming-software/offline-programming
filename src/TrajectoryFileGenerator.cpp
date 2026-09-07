@@ -61,7 +61,7 @@ TrajectoryFileGenerator::TrajectoryFileGenerator(const std::string& filename,
 	tm localTime;
 	if (localtime_s(&localTime, &now) == 0) {
 		char buffer[80];
-		strftime(buffer, 80, "DATE=%Y/%d /%d %H:%M:%S", &localTime);
+		strftime(buffer, 80, "DATE=%Y/%m/%d %H:%M:%S", &localTime);
 		date_ = buffer;
 	}
 	else {
@@ -72,7 +72,6 @@ TrajectoryFileGenerator::TrajectoryFileGenerator(const std::string& filename,
 // Éú³ÉRobotType×Ö·û´®
 std::string TrajectoryFileGenerator::generateRobotTypeString() const {
 	std::ostringstream oss;
-	//oss << "R_" << std::setw(2) << std::setfill('0') << robotJointsCount_ << "_" << externalAxesCount_ << "_SPRAY";
 	oss << "R_07_00_SPRAY";
 	return oss.str();
 }

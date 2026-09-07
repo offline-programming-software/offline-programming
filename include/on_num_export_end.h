@@ -5,41 +5,38 @@
 #include <QDialog>
 #include <QMap>
 #include <QStringList>
-#include <QComboBox>
 #include <QLabel>
-#include <QPlainTextEdit>
 #include <QPushButton>
+#include <QPlainTextEdit>
 
 #include "PQKitCallback.h"
 
-#import "RPC.tlb" no_namespace, named_guids, raw_interfaces_only, raw_native_types
+#import "RPC.tlb" no_namespace, named_guids, raw_native_types, raw_interfaces_only
 
-// 轨迹点输出对话框：选择 机器人->路径组->路径，输出该路径上所有点的坐标与位姿
-class export_end : public QDialog
+// 批量轨迹点输出对话框：遍历所有喷涂机器人的所有路径组/路径，
+// 按CATIA APT格式（GOTO / X,Y,Z,I,J,K）逐路径导出全部轨迹点
+class num_export_end : public QDialog
 {
 	Q_OBJECT
 
 public:
-	export_end(QWidget* parent = nullptr,
+	num_export_end(QWidget* parent = nullptr,
 		CComPtr<IPQPlatformComponent> ptrKit = nullptr,
 		CPQKitCallback* ptrKitCallback = nullptr);
-	~export_end();
+	~num_export_end();
 
 private:
 	// 界面控件
-	QComboBox* robotCombo;
-	QComboBox* groupCombo;
-	QComboBox* pathCombo;
-	QLabel* pointCountLabel;
-	QPlainTextEdit* resultEdit;
-	QPushButton* outputBtn;
-	QPushButton* saveBtn;
+	QLabel* pathLabel;
+	QPushButton* browseBtn;
+	QPushButton* exportBtn;
+	QPlainTextEdit* logEdit;
 
 	CComPtr<IPQPlatformComponent> m_ptrKit;
 	CPQKitCallback* m_ptrKitCallback;
 
-	// 机器人ID -> 名称
-	QMap<ULONG, QString> m_robotMap;
+	// 保存路径
+	QString savePath;
 
 	// APT轨迹点：笛卡尔坐标 + 刀轴方向单位矢量
 	struct AptPoint {
@@ -48,21 +45,20 @@ private:
 		double velocity;
 	};
 
-	// 缓存最近一次输出的轨迹点
-	std::vector<AptPoint> m_lastPoints;
-
-	// 按CATIA APT格式（GOTO / X,Y,Z,I,J,K）生成完整轨迹文件文本
-	QString buildAptContent(const QString& partName, const QString& operationName);
-
 private:
 	void initUI();
-	void loadRobots();
 
-	QString currentRobotName();
-	QString currentGroupName();
-	QString currentPathName();
+	// 生成APT文件头（$$注释 + PARTNO + 换刀工序，到LOADTL/1,1,1为止）
+	QStringList buildAptHeader(const QString& partName);
 
-	// 枚举辅助（与 effectiveness_analysis 同源）
+	// 向内容追加一个轨迹工序块（工序注释 + FEDRAT/SPINDL + 该路径全部GOTO点）
+	void appendAptOperation(QStringList& lines, const std::vector<AptPoint>& points,
+		const QString& operationName);
+
+	// 采集单条路径的全部轨迹点
+	bool collectPathPoints(ULONG pathID, std::vector<AptPoint>& points);
+
+	// 枚举辅助（与 export_end 同源）
 	QMap<ULONG, QString> getObjectsByType(PQDataType objType);
 	QStringList getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap);
 	QStringList getPathGroupNames(ULONG robotID);
@@ -72,9 +68,6 @@ private:
 	void GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG& o_uID);
 
 private slots:
-	void onRobotChanged();
-	void onGroupChanged();
-	void onPathChanged();
-	void onOutput();
-	void onSaveToFile();
+	void onSelectSavePath();
+	void onExportAll();
 };

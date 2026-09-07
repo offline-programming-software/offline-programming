@@ -1,192 +1,79 @@
-﻿#include "on_export_end.h"
+﻿#include "on_num_export_end.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QFormLayout>
 #include <QDebug>
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QFile>
-#include <QFileInfo>
+#include <QDir>
 #include <QDateTime>
 #include <QTextStream>
 
-export_end::export_end(QWidget* parent,
+num_export_end::num_export_end(QWidget* parent,
 	CComPtr<IPQPlatformComponent> ptrKit,
 	CPQKitCallback* ptrKitCallback)
 	: QDialog(parent)
 	, m_ptrKit(ptrKit)
 	, m_ptrKitCallback(ptrKitCallback)
 {
+	savePath = QDir::homePath() + "/Desktop";
+
 	initUI();
-	setWindowTitle("单个输出");
-	resize(440, 380);
-	loadRobots();
+	setWindowTitle(QString::fromUtf8("批量输出"));
+	resize(560, 420);
 }
 
-export_end::~export_end()
+num_export_end::~num_export_end()
 {
 }
 
-void export_end::initUI()
+void num_export_end::initUI()
 {
-	robotCombo = new QComboBox(this);
-	groupCombo = new QComboBox(this);
-	pathCombo = new QComboBox(this);
-	pointCountLabel = new QLabel(this);
-	resultEdit = new QPlainTextEdit(this);
-	resultEdit->setReadOnly(true);
-	outputBtn = new QPushButton(QString::fromUtf8("输出"), this);
-	saveBtn = new QPushButton(QString::fromUtf8("保存到文件"), this);
-	saveBtn->setEnabled(false);
+	pathLabel = new QLabel(QString::fromUtf8("路径: ") + savePath, this);
+	browseBtn = new QPushButton(QString::fromUtf8("浏览"), this);
+	exportBtn = new QPushButton(QString::fromUtf8("开始导出"), this);
+	logEdit = new QPlainTextEdit(this);
+	logEdit->setReadOnly(true);
 
-	QFormLayout* form = new QFormLayout;
-	form->addRow(QString::fromUtf8("机器人:"), robotCombo);
-	form->addRow(QString::fromUtf8("路径组:"), groupCombo);
-	form->addRow(QString::fromUtf8("路径:"), pathCombo);
-	form->addRow(QString::fromUtf8("点数:"), pointCountLabel);
+	QHBoxLayout* pathLayout = new QHBoxLayout;
+	pathLayout->addWidget(pathLabel, 1);
+	pathLayout->addWidget(browseBtn);
 
 	QHBoxLayout* btnLayout = new QHBoxLayout;
-	btnLayout->addWidget(outputBtn);
-	btnLayout->addWidget(saveBtn);
+	btnLayout->addStretch(1);
+	btnLayout->addWidget(exportBtn);
 
 	QVBoxLayout* mainLayout = new QVBoxLayout(this);
-	mainLayout->addLayout(form);
+	mainLayout->addLayout(pathLayout);
 	mainLayout->addLayout(btnLayout);
-	mainLayout->addWidget(resultEdit);
+	mainLayout->addWidget(logEdit);
 
-	connect(robotCombo, &QComboBox::currentTextChanged, this, &export_end::onRobotChanged);
-	connect(groupCombo, &QComboBox::currentTextChanged, this, &export_end::onGroupChanged);
-	connect(pathCombo, &QComboBox::currentTextChanged, this, &export_end::onPathChanged);
-	connect(outputBtn, &QPushButton::clicked, this, &export_end::onOutput);
-	connect(saveBtn, &QPushButton::clicked, this, &export_end::onSaveToFile);
+	connect(browseBtn, &QPushButton::clicked, this, &num_export_end::onSelectSavePath);
+	connect(exportBtn, &QPushButton::clicked, this, &num_export_end::onExportAll);
 }
 
-void export_end::loadRobots()
+void num_export_end::onSelectSavePath()
 {
-	if (m_ptrKit == nullptr) {
-		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("三维内核未初始化！"));
-		return;
+	QString selectedPath = QFileDialog::getExistingDirectory(this,
+		QString::fromUtf8("选择保存路径"), savePath);
+	if (!selectedPath.isEmpty()) {
+		savePath = selectedPath;
+		pathLabel->setText(QString::fromUtf8("路径: ") + savePath);
 	}
-
-	m_robotMap = getObjectsByType(PQ_ROBOT);
-	QStringList robotNames = getSprayRobotNames(PQ_MECHANISM_ROBOT, m_robotMap);
-
-	if (robotNames.isEmpty()) {
-		QMessageBox::information(this, QString::fromUtf8("提示"), QString::fromUtf8("当前没有可用的喷涂机器人！"));
-		return;
-	}
-
-	robotCombo->blockSignals(true);
-	robotCombo->clear();
-	robotCombo->addItems(robotNames);
-	robotCombo->blockSignals(false);
-
-	onRobotChanged();
 }
 
-QString export_end::currentRobotName()
+bool num_export_end::collectPathPoints(ULONG pathID, std::vector<AptPoint>& points)
 {
-	return robotCombo->currentText().trimmed();
-}
-
-QString export_end::currentGroupName()
-{
-	return groupCombo->currentText().trimmed();
-}
-
-QString export_end::currentPathName()
-{
-	return pathCombo->currentText().trimmed();
-}
-
-void export_end::onRobotChanged()
-{
-	QString robotName = currentRobotName();
-	if (robotName.isEmpty()) {
-		return;
-	}
-
-	ULONG robotID = m_robotMap.key(robotName, 0);
-	QStringList groups = getPathGroupNames(robotID);
-
-	groupCombo->blockSignals(true);
-	groupCombo->clear();
-	groupCombo->addItems(groups);
-	groupCombo->blockSignals(false);
-
-	onGroupChanged();
-}
-
-void export_end::onGroupChanged()
-{
-	pathCombo->blockSignals(true);
-	pathCombo->clear();
-
-	QString robotName = currentRobotName();
-	QString groupName = currentGroupName();
-	if (!robotName.isEmpty() && !groupName.isEmpty()) {
-		ULONG robotID = m_robotMap.key(robotName, 0);
-		pathCombo->addItems(getPathNames(robotID, groupName));
-	}
-
-	pathCombo->blockSignals(false);
-
-	onPathChanged();
-}
-
-void export_end::onPathChanged()
-{
-	int count = 0;
-
-	QString pathName = currentPathName();
-	if (!pathName.isEmpty()) {
-		ULONG pathID = 0;
-		GetObjIDByName(PQ_PATH, pathName.toStdWString(), pathID);
-		if (pathID != 0) {
-			int nPointsCount = 0;
-			ULONG* ulPointsIDs = nullptr;
-			if (SUCCEEDED(m_ptrKit->Path_get_point_id(pathID, &nPointsCount, &ulPointsIDs))) {
-				count = nPointsCount;
-			}
-			if (ulPointsIDs) {
-				m_ptrKit->PQAPIFree((LONG_PTR*)ulPointsIDs);
-			}
-		}
-	}
-
-	pointCountLabel->setText(count > 0 ? QString::number(count) : QString::fromUtf8("--"));
-}
-
-void export_end::onOutput()
-{
-	resultEdit->clear();
-	saveBtn->setEnabled(false);
-	m_lastPoints.clear();
-
-	QString robotName = currentRobotName();
-	QString pathName = currentPathName();
-	if (robotName.isEmpty() || pathName.isEmpty()) {
-		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("请先选择机器人和路径！"));
-		return;
-	}
-
-	// 获取路径ID及其点ID列表
-	ULONG pathID = 0;
-	GetObjIDByName(PQ_PATH, pathName.toStdWString(), pathID);
-	if (pathID == 0) {
-		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("无法获取路径ID！"));
-		return;
-	}
+	points.clear();
 
 	int nPointsCount = 0;
 	ULONG* ulPointsIDs = nullptr;
 	HRESULT hr = m_ptrKit->Path_get_point_id(pathID, &nPointsCount, &ulPointsIDs);
 	if (FAILED(hr) || nPointsCount <= 0 || ulPointsIDs == nullptr) {
-		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("该路径上没有轨迹点！"));
 		if (ulPointsIDs) {
 			m_ptrKit->PQAPIFree((LONG_PTR*)ulPointsIDs);
 		}
-		return;
+		return false;
 	}
 
 	// 逐点读取笛卡尔位姿：QUATERNION时 dPointPosture = [X, Y, Z, qw, qx, qy, qz]
@@ -222,13 +109,12 @@ void export_end::onOutput()
 				apt.k = 1.0 - 2.0 * (qx * qx + qy * qy);
 			}
 			else {
-				// 无姿态数据时刀轴取竖直向下/向上由调用方确认，这里默认-Z对应的单位矢量
 				apt.i = 0.0;
 				apt.j = 0.0;
 				apt.k = -1.0;
 			}
 
-			m_lastPoints.push_back(apt);
+			points.push_back(apt);
 		}
 
 		if (dPointPosture) {
@@ -238,24 +124,107 @@ void export_end::onOutput()
 
 	m_ptrKit->PQAPIFree((LONG_PTR*)ulPointsIDs);
 
-	if (m_lastPoints.empty()) {
-		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("未读取到有效的轨迹点数据！"));
-		return;
-	}
-
-	QString content = buildAptContent(robotName + "_" + pathName, pathName);
-	if (content.isEmpty()) {
-		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("生成轨迹文件失败！"));
-		return;
-	}
-	resultEdit->setPlainText(content);
-	saveBtn->setEnabled(true);
+	return !points.empty();
 }
 
-QString export_end::buildAptContent(const QString& partName, const QString& operationName)
+void num_export_end::onExportAll()
 {
-	// CATIA APT格式模板，结构照抄 JB_001.txt 样例：
-	// $$注释头 + PARTNO + MULTAX + 换刀工序 + 加工工序(GOTO点列) + FINI
+	logEdit->clear();
+
+	if (m_ptrKit == nullptr) {
+		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("三维内核未初始化！"));
+		return;
+	}
+	if (savePath.isEmpty()) {
+		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("请先选择保存路径！"));
+		return;
+	}
+
+	QMap<ULONG, QString> robotMap = getObjectsByType(PQ_ROBOT);
+	QStringList robotNames = getSprayRobotNames(PQ_MECHANISM_ROBOT, robotMap);
+	if (robotNames.isEmpty()) {
+		QMessageBox::information(this, QString::fromUtf8("提示"), QString::fromUtf8("当前没有可用的喷涂机器人！"));
+		return;
+	}
+
+	// 所有轨迹点合并输出到同一个APT文件：每条路径一个工序块，GOTO点列连续排列
+	const QString baseName = QString("%1_%2")
+		.arg(QString::fromUtf8("批量输出"))
+		.arg(QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss"));
+
+	QStringList lines = buildAptHeader(baseName);
+
+	int pathCount = 0;
+	int skipCount = 0;
+	int totalPoints = 0;
+
+	for (int r = 0; r < robotNames.size(); r++) {
+		const QString robotName = robotNames[r];
+		ULONG robotID = robotMap.key(robotName, 0);
+
+		QStringList groups = getPathGroupNames(robotID);
+		for (int g = 0; g < groups.size(); g++) {
+			QStringList paths = getPathNames(robotID, groups[g]);
+
+			for (int p = 0; p < paths.size(); p++) {
+				const QString& pathName = paths[p];
+
+				ULONG pathID = 0;
+				GetObjIDByName(PQ_PATH, pathName.toStdWString(), pathID);
+				if (pathID == 0) {
+					logEdit->appendPlainText(QString::fromUtf8("跳过(无法获取路径ID): %1 / %2")
+						.arg(robotName, pathName));
+					skipCount++;
+					continue;
+				}
+
+				std::vector<AptPoint> points;
+				if (!collectPathPoints(pathID, points)) {
+					logEdit->appendPlainText(QString::fromUtf8("跳过(无轨迹点): %1 / %2")
+						.arg(robotName, pathName));
+					skipCount++;
+					continue;
+				}
+
+				appendAptOperation(lines, points,
+					QString("%1_%2_%3").arg(robotName, groups[g], pathName));
+
+				pathCount++;
+				totalPoints += static_cast<int>(points.size());
+				logEdit->appendPlainText(QString::fromUtf8("已合并: %1 / %2 / %3 (%4个点)")
+					.arg(robotName, groups[g], pathName).arg(points.size()));
+			}
+		}
+	}
+
+	if (pathCount == 0) {
+		QMessageBox::information(this, QString::fromUtf8("提示"), QString::fromUtf8("没有可输出的轨迹点！"));
+		return;
+	}
+
+	lines << "FINI";
+
+	QString filePath = savePath + "/" + baseName + ".txt";
+	QFile file(filePath);
+	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+		QMessageBox::critical(this, QString::fromUtf8("错误"),
+			QString::fromUtf8("无法创建文件: %1").arg(filePath));
+		return;
+	}
+
+	QTextStream stream(&file);
+	stream.setCodec("UTF-8");
+	stream << lines.join("\n");
+	file.close();
+
+	QMessageBox::information(this, QString::fromUtf8("完成"),
+		QString::fromUtf8("批量输出完成！共合并 %1 条路径、%2 个轨迹点，跳过 %3 条。\n输出文件: %4")
+			.arg(pathCount).arg(totalPoints).arg(skipCount).arg(filePath));
+}
+
+QStringList num_export_end::buildAptHeader(const QString& partName)
+{
+	// CATIA APT文件头，结构照抄 JB_001.txt 样例：$$注释头 + PARTNO + MULTAX + 换刀工序
 	QStringList lines;
 
 	const QString dateStr = QDateTime::currentDateTime().toString("yyyy年M月d日 hh:mm:ss");
@@ -288,20 +257,26 @@ QString export_end::buildAptContent(const QString& partName, const QString& oper
 	lines << "$$ TOOLCHANGEEND";
 	lines << "$$  End of generation of : Tool Change.1";
 
+	return lines;
+}
+
+void num_export_end::appendAptOperation(QStringList& lines, const std::vector<AptPoint>& points,
+	const QString& operationName)
+{
 	// 轨迹工序：GOTO / X,Y,Z,I,J,K（XYZ保留5位小数，IJK保留6位小数并右对齐9列）
 	lines << QString("$$ OPERATION NAME : %1").arg(operationName);
 	lines << QString("$$  Start generation of : %1").arg(operationName);
 	lines << "LOADTL/1,1";
 
-	double feed = m_lastPoints.front().velocity;
+	double feed = points.front().velocity;
 	if (feed <= 0.0) {
 		feed = 1000.0;
 	}
 	lines << QString("FEDRAT/ %1,MMPM").arg(feed, 9, 'f', 4);
 	lines << "SPINDL/   70.0000,RPM,CLW";
 
-	for (size_t i = 0; i < m_lastPoints.size(); i++) {
-		const AptPoint& p = m_lastPoints[i];
+	for (size_t i = 0; i < points.size(); i++) {
+		const AptPoint& p = points[i];
 		lines << QString("GOTO  / %1,%2,%3,%4,%5,%6")
 			.arg(p.x, 0, 'f', 5)
 			.arg(p.y, 0, 'f', 5)
@@ -312,44 +287,13 @@ QString export_end::buildAptContent(const QString& partName, const QString& oper
 	}
 
 	lines << QString("$$  End of generation of : %1").arg(operationName);
-	lines << "FINI";
-
-	return lines.join("\n");
-}
-
-void export_end::onSaveToFile()
-{
-	QString content = resultEdit->toPlainText();
-	if (content.isEmpty()) {
-		return;
-	}
-
-	QString defaultName = QString("%1_%2.txt")
-		.arg(currentRobotName(), currentPathName());
-	QString fileName = QFileDialog::getSaveFileName(this, QString::fromUtf8("保存APT轨迹文件"),
-		defaultName, "APT files(*.txt *.apt)");
-	if (fileName.isEmpty()) {
-		return;
-	}
-
-	QFile file(fileName);
-	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-		QMessageBox::critical(this, QString::fromUtf8("错误"),
-			QString::fromUtf8("无法创建文件: %1").arg(fileName));
-		return;
-	}
-
-	QTextStream stream(&file);
-	stream.setCodec("UTF-8");
-	stream << content;
-	file.close();
 }
 
 //******************//
 // 枚举辅助函数     //
 //******************//
 
-QMap<ULONG, QString> export_end::getObjectsByType(PQDataType objType)
+QMap<ULONG, QString> num_export_end::getObjectsByType(PQDataType objType)
 {
 	QMap<ULONG, QString> objectMap;
 
@@ -382,7 +326,7 @@ QMap<ULONG, QString> export_end::getObjectsByType(PQDataType objType)
 	return objectMap;
 }
 
-QStringList export_end::getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap)
+QStringList num_export_end::getSprayRobotNames(PQRobotType mechanismType, const QMap<ULONG, QString>& robotMap)
 {
 	QStringList robotNames;
 
@@ -399,7 +343,7 @@ QStringList export_end::getSprayRobotNames(PQRobotType mechanismType, const QMap
 	return robotNames;
 }
 
-QStringList export_end::getPathGroupNames(ULONG robotID)
+QStringList num_export_end::getPathGroupNames(ULONG robotID)
 {
 	QStringList groupNames;
 
@@ -416,7 +360,7 @@ QStringList export_end::getPathGroupNames(ULONG robotID)
 	return groupNames;
 }
 
-QStringList export_end::getPathNames(ULONG robotID, const QString& groupName)
+QStringList num_export_end::getPathNames(ULONG robotID, const QString& groupName)
 {
 	QStringList pathNames;
 
@@ -444,7 +388,7 @@ QStringList export_end::getPathNames(ULONG robotID, const QString& groupName)
 	return pathNames;
 }
 
-QStringList export_end::extractStringArrayFromVariant(const VARIANT& variant)
+QStringList num_export_end::extractStringArrayFromVariant(const VARIANT& variant)
 {
 	QStringList result;
 
@@ -487,7 +431,7 @@ QStringList export_end::extractStringArrayFromVariant(const VARIANT& variant)
 	return result;
 }
 
-QList<long> export_end::extractLongArrayFromVariant(const VARIANT& variant)
+QList<long> num_export_end::extractLongArrayFromVariant(const VARIANT& variant)
 {
 	QList<long> result;
 
@@ -535,7 +479,7 @@ QList<long> export_end::extractLongArrayFromVariant(const VARIANT& variant)
 	return result;
 }
 
-void export_end::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG& o_uID)
+void num_export_end::GetObjIDByName(PQDataType i_nType, std::wstring i_wsName, ULONG& o_uID)
 {
 	o_uID = 0;
 
