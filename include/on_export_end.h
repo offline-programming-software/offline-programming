@@ -51,6 +51,9 @@ private:
 	// 缓存最近一次输出的轨迹点
 	std::vector<AptPoint> m_lastPoints;
 
+	// 相邻点距离检查：超过5mm时按5mm步长线性插补（位置与刀轴矢量同步插值）
+	void interpolatePoints(std::vector<AptPoint>& points);
+
 	// 按CATIA APT格式（GOTO / X,Y,Z,I,J,K）生成完整轨迹文件文本
 	QString buildAptContent(const QString& partName, const QString& operationName);
 

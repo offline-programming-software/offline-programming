@@ -55,8 +55,11 @@ private:
 	void appendAptOperation(QStringList& lines, const std::vector<AptPoint>& points,
 		const QString& operationName);
 
-	// 采集单条路径的全部轨迹点
+	// 采集单条路径的全部轨迹点（含相邻点距离检查与5mm插补）
 	bool collectPathPoints(ULONG pathID, std::vector<AptPoint>& points);
+
+	// 相邻点距离检查：超过5mm时按5mm步长线性插补（位置与刀轴矢量同步插值）
+	void interpolatePoints(std::vector<AptPoint>& points);
 
 	// 枚举辅助（与 export_end 同源）
 	QMap<ULONG, QString> getObjectsByType(PQDataType objType);

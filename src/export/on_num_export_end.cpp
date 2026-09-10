@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QDateTime>
 #include <QTextStream>
+#include <cmath>
 
 num_export_end::num_export_end(QWidget* parent,
 	CComPtr<IPQPlatformComponent> ptrKit,
@@ -124,7 +125,68 @@ bool num_export_end::collectPathPoints(ULONG pathID, std::vector<AptPoint>& poin
 
 	m_ptrKit->PQAPIFree((LONG_PTR*)ulPointsIDs);
 
+	// 相邻点距离检查：超过5mm时按5mm步长插补
+	interpolatePoints(points);
+
 	return !points.empty();
+}
+
+// 相邻点距离检查：超过5mm时按5mm步长线性插补新点（位置与刀轴矢量同步插值）
+void num_export_end::interpolatePoints(std::vector<AptPoint>& points)
+{
+	const double kMaxSpacing = 5.0; // 允许的最大点间距(mm)
+
+	std::vector<AptPoint> result;
+	result.reserve(points.size() * 2);
+
+	for (size_t idx = 0; idx < points.size(); idx++) {
+		result.push_back(points[idx]);
+		if (idx + 1 >= points.size()) {
+			break;
+		}
+
+		const AptPoint& cur = points[idx];
+		const AptPoint& next = points[idx + 1];
+
+		const double dx = next.x - cur.x;
+		const double dy = next.y - cur.y;
+		const double dz = next.z - cur.z;
+		const double dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+		if (dist <= kMaxSpacing) {
+			continue;
+		}
+
+		// 按5mm步长插入补点，末段为不足5mm的剩余距离
+		const int insertCount = static_cast<int>(std::floor(dist / kMaxSpacing));
+		for (int k = 1; k <= insertCount; k++) {
+			const double t = (kMaxSpacing * k) / dist;
+			AptPoint pt;
+			pt.x = cur.x + dx * t;
+			pt.y = cur.y + dy * t;
+			pt.z = cur.z + dz * t;
+
+			// 刀轴矢量线性插值后归一化为单位矢量
+			pt.i = cur.i + (next.i - cur.i) * t;
+			pt.j = cur.j + (next.j - cur.j) * t;
+			pt.k = cur.k + (next.k - cur.k) * t;
+			const double norm = std::sqrt(pt.i * pt.i + pt.j * pt.j + pt.k * pt.k);
+			if (norm > 1e-12) {
+				pt.i /= norm;
+				pt.j /= norm;
+				pt.k /= norm;
+			}
+			else {
+				pt.i = cur.i;
+				pt.j = cur.j;
+				pt.k = cur.k;
+			}
+
+			pt.velocity = cur.velocity;
+			result.push_back(pt);
+		}
+	}
+
+	points.swap(result);
 }
 
 void num_export_end::onExportAll()
