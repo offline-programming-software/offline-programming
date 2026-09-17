@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <vector>
 
 #include "PQKitCallback.h"
 
@@ -30,6 +31,7 @@ private:
 	QComboBox* robotCombo;
 	QComboBox* groupCombo;
 	QComboBox* pathCombo;
+	QComboBox* coordCombo;
 	QLabel* pointCountLabel;
 	QPlainTextEdit* resultEdit;
 	QPushButton* outputBtn;
@@ -54,12 +56,22 @@ private:
 	// 相邻点距离检查：超过5mm时按5mm步长线性插补（位置与刀轴矢量同步插值）
 	void interpolatePoints(std::vector<AptPoint>& points);
 
+	// 按位姿数组[x,y,z,qw,qx,qy,qz]把点变换到该位姿定义的坐标系（P=R^T(P-t)，矢量只旋转）
+	bool applyPostureTransform(std::vector<AptPoint>& points, const double* dPosture);
+
+	// 将点变换到指定坐标系对象（Doc_get_coordinate_posture），失败返回false
+	bool transformPointsToCoordinate(std::vector<AptPoint>& points, ULONG targetCoordID);
+
+	// 最近一次输出实际使用的坐标系说明（写入文件头注释便于核对）
+	QString m_lastCoordInfo;
+
 	// 按CATIA APT格式（GOTO / X,Y,Z,I,J,K）生成完整轨迹文件文本
 	QString buildAptContent(const QString& partName, const QString& operationName);
 
 private:
 	void initUI();
 	void loadRobots();
+	void loadCoordinates();
 
 	QString currentRobotName();
 	QString currentGroupName();

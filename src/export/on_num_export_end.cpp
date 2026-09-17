@@ -22,6 +22,7 @@ num_export_end::num_export_end(QWidget* parent,
 	initUI();
 	setWindowTitle(QString::fromUtf8("批量输出"));
 	resize(560, 420);
+	loadCoordinates();
 }
 
 num_export_end::~num_export_end()
@@ -31,6 +32,7 @@ num_export_end::~num_export_end()
 void num_export_end::initUI()
 {
 	pathLabel = new QLabel(QString::fromUtf8("路径: ") + savePath, this);
+	coordCombo = new QComboBox(this);
 	browseBtn = new QPushButton(QString::fromUtf8("浏览"), this);
 	exportBtn = new QPushButton(QString::fromUtf8("开始导出"), this);
 	logEdit = new QPlainTextEdit(this);
@@ -40,17 +42,39 @@ void num_export_end::initUI()
 	pathLayout->addWidget(pathLabel, 1);
 	pathLayout->addWidget(browseBtn);
 
+	QHBoxLayout* coordLayout = new QHBoxLayout;
+	coordLayout->addWidget(new QLabel(QString::fromUtf8("工件坐标系:"), this));
+	coordLayout->addWidget(coordCombo, 1);
+
 	QHBoxLayout* btnLayout = new QHBoxLayout;
 	btnLayout->addStretch(1);
 	btnLayout->addWidget(exportBtn);
 
 	QVBoxLayout* mainLayout = new QVBoxLayout(this);
 	mainLayout->addLayout(pathLayout);
+	mainLayout->addLayout(coordLayout);
 	mainLayout->addLayout(btnLayout);
 	mainLayout->addWidget(logEdit);
 
 	connect(browseBtn, &QPushButton::clicked, this, &num_export_end::onSelectSavePath);
 	connect(exportBtn, &QPushButton::clicked, this, &num_export_end::onExportAll);
+}
+
+void num_export_end::loadCoordinates()
+{
+	// 枚举场景中所有坐标系对象（wobj1等用户坐标系），供选择输出参考系
+	if (m_ptrKit == nullptr) {
+		return;
+	}
+
+	QMap<ULONG, QString> coordMap = getObjectsByType(PQ_COORD);
+
+	// 条目直接携带坐标系ID（UserData），避免按名字反查失败
+	coordCombo->clear();
+	coordCombo->addItem(QString::fromUtf8("自动(路径关联/base)"), QVariant((qulonglong)0));
+	for (auto it = coordMap.constBegin(); it != coordMap.constEnd(); ++it) {
+		coordCombo->addItem(it.value(), QVariant((qulonglong)it.key()));
+	}
 }
 
 void num_export_end::onSelectSavePath()
@@ -63,7 +87,7 @@ void num_export_end::onSelectSavePath()
 	}
 }
 
-bool num_export_end::collectPathPoints(ULONG pathID, std::vector<AptPoint>& points)
+bool num_export_end::collectPathPoints(ULONG pathID, ULONG targetCoordID, std::vector<AptPoint>& points)
 {
 	points.clear();
 
@@ -125,10 +149,102 @@ bool num_export_end::collectPathPoints(ULONG pathID, std::vector<AptPoint>& poin
 
 	m_ptrKit->PQAPIFree((LONG_PTR*)ulPointsIDs);
 
+	// 目标坐标系解析链：用户指定 -> 路径关联坐标系 -> 世界
+	bool transformed = false;
+	ULONG resolvedCoordID = targetCoordID;
+	if (resolvedCoordID != 0) {
+		transformed = transformPointsToCoordinate(points, resolvedCoordID);
+	}
+	if (!transformed) {
+		m_ptrKit->Path_get_relation_coordinate(pathID, &resolvedCoordID);
+		if (resolvedCoordID != 0) {
+			transformed = transformPointsToCoordinate(points, resolvedCoordID);
+		}
+	}
+	if (!transformed) {
+		m_lastCoordInfo = QString::fromUtf8("世界坐标(未变换)");
+	}
+
 	// 相邻点距离检查：超过5mm时按5mm步长插补
 	interpolatePoints(points);
 
 	return !points.empty();
+}
+
+// 将点变换到指定坐标系对象
+// 坐标系位姿[x,y,z,qw,qx,qy,qz]描述目标系在世界系下的位姿
+bool num_export_end::transformPointsToCoordinate(std::vector<AptPoint>& points, ULONG targetCoordID)
+{
+	if (targetCoordID == 0 || points.empty() || m_ptrKit == nullptr) {
+		return false;
+	}
+
+	int nCount = 0;
+	double* dPosture = nullptr;
+	HRESULT hrPosture = m_ptrKit->Doc_get_coordinate_posture(targetCoordID, QUATERNION, &nCount, &dPosture, 0);
+	if (FAILED(hrPosture) || dPosture == nullptr || nCount < 7) {
+		if (dPosture) {
+			m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
+		}
+		logEdit->appendPlainText(QString::fromUtf8("警告: 坐标系位姿读取失败(ID:%1)").arg((qulonglong)targetCoordID));
+		return false;
+	}
+
+	m_lastCoordInfo = QString::fromUtf8("坐标系ID:%1 t=(%2,%3,%4) q=(%5,%6,%7,%8)")
+		.arg((qulonglong)targetCoordID)
+		.arg(dPosture[0], 0, 'f', 3).arg(dPosture[1], 0, 'f', 3).arg(dPosture[2], 0, 'f', 3)
+		.arg(dPosture[3], 0, 'f', 4).arg(dPosture[4], 0, 'f', 4).arg(dPosture[5], 0, 'f', 4).arg(dPosture[6], 0, 'f', 4);
+
+	const bool ok = applyPostureTransform(points, dPosture);
+	m_ptrKit->PQAPIFreeArray((LONG_PTR*)dPosture);
+	return ok;
+}
+
+
+// 按位姿数组[x,y,z,qw,qx,qy,qz]把点变换到该位姿定义的坐标系
+// P_target = R^T * (P_world - t)，方向矢量只做 R^T 旋转
+bool num_export_end::applyPostureTransform(std::vector<AptPoint>& points, const double* dPosture)
+{
+	const double tx = dPosture[0];
+	const double ty = dPosture[1];
+	const double tz = dPosture[2];
+	const double qw = dPosture[3];
+	const double qx = dPosture[4];
+	const double qy = dPosture[5];
+	const double qz = dPosture[6];
+
+	// 目标系->世界 旋转矩阵 R（四元数约定与posCal一致：qw在前）
+	const double r00 = 1.0 - 2.0 * (qy * qy + qz * qz);
+	const double r01 = 2.0 * (qx * qy - qz * qw);
+	const double r02 = 2.0 * (qx * qz + qy * qw);
+	const double r10 = 2.0 * (qx * qy + qz * qw);
+	const double r11 = 1.0 - 2.0 * (qx * qx + qz * qz);
+	const double r12 = 2.0 * (qy * qz - qx * qw);
+	const double r20 = 2.0 * (qx * qz - qy * qw);
+	const double r21 = 2.0 * (qy * qz + qx * qw);
+	const double r22 = 1.0 - 2.0 * (qx * qx + qy * qy);
+
+	for (size_t i = 0; i < points.size(); i++) {
+		AptPoint& p = points[i];
+
+		// 位置：P_target = R^T * (P_world - t)
+		const double wx = p.x - tx;
+		const double wy = p.y - ty;
+		const double wz = p.z - tz;
+		p.x = r00 * wx + r10 * wy + r20 * wz;
+		p.y = r01 * wx + r11 * wy + r21 * wz;
+		p.z = r02 * wx + r12 * wy + r22 * wz;
+
+		// 刀轴矢量：只旋转 R^T
+		const double vi = p.i;
+		const double vj = p.j;
+		const double vk = p.k;
+		p.i = r00 * vi + r10 * vj + r20 * vk;
+		p.j = r01 * vi + r11 * vj + r21 * vk;
+		p.k = r02 * vi + r12 * vj + r22 * vk;
+	}
+
+	return true;
 }
 
 // 相邻点距离检查：超过5mm时按5mm步长线性插补新点（位置与刀轴矢量同步插值）
@@ -156,8 +272,9 @@ void num_export_end::interpolatePoints(std::vector<AptPoint>& points)
 			continue;
 		}
 
-		// 按5mm步长插入补点，末段为不足5mm的剩余距离
-		const int insertCount = static_cast<int>(std::floor(dist / kMaxSpacing));
+		// 按5mm步长插入补点，末段为不足5mm的剩余距离；
+		// 与终点距离不足0.001mm的补点没有意义(间距恰为5mm时避免产生重复点)
+		const int insertCount = static_cast<int>(std::floor((dist - 1e-3) / kMaxSpacing));
 		for (int k = 1; k <= insertCount; k++) {
 			const double t = (kMaxSpacing * k) / dist;
 			AptPoint pt;
@@ -209,6 +326,9 @@ void num_export_end::onExportAll()
 		return;
 	}
 
+	// 用户指定的输出坐标系（按ID直取），0=自动（路径关联->base）
+	ULONG fixedCoordID = (ULONG)coordCombo->currentData().toULongLong();
+
 	// 所有轨迹点合并输出到同一个APT文件：每条路径一个工序块，GOTO点列连续排列
 	const QString baseName = QString("%1_%2")
 		.arg(QString::fromUtf8("批量输出"))
@@ -241,7 +361,7 @@ void num_export_end::onExportAll()
 				}
 
 				std::vector<AptPoint> points;
-				if (!collectPathPoints(pathID, points)) {
+				if (!collectPathPoints(pathID, fixedCoordID, points)) {
 					logEdit->appendPlainText(QString::fromUtf8("跳过(无轨迹点): %1 / %2")
 						.arg(robotName, pathName));
 					skipCount++;
@@ -328,6 +448,9 @@ void num_export_end::appendAptOperation(QStringList& lines, const std::vector<Ap
 	// 轨迹工序：GOTO / X,Y,Z,I,J,K（XYZ保留5位小数，IJK保留6位小数并右对齐9列）
 	lines << QString("$$ OPERATION NAME : %1").arg(operationName);
 	lines << QString("$$  Start generation of : %1").arg(operationName);
+	if (!m_lastCoordInfo.isEmpty()) {
+		lines << QString("$$  OutputFrame: %1").arg(m_lastCoordInfo);
+	}
 	lines << "LOADTL/1,1";
 
 	double feed = points.front().velocity;
