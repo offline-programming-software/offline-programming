@@ -247,11 +247,16 @@ bool num_export_end::applyPostureTransform(std::vector<AptPoint>& points, const 
 	return true;
 }
 
-// 相邻点距离检查：超过5mm时按5mm步长线性插补新点（位置与刀轴矢量同步插值）
+// 相邻点距离检查：2.5mm以内的点合并为一个，超过5mm的段按5mm步长线性插补；
+// 插补后的点再做一次合并检查（消除插补尾点与段终点的近距点）
 void num_export_end::interpolatePoints(std::vector<AptPoint>& points)
 {
 	const double kMaxSpacing = 5.0; // 允许的最大点间距(mm)
 
+	// 1) 原始点重复合并
+	mergeClosePoints(points);
+
+	// 2) 稀疏段插补
 	std::vector<AptPoint> result;
 	result.reserve(points.size() * 2);
 
@@ -304,6 +309,44 @@ void num_export_end::interpolatePoints(std::vector<AptPoint>& points)
 	}
 
 	points.swap(result);
+
+	// 3) 插补后的点再做重复点合并
+	mergeClosePoints(points);
+}
+
+// 2.5mm以内相邻点合并：与已保留末点距离不足阈值时合并为中点（刀轴取平均后归一化，速度取后点）
+void num_export_end::mergeClosePoints(std::vector<AptPoint>& points)
+{
+	const double kMinSpacing = 2.5; // 小于等于该距离的相邻点合并(mm)
+
+	std::vector<AptPoint> merged;
+	merged.reserve(points.size());
+	for (size_t idx = 0; idx < points.size(); idx++) {
+		if (!merged.empty()) {
+			AptPoint& last = merged.back();
+			const double dx = points[idx].x - last.x;
+			const double dy = points[idx].y - last.y;
+			const double dz = points[idx].z - last.z;
+			if (std::sqrt(dx * dx + dy * dy + dz * dz) <= kMinSpacing) {
+				last.x = 0.5 * (last.x + points[idx].x);
+				last.y = 0.5 * (last.y + points[idx].y);
+				last.z = 0.5 * (last.z + points[idx].z);
+				last.i += points[idx].i;
+				last.j += points[idx].j;
+				last.k += points[idx].k;
+				const double norm = std::sqrt(last.i * last.i + last.j * last.j + last.k * last.k);
+				if (norm > 1e-12) {
+					last.i /= norm;
+					last.j /= norm;
+					last.k /= norm;
+				}
+				last.velocity = points[idx].velocity;
+				continue;
+			}
+		}
+		merged.push_back(points[idx]);
+	}
+	points.swap(merged);
 }
 
 void num_export_end::onExportAll()

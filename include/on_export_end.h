@@ -53,8 +53,12 @@ private:
 	// 缓存最近一次输出的轨迹点
 	std::vector<AptPoint> m_lastPoints;
 
-	// 相邻点距离检查：超过5mm时按5mm步长线性插补（位置与刀轴矢量同步插值）
+	// 相邻点距离检查：2.5mm以内合并为一个点，超过5mm按5mm步长线性插补；
+	// 插补后的点会再做一次合并检查
 	void interpolatePoints(std::vector<AptPoint>& points);
+
+	// 2.5mm以内相邻点合并为一个点（位置中点、刀轴平均归一化、速度取后点）
+	void mergeClosePoints(std::vector<AptPoint>& points);
 
 	// 按位姿数组[x,y,z,qw,qx,qy,qz]把点变换到该位姿定义的坐标系（P=R^T(P-t)，矢量只旋转）
 	bool applyPostureTransform(std::vector<AptPoint>& points, const double* dPosture);
