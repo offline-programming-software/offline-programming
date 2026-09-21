@@ -69,8 +69,18 @@ private:
 	// 最近一次输出实际使用的坐标系说明（写入文件头注释便于核对）
 	QString m_lastCoordInfo;
 
-	// 按CATIA APT格式（GOTO / X,Y,Z,I,J,K）生成完整轨迹文件文本
-	QString buildAptContent(const QString& partName, const QString& operationName);
+	// 轨迹起始关节角文本（MOVJ行，取路径首点关节值，逗号分隔）
+	QString m_lastMovjText;
+
+	// 解析机器人挂载的外部轴机构（AGV小车/导轨）ID：
+	// 1)命名约定<机器人名>_rail 2)relations.json连接关系 3)场景中唯一的导轨型机构；无则返回0
+	ULONG resolveExternalMechId(const QString& robotName);
+
+	// 读路径首点关节角（弧度转角度，Π取3.14）并追加AGV外部轴值（直线轴不换算），生成MOVJ行文本
+	void buildMovjText(ULONG firstPointID, ULONG externalMechId);
+
+	// 按图示格式生成轨迹文件文本（FEDRAT/SPINDL + MOVJ/GOTO点列/GUNT/GUNF/END）
+	QString buildAptContent(const QString& operationName);
 
 private:
 	void initUI();

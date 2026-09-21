@@ -8,6 +8,9 @@
 #include <QFile>
 #include <QDateTime>
 #include <QTextStream>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonValue>
 #include <cmath>
 
 export_end::export_end(QWidget* parent,
@@ -209,6 +212,9 @@ void export_end::onOutput()
 		return;
 	}
 
+	// 轨迹起始关节角（MOVJ行）：机器人关节（角度制）+ AGV小车外部轴
+	buildMovjText(ulPointsIDs[0], resolveExternalMechId(robotName));
+
 	// 逐点读取笛卡尔位姿：QUATERNION时 dPointPosture = [X, Y, Z, qw, qx, qy, qz]
 	for (int i = 0; i < nPointsCount; i++) {
 		ULONG pointID = ulPointsIDs[i];
@@ -285,7 +291,7 @@ void export_end::onOutput()
 	// 相邻点距离检查：超过5mm时按5mm步长插补
 	interpolatePoints(m_lastPoints);
 
-	QString content = buildAptContent(robotName + "_" + pathName, pathName);
+	QString content = buildAptContent(pathName);
 	if (content.isEmpty()) {
 		QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("生成轨迹文件失败！"));
 		return;
@@ -473,70 +479,165 @@ void export_end::mergeClosePoints(std::vector<AptPoint>& points)
 	points.swap(merged);
 }
 
-QString export_end::buildAptContent(const QString& partName, const QString& operationName)
+// 解析机器人挂载的外部轴机构（AGV小车/导轨）ID
+ULONG export_end::resolveExternalMechId(const QString& robotName)
 {
-	// CATIA APT格式模板，结构照抄 JB_001.txt 样例：
-	// $$注释头 + PARTNO + MULTAX + 换刀工序 + 加工工序(GOTO点列) + FINI
+	// 1) 命名约定：<机器人名>_rail
+	ULONG externalId = 0;
+	GetObjIDByName(PQ_ROBOT, (robotName + "_rail").toStdWString(), externalId);
+	if (externalId != 0) {
+		return externalId;
+	}
+
+	// 2) relations.json连接关系：[机器人名, 导轨名, AGV名]
+	auto tryFile = [&](const QString& filePath) -> ULONG {
+		QFile f(filePath);
+		if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+			return 0;
+		}
+		const QByteArray data = f.readAll();
+		f.close();
+
+		QJsonParseError err;
+		const QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+		if (err.error != QJsonParseError::NoError || !doc.isArray()) {
+			return 0;
+		}
+		const QJsonArray arr = doc.array();
+		for (const QJsonValue& v : arr) {
+			if (!v.isArray()) {
+				continue;
+			}
+			const QJsonArray row = v.toArray();
+			if (row.size() < 2) {
+				continue;
+			}
+			if (row.at(0).toString().trimmed() == robotName.trimmed()) {
+				const QString railName = row.at(1).toString().trimmed();
+				if (!railName.isEmpty() && railName != QStringLiteral("无")) {
+					ULONG id = 0;
+					GetObjIDByName(PQ_ROBOT, railName.toStdWString(), id);
+					return id;
+				}
+			}
+		}
+		return 0;
+	};
+	externalId = tryFile("./temp/jsons/relations.json");
+	if (externalId == 0) {
+		externalId = tryFile("relations.json");
+	}
+	if (externalId != 0) {
+		return externalId;
+	}
+
+	// 3) 场景中唯一的导轨型机构（Robot_get_type == PQ_MECHANISM_GUIDE）
+	QMap<ULONG, QString> robotMap = getObjectsByType(PQ_ROBOT);
+	ULONG guideId = 0;
+	int guideCount = 0;
+	for (auto it = robotMap.constBegin(); it != robotMap.constEnd(); ++it) {
+		PQRobotType type = PQ_MECHANISM_ROBOT;
+		if (SUCCEEDED(m_ptrKit->Robot_get_type(it.key(), &type)) && type == PQ_MECHANISM_GUIDE) {
+			guideId = it.key();
+			guideCount++;
+		}
+	}
+	return (guideCount == 1) ? guideId : 0;
+}
+
+// 生成MOVJ行文本：机器人关节角（弧度转角度，Π取3.14）后追加AGV外部轴值
+void export_end::buildMovjText(ULONG firstPointID, ULONG externalMechId)
+{
+	m_lastMovjText.clear();
+
+	// 机器人关节
+	VARIANT varJointsArray;
+	VariantInit(&varJointsArray);
+	if (SUCCEEDED(m_ptrKit->PQAPIGetRobotJointsFromPoints(firstPointID, &varJointsArray))
+		&& varJointsArray.vt == (VT_ARRAY | VT_R8) && varJointsArray.parray != nullptr) {
+		double* pJointData = nullptr;
+		if (SUCCEEDED(SafeArrayAccessData(varJointsArray.parray, (void**)&pJointData))) {
+			LONG lBound = 0, uBound = 0;
+			SafeArrayGetLBound(varJointsArray.parray, 1, &lBound);
+			SafeArrayGetUBound(varJointsArray.parray, 1, &uBound);
+			for (LONG j = lBound; j <= uBound; j++) {
+				if (!m_lastMovjText.isEmpty()) {
+					m_lastMovjText += ",";
+				}
+				// PQKit返回弧度，按项目后置约定π取3.14换算为角度制
+				const double angleDeg = pJointData[j] * 180.0 / 3.14;
+				m_lastMovjText += QString::number(angleDeg, 'f', 3);
+			}
+			SafeArrayUnaccessData(varJointsArray.parray);
+		}
+	}
+	VariantClear(&varJointsArray);
+
+	// AGV小车/导轨外部轴：直线轴值不做弧度换算，直接追加在关节角之后
+	if (externalMechId != 0) {
+		VARIANT varAgvArray;
+		VariantInit(&varAgvArray);
+		if (SUCCEEDED(m_ptrKit->PQAPIGetExternalJointsFromPoints(firstPointID, externalMechId, &varAgvArray))
+			&& varAgvArray.parray != nullptr && varAgvArray.parray->cDims == 1) {
+			double* pAgvData = nullptr;
+			if (SUCCEEDED(SafeArrayAccessData(varAgvArray.parray, (void**)&pAgvData))) {
+				LONG lBound = 0, uBound = 0;
+				SafeArrayGetLBound(varAgvArray.parray, 1, &lBound);
+				SafeArrayGetUBound(varAgvArray.parray, 1, &uBound);
+				for (LONG e = lBound; e <= uBound; e++) {
+					if (!m_lastMovjText.isEmpty()) {
+						m_lastMovjText += ",";
+					}
+					m_lastMovjText += QString::number(pAgvData[e], 'f', 3);
+				}
+				SafeArrayUnaccessData(varAgvArray.parray);
+			}
+		}
+		VariantClear(&varAgvArray);
+	}
+}
+
+// 按图示格式生成轨迹文件文本：
+// FEDRAT/SPINDL(文件级) + MOVJ(轨迹起始关节角) + GOTO点列 + GUNT/GUNF + END + 结束注释
+QString export_end::buildAptContent(const QString& operationName)
+{
 	QStringList lines;
 
-	const QString dateStr = QDateTime::currentDateTime().toString("yyyy年M月d日 hh:mm:ss");
-	lines << "$$ -----------------------------------------------------------------";
-	lines << QString("$$     Generated on %1").arg(dateStr);
-	lines << "$$     CATIA APT VERSION 1.0";
 	if (!m_lastCoordInfo.isEmpty()) {
 		lines << QString("$$     OutputFrame: %1").arg(m_lastCoordInfo);
 	}
-	lines << "$$ -----------------------------------------------------------------";
-	lines << "$$ 001";
-	lines << QString("$$  %1").arg(partName);
-	lines << "$$*CATIA0";
-	lines << "$$ 001";
-	lines << "$$     0.00000     1.00000     0.00000     0.00000";
-	lines << "$$     0.00000     0.00000     1.00000     0.00000";
-	lines << "$$     1.00000     0.00000     0.00000     0.00000";
-	lines << QString("PARTNO %1").arg(partName);
 
-	// 换刀工序（固定模板）
-	lines << "$$ OPERATION NAME : Tool Change.1";
-	lines << "$$  Start generation of : Tool Change.1";
-	lines << "MULTAX";
-	lines << "$$ TOOLCHANGEBEGINNING";
-	lines << "CUTTER/  0.000000,  0.000000,  0.000000,  0.000000,  0.000000,$";
-	lines << "        10.000000, 40.000000";
-	lines << "TOOLNO/1,MILL,1,0,   14.106000,  100.000000,$";
-	lines << "  100.000000,  100.000000,   20.000000,   15.000000,,   40.000000,$";
-	lines << " 1000.000000,MMPM,   70.000000,RPM,CLW,$";
-	lines << "ON,,NOTE";
-	lines << "TPRINT/T1 Conical Mill D 25,T1 Conical Mill D 25,T1 Conical Mill D 25";
-	lines << "LOADTL/1,1,1";
-	lines << "$$ TOOLCHANGEEND";
-	lines << "$$  End of generation of : Tool Change.1";
-
-	// 轨迹工序：GOTO / X,Y,Z,I,J,K（XYZ保留5位小数，IJK保留6位小数并右对齐9列）
-	lines << QString("$$ OPERATION NAME : %1").arg(operationName);
-	lines << QString("$$  Start generation of : %1").arg(operationName);
-	lines << "LOADTL/1,1";
-
+	// 文件级进给/主轴指令：进给速度取首点速度（无有效值时按50输出），单位与图示一致为MMF
 	double feed = m_lastPoints.front().velocity;
 	if (feed <= 0.0) {
-		feed = 1000.0;
+		feed = 50.0;
 	}
-	lines << QString("FEDRAT/ %1,MMPM").arg(feed, 9, 'f', 4);
-	lines << "SPINDL/   70.0000,RPM,CLW";
+	lines << QString("FEDRAT /  %1,MMF").arg(feed, 0, 'f', 4);
+	lines << QString("SPINDL /  70.0000,RPM,CLW");
 
+	// 轨迹起始关节角
+	if (!m_lastMovjText.isEmpty()) {
+		lines << QString("MOVJ /  %1").arg(m_lastMovjText);
+	}
+
+	// GOTO / X,Y,Z,I,J,K：XYZ保留5位小数，IJK保留6位小数
 	for (size_t i = 0; i < m_lastPoints.size(); i++) {
 		const AptPoint& p = m_lastPoints[i];
-		lines << QString("GOTO  / %1,%2,%3,%4,%5,%6")
+		lines << QString("GOTO /  %1,%2,%3,%4,%5,%6")
 			.arg(p.x, 0, 'f', 5)
 			.arg(p.y, 0, 'f', 5)
 			.arg(p.z, 0, 'f', 5)
-			.arg(p.i, 9, 'f', 6)
-			.arg(p.j, 9, 'f', 6)
-			.arg(p.k, 9, 'f', 6);
+			.arg(p.i, 0, 'f', 6)
+			.arg(p.j, 0, 'f', 6)
+			.arg(p.k, 0, 'f', 6);
 	}
 
+	// 开枪点/关枪点与轨迹块结束
+	lines << "GUNT /  1";
+	lines << "GUNF /  2";
+	lines << "END";
+
 	lines << QString("$$  End of generation of : %1").arg(operationName);
-	lines << "FINI";
 
 	return lines.join("\n");
 }
