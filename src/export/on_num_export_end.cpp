@@ -146,6 +146,46 @@ bool num_export_end::collectPathPoints(ULONG pathID, ULONG targetCoordID, ULONG 
 				apt.k = -1.0;
 			}
 
+			// 读取该点喷涂事件：开枪->GUNT，关枪->GUNF（名称/模板/内容任一匹配即判定）
+			{
+				WCHAR* wsName = nullptr;
+				ULONG executeDeviceId = 0;
+				LONG pointForward = 1; // 非0视为点前，0视为点后
+				WCHAR* wsEventTemplate = nullptr;
+				WCHAR* wsEventContent = nullptr;
+				LONG bUnion = 0;
+				ULONG* nozzleIds = nullptr;
+				ULONG* assistorIds = nullptr;
+				INT assistorCount = 0;
+
+				HRESULT hrEvent = m_ptrKit->Point_get_spray_event_content(
+					pointID, &wsName, &executeDeviceId, &pointForward,
+					&wsEventTemplate, &wsEventContent, &bUnion,
+					&nozzleIds, &assistorIds, &assistorCount);
+
+				if (SUCCEEDED(hrEvent)) {
+					const QString evName = wsName ? QString::fromWCharArray(wsName) : QString();
+					const QString evTemplate = wsEventTemplate ? QString::fromWCharArray(wsEventTemplate) : QString();
+					const QString evContent = wsEventContent ? QString::fromWCharArray(wsEventContent) : QString();
+					const QString evAll = evName + " " + evTemplate + " " + evContent;
+
+					if (evAll.contains(QString::fromUtf8("开枪")) || evAll.contains("gun on", Qt::CaseInsensitive)) {
+						apt.gunEvent = 1;
+						apt.gunBeforePoint = (pointForward != 0);
+					}
+					else if (evAll.contains(QString::fromUtf8("关枪")) || evAll.contains("gun off", Qt::CaseInsensitive)) {
+						apt.gunEvent = 2;
+						apt.gunBeforePoint = (pointForward != 0);
+					}
+				}
+
+				if (wsName) m_ptrKit->PQAPIFree((LONG_PTR*)wsName);
+				if (wsEventTemplate) m_ptrKit->PQAPIFree((LONG_PTR*)wsEventTemplate);
+				if (wsEventContent) m_ptrKit->PQAPIFree((LONG_PTR*)wsEventContent);
+				if (nozzleIds) m_ptrKit->PQAPIFreeArray((LONG_PTR*)nozzleIds);
+				if (assistorIds) m_ptrKit->PQAPIFreeArray((LONG_PTR*)assistorIds);
+			}
+
 			points.push_back(apt);
 		}
 
@@ -466,6 +506,11 @@ void num_export_end::mergeClosePoints(std::vector<AptPoint>& points)
 					last.k /= norm;
 				}
 				last.velocity = points[idx].velocity;
+				// 被合并点的喷涂事件转移到保留点（保留点已有事件则不覆盖）
+				if (points[idx].gunEvent != 0 && last.gunEvent == 0) {
+					last.gunEvent = points[idx].gunEvent;
+					last.gunBeforePoint = points[idx].gunBeforePoint;
+				}
 				continue;
 			}
 		}
@@ -597,9 +642,15 @@ void num_export_end::appendAptOperation(QStringList& lines, const std::vector<Ap
 		lines << QString("MOVJ /  %1").arg(m_lastMovjText);
 	}
 
-	// GOTO / X,Y,Z,I,J,K：XYZ保留5位小数，IJK保留6位小数
+	// GOTO / X,Y,Z,I,J,K：XYZ保留5位小数，IJK保留6位小数；
+	// 带喷涂事件的点在其点前/点后位置输出GUNT/GUNF（编号全文件递增），无事件的路径不输出
 	for (size_t i = 0; i < points.size(); i++) {
 		const AptPoint& p = points[i];
+
+		if (p.gunEvent != 0 && p.gunBeforePoint) {
+			lines << QString("%1 /  %2").arg(p.gunEvent == 1 ? "GUNT" : "GUNF").arg(m_gunCounter++);
+		}
+
 		lines << QString("GOTO /  %1,%2,%3,%4,%5,%6")
 			.arg(p.x, 0, 'f', 5)
 			.arg(p.y, 0, 'f', 5)
@@ -607,11 +658,12 @@ void num_export_end::appendAptOperation(QStringList& lines, const std::vector<Ap
 			.arg(p.i, 0, 'f', 6)
 			.arg(p.j, 0, 'f', 6)
 			.arg(p.k, 0, 'f', 6);
+
+		if (p.gunEvent != 0 && !p.gunBeforePoint) {
+			lines << QString("%1 /  %2").arg(p.gunEvent == 1 ? "GUNT" : "GUNF").arg(m_gunCounter++);
+		}
 	}
 
-	// 开枪点/关枪点（编号全文件递增）与轨迹块结束
-	lines << QString("GUNT /  %1").arg(m_gunCounter++);
-	lines << QString("GUNF /  %1").arg(m_gunCounter++);
 	lines << "END";
 
 	lines << QString("$$  End of generation of : %1").arg(operationName);

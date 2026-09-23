@@ -48,6 +48,10 @@ private:
 		double x, y, z;
 		double i, j, k;
 		double velocity;
+		// 喷涂事件：0=无，1=开枪(GUNT)，2=关枪(GUNF)
+		int gunEvent = 0;
+		// 事件输出时机：true=点前(该点GOTO之前)，false=点后(该点GOTO之后)
+		bool gunBeforePoint = true;
 	};
 
 	// 缓存最近一次输出的轨迹点

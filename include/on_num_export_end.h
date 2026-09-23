@@ -46,6 +46,10 @@ private:
 		double x, y, z;
 		double i, j, k;
 		double velocity;
+		// 喷涂事件：0=无，1=开枪(GUNT)，2=关枪(GUNF)
+		int gunEvent = 0;
+		// 事件输出时机：true=点前(该点GOTO之前)，false=点后(该点GOTO之后)
+		bool gunBeforePoint = true;
 	};
 
 private:
@@ -53,7 +57,7 @@ private:
 	void loadCoordinates();
 
 	// 向内容追加一个轨迹块：首个块前写FEDRAT/SPINDL（文件级），
-	// 块内为 MOVJ(起始关节角) + GOTO点列 + GUNT/GUNF(编号全文件递增) + END + 结束注释
+	// 块内为 MOVJ(起始关节角) + GOTO点列（带喷涂事件的点按点前/点后输出GUNT/GUNF）+ END + 结束注释
 	void appendAptOperation(QStringList& lines, const std::vector<AptPoint>& points,
 		const QString& operationName);
 
