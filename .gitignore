@@ -23,3 +23,6 @@ olp/x64/Debug/PQKit/bin/RobotArt/bin/
 *.log
 *.tmp
 *.cache
+
+# 发布产物（完整可运行包 2GB+，不入库）
+dist/

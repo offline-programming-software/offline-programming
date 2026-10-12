@@ -1,0 +1,2205 @@
+﻿// Created by Microsoft (R) C/C++ Compiler Version 14.16.27054.0 (75588416).
+//
+// e:\offline-programming\olp\x64\release\rpc.tlh
+//
+// C++ source equivalent of type library RPC.tlb
+// compiler-generated file created 10/12/26 at 16:07:14 - DO NOT EDIT!
+
+#pragma once
+#pragma pack(push, 8)
+
+#include <comdef.h>
+
+//
+// Forward references and typedefs
+//
+
+struct __declspec(uuid("250d49b7-0a0e-42cf-9dbd-55e017531566"))
+/* LIBID */ __RPCLib;
+struct /* coclass */ PQPlatformComponent;
+struct __declspec(uuid("25686fb1-da0d-4b16-969b-d9613837cb4d"))
+/* dual interface */ IPQPlatformComponent;
+struct __declspec(uuid("0637b701-1636-49b6-9df3-06fd0474d930"))
+/* dual interface */ IPQPlatformComponentCallBack;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0005;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0034;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0004;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0009;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0015;
+struct struct_PQ6RConfig;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0030;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0029;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0028;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0033;
+struct struct_PQKitOption;
+struct __declspec(uuid("e57f0328-15e9-415b-8ba1-e578f7b34465"))
+/* dual interface */ IPQComponentOption;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0011;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0013;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0014;
+struct struct_PQPostOption;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0001;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0016;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0035;
+struct struct_PQGP3ReconParm;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0002;
+struct struct_PQEdgePram;
+struct struct_PQAShapesEdgePram;
+struct struct_PQBoundaryEdgeParm;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0022;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0023;
+struct struct_PQPFGCurveShapeParm;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0024;
+struct struct_PQPFEPathParameterInfor;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0025;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0026;
+struct struct_PQPFEPathTransitInfor;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0017;
+struct struct_PQRotrayProcessParameter;
+struct struct_PQRotrayAreaParameter;
+struct struct_PQRotrayCoordinateParameter;
+struct struct_PQRotrayConnectParameter;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0018;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0019;
+struct struct_PQMotionPlanParameter;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0027;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0012;
+struct struct_PQ3R1PConfig;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0032;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0003;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0020;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0036;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0008;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0006;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0007;
+enum __MIDL___MIDL_itf_RPC_0000_0000_0021;
+struct struct_PQRegPlaneParm;
+struct /* coclass */ PQPlatformComponentCallBack;
+struct /* coclass */ PQComponentOption;
+struct /* coclass */ PQComponentUtility;
+struct __declspec(uuid("70d66320-0d8b-477b-b1c9-0ae07c04fc30"))
+/* dual interface */ IPQComponentUtility;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0005 PQDataType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0034 PQPathPtState;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0004 PQPostureType;
+#if !defined(_WIN64)
+typedef __w64 unsigned long ULONG_PTR;
+#else
+typedef unsigned __int64 ULONG_PTR;
+#endif
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0009 PQPointInstruction;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0015 PQCalibrateType;
+#if !defined(_WIN64)
+typedef __w64 long LONG_PTR;
+#else
+typedef __int64 LONG_PTR;
+#endif
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0011 PQAnnotationType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0013 PQCoordinateType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0014 PQModelType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0016 PQNormType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0035 PQCalInverseType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0002 eLoopType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0022 PQEdgeExtraType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0023 PQPickupType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0017 PQSearchDirection;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0018 PQRobotType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0019 PQPlyType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0012 PQAnnotationDisplayType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0003 PQEdgeType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0020 PQDiscreteType;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0036 PQRotationAxis;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0008 PQCalFrame;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0006 PQPositionDir;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0007 PQGuideControlMode;
+typedef enum __MIDL___MIDL_itf_RPC_0000_0000_0021 PQFaceType;
+
+//
+// Smart pointer typedef declarations
+//
+
+_COM_SMARTPTR_TYPEDEF(IPQPlatformComponentCallBack, __uuidof(IPQPlatformComponentCallBack));
+_COM_SMARTPTR_TYPEDEF(IPQComponentOption, __uuidof(IPQComponentOption));
+_COM_SMARTPTR_TYPEDEF(IPQPlatformComponent, __uuidof(IPQPlatformComponent));
+_COM_SMARTPTR_TYPEDEF(IPQComponentUtility, __uuidof(IPQComponentUtility));
+
+//
+// Type library items
+//
+
+struct __declspec(uuid("32087f6b-aabf-420f-afeb-5b1eaf4d88f2"))
+PQPlatformComponent;
+    // [ default ] interface IPQPlatformComponent
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0005
+{
+    PQ_WORKINGPART = 16,
+    PQ_ROBOT = 32,
+    PQ_TOOL = 48,
+    PQ_SEAT = 64,
+    PQ_PATH = 80,
+    PQ_POINT = 96,
+    PQ_COORD = 176,
+    PQ_ACCESSORY_PART = 225,
+    PQ_WORKCELL = 227,
+    PQ_MECHSTATE = 240,
+    PQ_PATH_FOLDER = 252,
+    PQ_MAX = 255
+};
+
+struct __declspec(uuid("0637b701-1636-49b6-9df3-06fd0474d930"))
+IPQPlatformComponentCallBack : IDispatch
+{
+    //
+    // Raw methods provided by interface
+    //
+
+      virtual HRESULT __stdcall Fire_Initialize_Result (
+        /*[in]*/ long lResult ) = 0;
+      virtual HRESULT __stdcall Fire_RunCMD_Result (
+        /*[in]*/ long lResult ) = 0;
+      virtual HRESULT __stdcall Fire_GetData_Result (
+        /*[in]*/ long lResult ) = 0;
+      virtual HRESULT __stdcall Notify_Raise_Dockwindow (
+        /*[in]*/ int i_nType ) = 0;
+      virtual HRESULT __stdcall Fire_Login_Result (
+        /*[in]*/ int i_nLoginType ) = 0;
+      virtual HRESULT __stdcall Fire_Path_Generate_Result (
+        /*[in]*/ long i_bSuccess,
+        /*[in]*/ int i_nPathCount,
+        /*[in]*/ int i_nIndex,
+        /*[in]*/ unsigned long i_ulPathID ) = 0;
+      virtual HRESULT __stdcall Fire_Element_Pickup (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ LPWSTR i_wsEntityName,
+        /*[in]*/ int i_nEntityType,
+        /*[in]*/ double i_dPointX,
+        /*[in]*/ double i_dPointY,
+        /*[in]*/ double i_dPointZ ) = 0;
+      virtual HRESULT __stdcall Fire_RButton_Up (
+        /*[in]*/ long i_lPosX,
+        /*[in]*/ long i_lPosY ) = 0;
+      virtual HRESULT __stdcall Fire_LButton_Up (
+        /*[in]*/ long i_lPosX,
+        /*[in]*/ long i_lPosY ) = 0;
+      virtual HRESULT __stdcall Fire_Menu_Pop (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ long i_lPosX,
+        /*[in]*/ long i_lPosY,
+        /*[out]*/ int * o_nHandled ) = 0;
+      virtual HRESULT __stdcall Fire_Draw ( ) = 0;
+      virtual HRESULT __stdcall Fire_Element_Selection (
+        /*[in]*/ LPWSTR i_wObjNames,
+        /*[in]*/ LPWSTR i_wFaceNames,
+        /*[in]*/ double * i_dPointXYZ,
+        /*[in]*/ int i_nSize ) = 0;
+      virtual HRESULT __stdcall Fire_Simulate_Status (
+        /*[in]*/ long i_bStart ) = 0;
+      virtual HRESULT __stdcall Fire_Object_Selected (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ PQDataType i_eObjType ) = 0;
+      virtual HRESULT __stdcall Fire_Arcball_Status (
+        /*[in]*/ long i_bStart ) = 0;
+      virtual HRESULT __stdcall Fire_Simulate_Point_Error (
+        /*[in]*/ double i_dPtPositionX,
+        /*[in]*/ double i_dPtPositionY,
+        /*[in]*/ double i_dPtPositionZ,
+        /*[in]*/ PQPathPtState i_ePtState ) = 0;
+      virtual HRESULT __stdcall Fire_Object_Deleted (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ LPWSTR i_wObjName,
+        /*[in]*/ PQDataType i_eObjType ) = 0;
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0034
+{
+    PQ_PPS_BE_REACH = 0,
+    PQ_PPS_BE_NOTREACH = 1,
+    PQ_PPS_BE_OUTRANGE = 2,
+    PQ_PPS_BE_SINGULAR = 3,
+    PQ_PPS_BE_UNKNOW = 4,
+    PQ_PPS_BE_CONFIGDIFF = 5,
+    PQ_PPS_BE_COLLISION = 6
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0004
+{
+    QUATERNION = 0,
+    EULERANGLEXYZ = 1,
+    EULERANGLEZYX = 2,
+    EULERANGLEZXZ = 3,
+    EULERANGLEZYZ = 4
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0009
+{
+    PQ_LINE = 1,
+    PQ_CIRCLE = 2,
+    PQ_SPLINE = 3,
+    PQ_JOINT = 4,
+    PQ_ABSJOINT = 5
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0015
+{
+    CALIBRATE_ROBOT = 0,
+    CALIBRATE_WORKPART = 1
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0030
+{
+    PQ_INVERSE_FRONT = 0,
+    PQ_INVERSE_BACK = 1
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0029
+{
+    PQ_INVERSE_UP = 0,
+    PQ_INVERSE_DWON = 1
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0028
+{
+    PQ_INVERSE_NOFLIP = 0,
+    PQ_INVERSE_FLIP = 1,
+    PQ_INVERSE_CLOSEST = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0033
+{
+    PQ_INVERSE_CONTINUATION = 0,
+    PQ_INVERSE_SMALL = 1,
+    PQ_INVERSE_MIDDLE = 2,
+    PQ_INVERSE_LARGE = 3
+};
+
+#pragma pack(push, 4)
+
+struct struct_PQ6RConfig
+{
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0030 eFrontOrBack;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0029 eUpOrDown;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0028 eFlipOrNoFlip;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0033 J1;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0033 J4;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0033 J6;
+};
+
+#pragma pack(pop)
+
+#pragma pack(push, 4)
+
+struct struct_PQKitOption
+{
+    int nEmbedded;
+};
+
+#pragma pack(pop)
+
+struct __declspec(uuid("e57f0328-15e9-415b-8ba1-e578f7b34465"))
+IPQComponentOption : IDispatch
+{
+    //
+    // Raw methods provided by interface
+    //
+
+      virtual HRESULT __stdcall Set_defaultdock_embedded (
+        /*[in]*/ long i_bDefaultDockEmbedded ) = 0;
+      virtual HRESULT __stdcall Is_defaultdock_embedded (
+        /*[out]*/ long * o_bDefaultDockEmbedded ) = 0;
+      virtual HRESULT __stdcall Set_enable_cefcontext (
+        /*[in]*/ long i_bEnableCefContext ) = 0;
+      virtual HRESULT __stdcall Is_enable_cefcontext (
+        /*[out]*/ long * o_bEnableCefContext ) = 0;
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0011
+{
+    PQ_UNKNOWN = 0,
+    PQ_ANNOTATION_TEXT = 1,
+    PQ_ANNOTATION_LINE = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0013
+{
+    PQ_COORINATE_WORLD = 0,
+    PQ_COORINATE_USER = 1,
+    PQ_COORINATE_ROBOTBASE = 2,
+    PQ_COORINATE_WKT = 3
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0014
+{
+    PQ_MODEL_STANFORD_TRIANGLE_MESH_PLY = 0,
+    PQ_MODEL_STL = 1
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0001
+{
+    PQ_ANSI = 0,
+    PQ_UTF8 = 1,
+    PQ_UTF16 = 2
+};
+
+#pragma pack(push, 4)
+
+struct struct_PQPostOption
+{
+    int nFirstPtIndex;
+    int nOffsetDir;
+    int nOffsetData;
+    int nPtDataType;
+    int nPtCoor;
+    int nLineIndex;
+    int nOutputIO;
+    int nUseComment;
+    int nIgnorePathState;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0001 eEncodeType;
+};
+
+#pragma pack(pop)
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0016
+{
+    PQNormType_Norm = 0,
+    PQNormType_Average = 1,
+    PQNormType_TiltAngle = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0035
+{
+    PQ_ROINVERSETYPE_STATION = 0,
+    PQ_ROINVERSETYPE_EXTERNALAXLE_POS_PRIORITY = 1,
+    PQ_ROINVERSETYPE_EXTERNALAXLE_AS_MECH = 2,
+    PQ_ROINVERSETYPE_EXTERNALAXLE_ANGLE_PRIORITY = 3,
+    PQ_ROINVERSETYPE_EXTERNALAXLE_FIXED_DIR = 4,
+    PQ_ROINVERSETYPE_USE_EXTERNAL_DATA = 5
+};
+
+#pragma pack(push, 8)
+
+struct struct_PQGP3ReconParm
+{
+    unsigned long uKSearch;
+    double dKRadius;
+    double dMu;
+    unsigned long iMaxNearestNeighborsNum;
+};
+
+#pragma pack(pop)
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0002
+{
+    E_OUTLOOP = 0,
+    E_INNERLOOP = 1
+};
+
+#pragma pack(push, 8)
+
+struct struct_PQAShapesEdgePram
+{
+    double dAlpha;
+    double dDistanceThreshold;
+    int iMaxIterations;
+    double dRadiusSearch;
+    int iMinClusterSize;
+    int iMaxClusterSize;
+    float fSmoothnessThreshold;
+    float fCurvatureThreshold;
+    unsigned int uiNumberOfNeighbours;
+    float fResidualThreshold;
+};
+
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+
+struct struct_PQBoundaryEdgeParm
+{
+    double dRadiusSearch;
+};
+
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+
+struct struct_PQEdgePram
+{
+    struct struct_PQAShapesEdgePram sASEdgeParm;
+    struct struct_PQBoundaryEdgeParm sBoundaryParm;
+};
+
+#pragma pack(pop)
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0022
+{
+    PQ_ASHAPE = 0,
+    PQ_BOUNDARY = 1
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0023
+{
+    PQ_SELECT_FACE = 1,
+    PQ_SELECT_EDGE = 2,
+    PQ_SELECT_FEV = 7,
+    PQ_SELECT_ANY = 64
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0024
+{
+    PQ_SELECT_CURVE = 0,
+    PQ_SELECT_CURVE_WIRE = 1,
+    PQ_SELECT_CURVE_EDGE = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0025
+{
+    PQ_EPS_TYPE_STEP = 0,
+    PQ_EPS_TYPE_NUMBER = 1,
+    PQ_EPS_TYPE_AUTO_TANDEFLECTION = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0026
+{
+    PQ_EPJ_DEFAULT = 0,
+    PQ_EPJ_ONEPT = 1,
+    PQ_EPJ_TWOPT = 2
+};
+
+#pragma pack(push, 8)
+
+struct struct_PQPFEPathParameterInfor
+{
+    double dInterferenceH;
+    double dInterferenceT;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0025 epsPtStepType;
+    double dPointNumer;
+    double dPointStep;
+    double dAngdeflection;
+    double dCurvaturedeflection;
+    char bMinPtCnt;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0026 epjType;
+    int iConnect1Sel;
+    char bCircleMinPtCnt;
+    double dCircleApproximation;
+    char bGenCirc4Spline;
+    double dCirc4SplineAng;
+    char bGenLine4Spline;
+    double dLine4SplineAng;
+    char bYaxisAlongTan;
+};
+
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+
+struct struct_PQPFEPathTransitInfor
+{
+    char bEntryExitPt;
+    double dEntryOffset;
+    int iEntryDir;
+    double dExitOffset;
+    int iExitDir;
+    int iCutInOutPt;
+    double dCutInOffset;
+    int iCutInDir;
+    double dCutOutOffset;
+    int iCutOutDir;
+    double dCutInOutRadius;
+    double dCutInOutAngle;
+    int iCutInOutCirclePlane;
+};
+
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+
+struct struct_PQPFGCurveShapeParm
+{
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0024 eCurveSelectType;
+    long lFaceEdgeGroup;
+    char bRev;
+    struct struct_PQPFEPathParameterInfor sPathPara;
+    struct struct_PQPFEPathTransitInfor sPathTransit;
+    char bCleanPathProcess;
+    char bCurvesMergePath;
+    int iCoordinate;
+    int epfPostProc;
+    int nToolType;
+    int nTCPType;
+    int iCoordinateRel;
+};
+
+#pragma pack(pop)
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0017
+{
+    PQ_DirectionX = 0,
+    PQ_DirectionY = 1,
+    PQ_DirectionZ = 2,
+    PQ_DirectionXYZ = 3
+};
+
+#pragma pack(push, 8)
+
+struct struct_PQRotrayProcessParameter
+{
+    unsigned long ulObjID;
+    int nOutputType;
+    int nMaxStepOverDistance;
+    double dCutTolerance;
+    int nPtPosZMode;
+};
+
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+
+struct struct_PQRotrayAreaParameter
+{
+    int nRotAxis;
+    double dStartAngle;
+    double dEndAngle;
+    double dStartHeight;
+    double dEndHeight;
+};
+
+#pragma pack(pop)
+
+#pragma pack(push, 4)
+
+struct struct_PQRotrayCoordinateParameter
+{
+    unsigned long ulCoordinateID;
+};
+
+#pragma pack(pop)
+
+#pragma pack(push, 4)
+
+struct struct_PQRotrayConnectParameter
+{
+    int nEntryType;
+    int nExitType;
+};
+
+#pragma pack(pop)
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0018
+{
+    PQ_MECHANISM_ROBOT = 0,
+    PQ_MECHANISM_GUIDE = 1,
+    PQ_MECHANISM_POSITIONER = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0019
+{
+    PLY_POINT_FORMAT = 0,
+    PLY_STANFORD_TRIANGLE_MESH = 1
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0027
+{
+    PQ_NO_OPTIMIZATION = 0,
+    PQ_SIMPLIFY = 1,
+    PQ_MERGEPOINTS = 2
+};
+
+#pragma pack(push, 8)
+
+struct struct_PQMotionPlanParameter
+{
+    double dMaxDistance;
+    double dMaxTime;
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0027 eMotionOptimization;
+    int nPointCount;
+};
+
+#pragma pack(pop)
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0012
+{
+    PQ_SHOWONLYPOINT = 0,
+    PQ_SHOWALL = 1,
+    PQ_HIDEALL = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0032
+{
+    PQ_ESCaRaConfig_leftHand = 0,
+    PQ_ESCaRaConfig_rightHand = 1
+};
+
+#pragma pack(push, 4)
+
+struct struct_PQ3R1PConfig
+{
+    enum __MIDL___MIDL_itf_RPC_0000_0000_0032 EScaraConfig;
+};
+
+#pragma pack(pop)
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0003
+{
+    PQ_CURVE_UNKNOWN = 0,
+    PQ_CURVE_STRAIGNT = 1,
+    PQ_CURVE_CIRCLE = 2,
+    PQ_CURVE_SPLINE = 3
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0020
+{
+    PQ_DISCRETE_BY_STEP = 0,
+    PQ_DISCRETE_BY_NUM = 1,
+    PQ_DISCRETE_AUTO = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0036
+{
+    PQ_ROTATIONAXIS_X = 0,
+    PQ_ROTATIONAXIS_Y = 1,
+    PQ_ROTATIONAXIS_Z = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0008
+{
+    PQ_TCP_FRAME = 0,
+    PQ_BASE_FRAME = 1
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0006
+{
+    PQ_POSITIONDIR_STATION = 0,
+    PQ_POSITIONDIR_FORWARD = 1,
+    PQ_POSITIONDIR_REVERSE = 2
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0007
+{
+    PQ_GUIDEMODE_GUIDE_FIRST = 0,
+    PQ_GUIDEMODE_ROBOT_FIRST = 1,
+    PQ_GUIDEMODE_SAFE = 2,
+    PQ_GUIDEMODE_CUSTOM = 3
+};
+
+enum __MIDL___MIDL_itf_RPC_0000_0000_0021
+{
+    PQ_RACE_GENERAL = 0,
+    PQ_RACE_PLANE = 1,
+    PQ_RACE_CYLINDER = 2,
+    PQ_RACE_CONE = 3,
+    PQ_RACE_REVOLUTION = 4
+};
+
+#pragma pack(push, 8)
+
+struct struct_PQRegPlaneParm
+{
+    double m_dSegThreshold;
+    int m_nSegMaxItera;
+    int m_nPlaneNum;
+};
+
+#pragma pack(pop)
+
+struct __declspec(uuid("25686fb1-da0d-4b16-969b-d9613837cb4d"))
+IPQPlatformComponent : IDispatch
+{
+    //
+    // Raw methods provided by interface
+    //
+
+      virtual HRESULT __stdcall pq_InitPlatformComponent (
+        /*[in]*/ struct IPQPlatformComponentCallBack * pCallBack,
+        /*[in]*/ int hParentHwnd,
+        /*[in]*/ BSTR bsName,
+        /*[in]*/ BSTR bsPWD ) = 0;
+      virtual HRESULT __stdcall pq_GetPlatformView (
+        /*[out]*/ int * hView ) = 0;
+      virtual HRESULT __stdcall pq_RunCommand (
+        /*[in]*/ BSTR bsCommandID,
+        /*[in]*/ unsigned __int64 wParam,
+        /*[in]*/ __int64 lParam,
+        /*[in]*/ BSTR bsParam,
+        /*[in]*/ VARIANT varParam,
+        /*[out]*/ __int64 * lResult ) = 0;
+      virtual HRESULT __stdcall pq_GetAllDataObjectsByType (
+        /*[in]*/ PQDataType i_eObjType,
+        /*[out]*/ BSTR * o_sObjNames,
+        /*[out]*/ BSTR * o_sObjIDs ) = 0;
+      virtual HRESULT __stdcall Doc_get_obj_joint_count (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[out]*/ int * o_nCount ) = 0;
+      virtual HRESULT __stdcall Doc_get_obj_joints (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[out]*/ int * i_nJointsCount,
+        /*[out]*/ double * * o_dJoints ) = 0;
+      virtual HRESULT __stdcall Doc_get_obj_links (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[out]*/ int * o_nLinksCount,
+        /*[out]*/ double * * o_dLinks ) = 0;
+      virtual HRESULT __stdcall Doc_get_obj_velocity (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[out]*/ double * o_dVelocity,
+        /*[out]*/ double * o_dRAD ) = 0;
+      virtual HRESULT __stdcall Tool_get_tcp_posture (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ LPWSTR i_chTcpName,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nPostureCount,
+        /*[out]*/ double * * o_dTcpPosture ) = 0;
+      virtual HRESULT __stdcall Robot_get_end_posture (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nPostureArraySize,
+        /*[out]*/ double * * o_dPosture ) = 0;
+      virtual HRESULT __stdcall Doc_get_obj_name (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[out]*/ BSTR * o_bsName ) = 0;
+      virtual HRESULT __stdcall Doc_get_obj_posture (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nPostureArraySize,
+        /*[in]*/ unsigned long i_ulCoorID,
+        /*[out]*/ double * * o_dPosture ) = 0;
+      virtual HRESULT __stdcall Doc_set_obj_color (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double i_dR,
+        /*[in]*/ double i_dG,
+        /*[in]*/ double i_dB ) = 0;
+      virtual HRESULT __stdcall pq_CloseDocument (
+        /*[in]*/ BSTR i_bsDocName ) = 0;
+      virtual HRESULT __stdcall pq_GetModelTreeView (
+        /*[out,retval]*/ ULONG_PTR * hView ) = 0;
+      virtual HRESULT __stdcall pq_GetDebugTreeView (
+        /*[out,retval]*/ ULONG_PTR * hView ) = 0;
+      virtual HRESULT __stdcall pq_GetOutPutView (
+        /*[out,retval]*/ ULONG_PTR * hView ) = 0;
+      virtual HRESULT __stdcall pq_GetRobotControlView (
+        /*[out,retval]*/ ULONG_PTR * hView ) = 0;
+      virtual HRESULT __stdcall PQAPIImportPointsToPath (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_dPosition,
+        /*[in]*/ PQPointInstruction * i_eInstruct,
+        /*[in]*/ double * i_dVelocity,
+        /*[in]*/ double * i_dSpeedPercent,
+        /*[in]*/ int * i_nApproach,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ BSTR i_PathName,
+        /*[in]*/ BSTR i_GroupName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[out]*/ unsigned long * o_PathID,
+        /*[in]*/ long i_bToolEndPosture ) = 0;
+      virtual HRESULT __stdcall PQAPITransPosition (
+        /*[in]*/ double i_dInputPosition[16],
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nTargetPositionSize,
+        /*[out]*/ double * * o_dTargetPosition ) = 0;
+      virtual HRESULT __stdcall PQAPIDeletePathGroup (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ BSTR bsName ) = 0;
+      virtual HRESULT __stdcall PQAPIGetPointsID (
+        /*[in]*/ unsigned long i_uPathID,
+        /*[out]*/ VARIANT * o_varIDArray ) = 0;
+      virtual HRESULT __stdcall PQAPIGetPointInfo (
+        /*[in]*/ unsigned long i_uPointID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nPostureCount,
+        /*[out]*/ double * * o_dPointPosture,
+        /*[out]*/ double * o_dVelocity,
+        /*[out]*/ double * o_dSpeedPercent,
+        /*[out]*/ PQPointInstruction * o_eInstruct,
+        /*[out]*/ int * o_nApproach ) = 0;
+      virtual HRESULT __stdcall PQAPIAddCustomEvent (
+        /*[in]*/ unsigned long * i_uPointsID,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ unsigned long i_uExecuteObjID,
+        /*[in]*/ int i_nEventPosition,
+        /*[in]*/ BSTR i_bsEventName,
+        /*[in]*/ BSTR i_bsContent ) = 0;
+      virtual HRESULT __stdcall PQAPIPutViewBGC (
+        /*[in]*/ double i_dFromR,
+        /*[in]*/ double i_dFromG,
+        /*[in]*/ double i_dFromB,
+        /*[in]*/ double i_dToR,
+        /*[in]*/ double i_dToG,
+        /*[in]*/ double i_dToB ) = 0;
+      virtual HRESULT __stdcall PQAPIGetObjPositionAttitudeType (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[out]*/ PQPostureType * o_ePostureType ) = 0;
+      virtual HRESULT __stdcall PQAPISetPathInverType (
+        /*[in]*/ unsigned long i_uPathID,
+        /*[in]*/ int i_nType ) = 0;
+      virtual HRESULT __stdcall PQAPISetActiveEngine (
+        /*[in]*/ unsigned long i_uEngineID ) = 0;
+      virtual HRESULT __stdcall PQAPIGetActiveEngine (
+        /*[out]*/ unsigned long * o_uEngineID ) = 0;
+      virtual HRESULT __stdcall PQAPIGetRobotJointsFromPoints (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[out]*/ VARIANT * o_varJointsArray ) = 0;
+      virtual HRESULT __stdcall PQAPICreateExternalLink (
+        /*[in]*/ unsigned long i_ulEngineID,
+        /*[in]*/ unsigned long i_ulGuideID,
+        /*[in]*/ int i_nAngle,
+        /*[in]*/ long i_bSyncPosition,
+        /*[in]*/ unsigned long i_ulPositionerID ) = 0;
+      virtual HRESULT __stdcall PQAPIDeleteExternalLink (
+        /*[in]*/ unsigned long i_ulEngineID,
+        /*[in]*/ unsigned long i_ulExternalID,
+        /*[in]*/ long i_bClearAll ) = 0;
+      virtual HRESULT __stdcall PQAPIGetExternalJointsFromPoints (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ unsigned long i_uExternalID,
+        /*[out]*/ VARIANT * o_varJointsArray ) = 0;
+      virtual HRESULT __stdcall PQAPIGetPathFromRobot (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ BSTR * o_sNames,
+        /*[out]*/ BSTR * o_sIDs ) = 0;
+      virtual HRESULT __stdcall PQAPIGetPathStatus (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ PQPathPtState * o_eStatus ) = 0;
+      virtual HRESULT __stdcall PQAPIGetPointCustomEventInfo (
+        /*[in]*/ unsigned long i_uID,
+        /*[out]*/ long * o_bHasCustomEvent,
+        /*[out]*/ BSTR * o_sName,
+        /*[out]*/ BSTR * o_sContent,
+        /*[out]*/ BSTR * o_sPosition ) = 0;
+      virtual HRESULT __stdcall PQAPIAddTransitPath (
+        /*[in]*/ unsigned long i_uPathAID,
+        /*[in]*/ unsigned long i_uPathBID,
+        /*[out]*/ unsigned long * o_PathID ) = 0;
+      virtual HRESULT __stdcall PQAPIAddAbsJointPath (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_dRobotJoints,
+        /*[in]*/ int i_nRJointsCount,
+        /*[in]*/ double * i_dGuideJoints,
+        /*[in]*/ int i_nGJointsCount,
+        /*[in]*/ double * i_dPositionerJoints,
+        /*[in]*/ int i_nPJointsCount,
+        /*[in]*/ double * i_dVelocity,
+        /*[in]*/ double * i_dSpeedPercent,
+        /*[in]*/ int * i_nApproach,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ unsigned long i_uPathID,
+        /*[out]*/ unsigned long * o_uPathID ) = 0;
+      virtual HRESULT __stdcall PQAPIDeletePathGroupAll (
+        /*[in]*/ unsigned long i_ulRobotID ) = 0;
+      virtual HRESULT __stdcall PQAPICreatePathCoordinateRelation (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ unsigned long i_ulCoordinateID ) = 0;
+      virtual HRESULT __stdcall PQAPIModifyExternalAxleBatch (
+        /*[in]*/ unsigned long * i_ulPathIDs,
+        /*[in]*/ int i_nPathCount,
+        /*[in]*/ unsigned long i_ulExternalID,
+        /*[in]*/ double * i_dExternalJoints,
+        /*[in]*/ int i_nJointsCount ) = 0;
+      virtual HRESULT __stdcall PQIKCalInverseKinematics (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_EndPosture,
+        /*[in]*/ int i_nEndPostureCount,
+        /*[in]*/ double * io_pJointValues,
+        /*[in]*/ int i_nJointValuesCount,
+        /*[in]*/ int i_nAxis1Cfg,
+        /*[in]*/ int i_nAxis2Cfg,
+        /*[in]*/ int i_nAxis4Cfg,
+        /*[in]*/ int i_nAxis6Cfg,
+        /*[out]*/ int * o_pPtStatus ) = 0;
+      virtual HRESULT __stdcall PQAPICreateBoxPart (
+        /*[in]*/ double i_dLength,
+        /*[in]*/ double i_dWidth,
+        /*[in]*/ double i_dHeight,
+        /*[in]*/ double i_dR,
+        /*[in]*/ double i_dG,
+        /*[in]*/ double i_dB,
+        /*[in]*/ BSTR i_PartName,
+        /*[out]*/ unsigned long * o_PartID ) = 0;
+      virtual HRESULT __stdcall PQAPICreateCatchEvent (
+        /*[in]*/ unsigned long i_uPartID,
+        /*[in]*/ unsigned long i_uPointID,
+        /*[in]*/ long i_bPrePoint,
+        /*[in]*/ long i_bCatch,
+        /*[in]*/ BSTR i_EventName ) = 0;
+      virtual HRESULT __stdcall PQAPIModifyPointPosture (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ double * i_dPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType ) = 0;
+      virtual HRESULT __stdcall PQAPICalibrateObj (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double * i_dSrcPosition,
+        /*[in]*/ double * i_dDesPosition,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[in]*/ int i_nTolerancesType,
+        /*[in]*/ double i_dTolerancesValue,
+        /*[in]*/ PQCalibrateType i_calibrateType ) = 0;
+      virtual HRESULT __stdcall PQAPIGetWorkPartVertexCount (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[out]*/ long * o_nCount ) = 0;
+      virtual HRESULT __stdcall PQAPIGetWorkPartVertex (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[in]*/ int i_nCount,
+        /*[out]*/ double * i_dSrcPosition ) = 0;
+      virtual HRESULT __stdcall PQAPIModifyPathGroupIndex (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ BSTR bsSrcName,
+        /*[in]*/ BSTR bsTarName,
+        /*[in]*/ long i_bBefore ) = 0;
+      virtual HRESULT __stdcall PQAPIInverseKinematics (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_EndPosture,
+        /*[in]*/ int i_nEndPostureCount,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ double * io_pJointValues,
+        /*[in]*/ int i_nJointValuesCount,
+        /*[in]*/ struct struct_PQ6RConfig i_eAxisCfg,
+        /*[in]*/ PQPathPtState * o_ePtStatus,
+        /*[in]*/ long i_bToolEndPosture ) = 0;
+      virtual HRESULT __stdcall PQAPIInverseKinematicsFanuc (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_EndPosture,
+        /*[in]*/ int i_nEndPostureCount,
+        /*[in]*/ double * io_pJointValues,
+        /*[in]*/ int i_nJointValuesCount,
+        /*[in]*/ int * i_nAxisCfg,
+        /*[in]*/ int i_nAxisCfgCount,
+        /*[out]*/ int * o_pPtStatus ) = 0;
+      virtual HRESULT __stdcall PQAPISetAxisConfig (
+        /*[in]*/ unsigned long i_uPathID,
+        /*[in]*/ struct struct_PQ6RConfig i_eAxisCfg ) = 0;
+      virtual HRESULT __stdcall Robot_get_base_coordinate (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ unsigned long * o_uCoordinateID ) = 0;
+      virtual HRESULT __stdcall Path_set_post_coordinate (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ unsigned long i_ulCoorID ) = 0;
+      virtual HRESULT __stdcall Path_change_order (
+        /*[in]*/ unsigned long i_ulSrcPathID,
+        /*[in]*/ unsigned long i_ulTarPathID,
+        /*[in]*/ long i_bAhead ) = 0;
+      virtual HRESULT __stdcall Path_feature_set_round (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ int i_nTime ) = 0;
+      virtual HRESULT __stdcall Path_modify_external_axis (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ unsigned long * i_ulGuideID,
+        /*[in]*/ int i_nGuideCount,
+        /*[in]*/ double * i_dGuideData,
+        /*[in]*/ int i_nGuideDataCount ) = 0;
+      virtual HRESULT __stdcall Path_add_entry_point (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ double i_dInOffset,
+        /*[in]*/ double i_dOutOffset,
+        /*[in]*/ PQPointInstruction i_eInInstruction,
+        /*[in]*/ PQPointInstruction i_eOutInstruction ) = 0;
+      virtual HRESULT __stdcall Path_insert_from_point (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ int i_nPtCount,
+        /*[in]*/ double * i_dPosition,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ PQPointInstruction * i_eInstruct,
+        /*[in]*/ double * i_dVelocity,
+        /*[in]*/ double * i_dSpeedPercent,
+        /*[in]*/ int * i_nApproach,
+        /*[in]*/ BSTR i_PathName,
+        /*[in]*/ BSTR i_GroupName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[in]*/ long i_bToolEndPosture,
+        /*[out]*/ unsigned long * o_PathID,
+        /*[in]*/ long i_bIsUpdate ) = 0;
+      virtual HRESULT __stdcall Path_get_group_path (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ BSTR i_GroupName,
+        /*[out]*/ VARIANT * o_sNames,
+        /*[out]*/ VARIANT * o_sIDs ) = 0;
+      virtual HRESULT __stdcall Path_get_point_count (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ int * o_nCount ) = 0;
+      virtual HRESULT __stdcall Doc_get_pathgroup_name (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ VARIANT * o_varNameArray ) = 0;
+      virtual HRESULT __stdcall Doc_get_obj_bytype (
+        /*[in]*/ PQDataType i_eObjType,
+        /*[out]*/ VARIANT * o_sNames,
+        /*[out]*/ VARIANT * o_sIDs ) = 0;
+      virtual HRESULT __stdcall Doc_set_obj_visibility (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ long i_bShow ) = 0;
+      virtual HRESULT __stdcall Math_trans_posture_to_rotationmatrix (
+        /*[in]*/ double * i_dPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ double o_dTranslation[16] ) = 0;
+      virtual HRESULT __stdcall Path_get_pointgroup_info (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ int * o_nPtGroupCount,
+        /*[out]*/ VARIANT * o_arrGroupPtCount ) = 0;
+      virtual HRESULT __stdcall Doc_collide_obj_single (
+        /*[in]*/ unsigned long i_ulObjAID,
+        /*[in]*/ unsigned long i_ulObjBID,
+        /*[out]*/ long * o_bCollide ) = 0;
+      virtual HRESULT __stdcall Doc_collide_obj_multiple (
+        /*[in]*/ unsigned long * i_ulObjAIDs,
+        /*[in]*/ int i_nACount,
+        /*[in]*/ unsigned long * i_ulObjBIDs,
+        /*[in]*/ int i_nBCount,
+        /*[out]*/ VARIANT * o_collideObjs ) = 0;
+      virtual HRESULT __stdcall Doc_set_obj_joints (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double * i_dJoints,
+        /*[in]*/ int i_nJointArraySize ) = 0;
+      virtual HRESULT __stdcall Doc_set_obj_links (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double * i_dLinks,
+        /*[in]*/ int i_nLinkArraySize ) = 0;
+      virtual HRESULT __stdcall Doc_set_obj_velocity (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double i_dVelocity,
+        /*[in]*/ double i_dRAD ) = 0;
+      virtual HRESULT __stdcall Tool_set_tcp_posture (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ LPWSTR i_chTcpName,
+        /*[in]*/ double * i_dTcpPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType ) = 0;
+      virtual HRESULT __stdcall Doc_set_obj_name (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ BSTR i_bsName ) = 0;
+      virtual HRESULT __stdcall Doc_set_obj_posture (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double * i_dPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ unsigned long i_ulCoorID ) = 0;
+      virtual HRESULT __stdcall Doc_get_name (
+        /*[out]*/ BSTR * o_sName ) = 0;
+      virtual HRESULT __stdcall Point_modify_poture_batch (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ int i_nStartIndex,
+        /*[in]*/ int i_nEndIndex,
+        /*[in]*/ double * i_dPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType ) = 0;
+      virtual HRESULT __stdcall PQAPISetOption (
+        /*[in]*/ struct struct_PQKitOption * i_stuOption ) = 0;
+      virtual HRESULT __stdcall Path_get_generate_face (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ int * o_nFaceCount,
+        /*[out]*/ LONG_PTR * * o_lpFacePtr ) = 0;
+      virtual HRESULT __stdcall Path_insert_from_joint (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_dRobotJoints,
+        /*[in]*/ int i_nRobotJointsSize,
+        /*[in]*/ double * i_dGuideJoints,
+        /*[in]*/ int i_nGuideJointsSize,
+        /*[in]*/ double * i_dPositionerJoints,
+        /*[in]*/ int i_nPositionerJointsSize,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ PQPointInstruction * i_eInstruct,
+        /*[in]*/ double * i_dVelocity,
+        /*[in]*/ double * i_dSpeedPercent,
+        /*[in]*/ int * i_nApproach,
+        /*[in]*/ BSTR i_PathName,
+        /*[in]*/ BSTR i_GroupName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[out]*/ unsigned long * o_PathID,
+        /*[in]*/ long i_bIsUpdate ) = 0;
+      virtual HRESULT __stdcall Path_get_generate_shape (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ int * o_nShapeCount,
+        /*[out]*/ LONG_PTR * * o_lpShapePtr ) = 0;
+      virtual HRESULT __stdcall PQAPIFree (
+        /*[in]*/ LONG_PTR * i_ptrData ) = 0;
+      virtual HRESULT __stdcall PQAPIFreeArray (
+        /*[in]*/ LONG_PTR * i_ptrDataArray ) = 0;
+      virtual HRESULT __stdcall Robot_get_tool (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ unsigned long * o_ulToolID ) = 0;
+      virtual HRESULT __stdcall Tool_get_tcp (
+        /*[in]*/ unsigned long i_ulID,
+        /*[out]*/ int * o_nTcpCount,
+        /*[out]*/ LPWSTR * o_chTcpNames,
+        /*[out]*/ int * * o_nTcpNameLengthArray ) = 0;
+      virtual HRESULT __stdcall Path_set_tcp (
+        /*[in]*/ unsigned long i_ulID,
+        /*[in]*/ LPWSTR i_chTcpName ) = 0;
+      virtual HRESULT __stdcall Path_get_tcp (
+        /*[in]*/ unsigned long i_ulID,
+        /*[out]*/ LPWSTR * o_chTcpName ) = 0;
+      virtual HRESULT __stdcall Path_get_post_coordinate (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ unsigned long * o_ulCoorID ) = 0;
+      virtual HRESULT __stdcall Path_get_relation_coordinate (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ unsigned long * o_ulCoorID ) = 0;
+      virtual HRESULT __stdcall Doc_get_coordinate_posture (
+        /*[in]*/ unsigned long i_ulCoorID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nPostureArraySize,
+        /*[out]*/ double * * o_dPosture,
+        /*[in]*/ unsigned long i_ulRobCoorID ) = 0;
+      virtual HRESULT __stdcall Doc_add_sim_collide_data (
+        /*[in]*/ unsigned long * i_vCollisionCheckIDS,
+        /*[in]*/ int i_nCheckIDSCount,
+        /*[in]*/ unsigned long * i_vCollisionWithIDS,
+        /*[in]*/ int i_nWithIDSCount ) = 0;
+      virtual HRESULT __stdcall Doc_clear_sim_collide_data ( ) = 0;
+      virtual HRESULT __stdcall Doc_set_dockwindow_visible (
+        /*[in]*/ int i_nDockType,
+        /*[in]*/ long i_bVisible ) = 0;
+      virtual HRESULT __stdcall pq_CloseComponent ( ) = 0;
+      virtual HRESULT __stdcall Point_get_posture_batch (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ int i_nStartIndex,
+        /*[in]*/ int i_nCount,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[out]*/ int * o_nPostureArraySize,
+        /*[out]*/ double * * o_dPosture ) = 0;
+      virtual HRESULT __stdcall Doc_obj_rotate_local_X (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double i_dRAD ) = 0;
+      virtual HRESULT __stdcall Doc_obj_rotate_local_Y (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double i_dRAD ) = 0;
+      virtual HRESULT __stdcall Doc_obj_rotate_local_Z (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ double i_dRAD ) = 0;
+      virtual HRESULT __stdcall Doc_create_coordinate (
+        /*[in]*/ unsigned long i_ulBaseCoordinateID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ double * i_dPosture,
+        /*[in]*/ int i_nPostureSize,
+        /*[in]*/ LPWSTR i_chName ) = 0;
+      virtual HRESULT __stdcall Doc_get_current_selected_obj (
+        /*[out]*/ int * o_nSelectedCount,
+        /*[out]*/ unsigned long * * o_ulSelectedObjIDs ) = 0;
+      virtual HRESULT __stdcall Path_add_send_event (
+        /*[in]*/ unsigned long * i_uPointsID,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ unsigned long i_uExecuteObjID,
+        /*[in]*/ int i_nEventPosition,
+        /*[in]*/ LPWSTR i_bsEventName ) = 0;
+      virtual HRESULT __stdcall Path_add_waittime_event (
+        /*[in]*/ unsigned long * i_uPointsID,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ unsigned long i_uExecuteObjID,
+        /*[in]*/ int i_nEventPosition,
+        /*[in]*/ double i_dWaitTime,
+        /*[in]*/ LPWSTR i_bsEventName ) = 0;
+      virtual HRESULT __stdcall Path_add_wait_event (
+        /*[in]*/ unsigned long * i_uPointsID,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ unsigned long i_uExecuteObjID,
+        /*[in]*/ int i_nEventPosition,
+        /*[in]*/ LPWSTR i_bsEventName,
+        /*[in]*/ LPWSTR i_bsWaitEventName ) = 0;
+      virtual HRESULT __stdcall App_get_option (
+        /*[out]*/ struct IPQComponentOption * * o_ptrOption ) = 0;
+      virtual HRESULT __stdcall Doc_get_objtype_by_id (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[out]*/ PQDataType * o_eObjType ) = 0;
+      virtual HRESULT __stdcall Path_get_robot (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ unsigned long * o_uRobotID ) = 0;
+      virtual HRESULT __stdcall Robot_get_fl_in_point (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nPostureArraySize,
+        /*[out]*/ double * * o_dPosture ) = 0;
+      virtual HRESULT __stdcall Doc_open_robx (
+        /*[in]*/ LPWSTR i_whRobxPath ) = 0;
+      virtual HRESULT __stdcall Doc_save_robx ( ) = 0;
+      virtual HRESULT __stdcall Doc_saveas_robx (
+        /*[in]*/ LPWSTR i_whRobxPath ) = 0;
+      virtual HRESULT __stdcall Path_set_velocity_batch (
+        /*[in]*/ unsigned long * i_uPointsID,
+        /*[in]*/ int i_nPathIDArraySize,
+        /*[in]*/ double i_dInitWorkingVel,
+        /*[in]*/ double i_dJointWorkingVel,
+        /*[in]*/ double i_dJointSpeedPercent ) = 0;
+      virtual HRESULT __stdcall Path_get_velocity (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ double * i_dInitWorkingVel,
+        /*[out]*/ double * i_dJointWorkingVel,
+        /*[out]*/ double * i_dJointSpeedPercent ) = 0;
+      virtual HRESULT __stdcall Point_get_parent_path (
+        /*[in]*/ unsigned long i_uPointID,
+        /*[out]*/ unsigned long * o_uPathID ) = 0;
+      virtual HRESULT __stdcall Robot_insert_pos_point (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ PQPointInstruction i_eInstruction,
+        /*[in]*/ LPWSTR i_whPathName,
+        /*[out]*/ unsigned long * o_PathID ) = 0;
+      virtual HRESULT __stdcall Part_insert_pos_point (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[in]*/ LPWSTR i_whPathName,
+        /*[out]*/ unsigned long * o_PathID ) = 0;
+      virtual HRESULT __stdcall Doc_get_collide_result (
+        /*[in]*/ double i_dMInDistance,
+        /*[in]*/ long b_isPreciseDetection,
+        /*[out]*/ unsigned long * * o_ulObjAIDs,
+        /*[out]*/ int * o_nObjCount ) = 0;
+      virtual HRESULT __stdcall Doc_set_collide_data (
+        /*[in]*/ unsigned long * i_vCollisionCheckIDS,
+        /*[in]*/ int i_nCheckIDSCount,
+        /*[in]*/ unsigned long * i_vCollisionWithIDS,
+        /*[in]*/ int i_nWithIDSCount ) = 0;
+      virtual HRESULT __stdcall Doc_clear_collide_data ( ) = 0;
+      virtual HRESULT __stdcall Doc_update_view ( ) = 0;
+      virtual HRESULT __stdcall Doc_insert_annotation (
+        /*[in]*/ double i_dBasePoint[3],
+        /*[in]*/ double i_dTextPoint[3],
+        /*[in]*/ unsigned long i_ulCoordinateID,
+        /*[in]*/ LPWSTR i_whText,
+        /*[in]*/ double i_dTextColor[3],
+        /*[in]*/ double i_dBaseColor[3],
+        /*[in]*/ PQAnnotationType i_eType,
+        /*[in]*/ long i_lPtSize,
+        /*[in]*/ double i_lPtColor[3],
+        /*[in]*/ double i_dFontSize,
+        /*[in]*/ long i_bFramem,
+        /*[out]*/ unsigned long * o_AnnotationID,
+        /*[in]*/ unsigned long i_uObjID,
+        /*[in]*/ long i_bUpdate ) = 0;
+      virtual HRESULT __stdcall Annotation_modify_text (
+        /*[in]*/ unsigned long i_ulAnnotationId,
+        /*[in]*/ LPWSTR i_whEditText ) = 0;
+      virtual HRESULT __stdcall Doc_get_coordinate (
+        /*[in]*/ PQCoordinateType i_eType,
+        /*[out]*/ int * o_nCount,
+        /*[out]*/ LPWSTR * o_whCoordinateNames,
+        /*[out]*/ int * * o_nCoordinateNameLengthArray,
+        /*[out]*/ unsigned long * * o_uCoordinateIDs ) = 0;
+      virtual HRESULT __stdcall Doc_start_module (
+        /*[in]*/ LPWSTR i_whModuleID ) = 0;
+      virtual HRESULT __stdcall Doc_end_module (
+        /*[in]*/ LPWSTR i_whModuleID ) = 0;
+      virtual HRESULT __stdcall View_draw_point (
+        /*[in]*/ double i_PtPosition[3],
+        /*[in]*/ unsigned long i_ulCoordinateID,
+        /*[in]*/ long i_lPtSize,
+        /*[in]*/ long i_lPtColor,
+        /*[in]*/ LPWSTR i_wsText,
+        /*[in]*/ long i_lTextColor ) = 0;
+      virtual HRESULT __stdcall Part_get_vertex_position (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[in]*/ LPWSTR i_whVertextName,
+        /*[in]*/ unsigned long i_ulCoordinateID,
+        /*[out]*/ double o_dPosition[3] ) = 0;
+      virtual HRESULT __stdcall Path_set_transition (
+        /*[in]*/ unsigned long i_ulPointIDStart,
+        /*[in]*/ double i_dXStart,
+        /*[in]*/ double i_dYStart,
+        /*[in]*/ double i_dZStart,
+        /*[in]*/ unsigned long i_ulPointIDEnd,
+        /*[in]*/ double i_dXEnd,
+        /*[in]*/ double i_dYEnd,
+        /*[in]*/ double i_dZEnd ) = 0;
+      virtual HRESULT __stdcall Math_is_three_point_collinear (
+        /*[in]*/ double * i_dPoint1,
+        /*[in]*/ double * i_dPoint2,
+        /*[in]*/ double * i_dPoint3,
+        /*[out]*/ long * o_bIsColliner ) = 0;
+      virtual HRESULT __stdcall Math_is_calibrate_point_less_distance (
+        /*[in]*/ double * i_dSrcPosition,
+        /*[in]*/ double * i_dDesPosition,
+        /*[in]*/ double i_dSafetyValue,
+        /*[out]*/ long * o_bIsLess ) = 0;
+      virtual HRESULT __stdcall Part_get_ray_surface_intersetion (
+        /*[in]*/ LPWSTR i_wSurfaceName,
+        /*[in]*/ double i_dPointCoor[3],
+        /*[in]*/ double i_dPointVec[3],
+        /*[out]*/ double * * o_dIntersetionPoint,
+        /*[out]*/ int * o_nArrySize ) = 0;
+      virtual HRESULT __stdcall Part_cheak_point_on_surface (
+        /*[in]*/ LPWSTR i_wSurfaceName,
+        /*[in]*/ double i_dPointCoor[3],
+        /*[in]*/ double i_dTol,
+        /*[out]*/ long * o_bPointonSuraface ) = 0;
+      virtual HRESULT __stdcall Robot_set_custom_post (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ LPWSTR i_whPostFile ) = 0;
+      virtual HRESULT __stdcall Part_get_path (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[out]*/ int * o_nCount,
+        /*[out]*/ LPWSTR * o_whPathNames,
+        /*[out]*/ unsigned long * * o_uPathIDs ) = 0;
+      virtual HRESULT __stdcall Math_trans_vector_to_posture (
+        /*[in]*/ double i_dPoint[3],
+        /*[in]*/ double i_dXVector[3],
+        /*[in]*/ double i_dZVector[3],
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ double * * o_dPosture,
+        /*[out]*/ int * o_nPostureArraySize ) = 0;
+      virtual HRESULT __stdcall Path_Reverse (
+        /*[in]*/ unsigned long * i_ulPathIDs,
+        /*[in]*/ int i_nPathIDArraySize ) = 0;
+      virtual HRESULT __stdcall Path_Rotate (
+        /*[in]*/ unsigned long * i_ulPathIDs,
+        /*[in]*/ int i_nPathIDArraySize,
+        /*[in]*/ double i_dX,
+        /*[in]*/ double i_dY,
+        /*[in]*/ double i_dZ ) = 0;
+      virtual HRESULT __stdcall Path_Translation (
+        /*[in]*/ unsigned long * i_ulPathIDs,
+        /*[in]*/ int i_nPathIDArraySize,
+        /*[in]*/ double i_dX,
+        /*[in]*/ double i_dY,
+        /*[in]*/ double i_dZ ) = 0;
+      virtual HRESULT __stdcall Part_Multi_Point_Calibrate (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[in]*/ double i_dSrcPosition[15],
+        /*[in]*/ double i_dDesPosition[15],
+        /*[in]*/ unsigned long i_uCoordinateID ) = 0;
+      virtual HRESULT __stdcall Doc_set_floor_color (
+        /*[in]*/ double i_dR,
+        /*[in]*/ double i_dG,
+        /*[in]*/ double i_dB ) = 0;
+      virtual HRESULT __stdcall Part_export (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ unsigned long i_ulObjVisualID,
+        /*[in]*/ LPWSTR i_bsFileName,
+        /*[in]*/ PQModelType i_eModelType ) = 0;
+      virtual HRESULT __stdcall Doc_setup_workingpart (
+        /*[in]*/ unsigned long i_ulWorkingPart ) = 0;
+      virtual HRESULT __stdcall Path_add_spray_event (
+        /*[in]*/ unsigned long * i_uPointsID,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ unsigned long i_uExecuteObjID,
+        /*[in]*/ int i_nEventPosition,
+        /*[in]*/ LPWSTR i_bsEventName,
+        /*[in]*/ unsigned long * i_ulNozzleID,
+        /*[in]*/ unsigned long * i_ulAssistorID,
+        /*[in]*/ int i_nNozzleSize,
+        /*[in]*/ int i_nAssistorSize,
+        /*[in]*/ long i_bUnion ) = 0;
+      virtual HRESULT __stdcall Doc_get_nozzle (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ int * o_nSize,
+        /*[out]*/ LPWSTR * o_sNames,
+        /*[out]*/ unsigned long * * o_sIDs ) = 0;
+      virtual HRESULT __stdcall Doc_get_assistor (
+        /*[in]*/ unsigned long i_ulNozzleID,
+        /*[out]*/ int * o_nSize,
+        /*[out]*/ LPWSTR * o_sNames,
+        /*[out]*/ unsigned long * * o_sIDs ) = 0;
+      virtual HRESULT __stdcall Doc_set_coordinate_posture (
+        /*[in]*/ unsigned long i_ulCoorID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ double * i_dPosture,
+        /*[in]*/ int i_nPostureSize,
+        /*[in]*/ long i_bUpdatePost ) = 0;
+      virtual HRESULT __stdcall Doc_catch_obj (
+        /*[in]*/ unsigned long i_uEngineID,
+        /*[in]*/ unsigned long i_ulPartID ) = 0;
+      virtual HRESULT __stdcall Doc_release_obj (
+        /*[in]*/ unsigned long i_uEngineID,
+        /*[in]*/ unsigned long i_ulPartID ) = 0;
+      virtual HRESULT __stdcall Doc_get_selected_annotation_position (
+        /*[out]*/ int * o_nPointCount,
+        /*[out]*/ double * * o_dBasePoint,
+        /*[out]*/ double * * o_dTextPoint,
+        /*[out]*/ unsigned long * * o_ulAnnotationIDs ) = 0;
+      virtual HRESULT __stdcall Path_add_SynSetting_event (
+        /*[in]*/ unsigned long * i_uPointsID,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ unsigned long i_uExecuteObjID,
+        /*[in]*/ int i_nEventPosition,
+        /*[in]*/ LPWSTR i_bsEventName,
+        /*[in]*/ unsigned long * i_uSynSettingEngineID,
+        /*[in]*/ int i_nSynSettingEngineCount ) = 0;
+      virtual HRESULT __stdcall Doc_synergism_set (
+        /*[in]*/ unsigned long * i_ulObjIDs,
+        /*[in]*/ int i_nCount,
+        /*[in]*/ LPWSTR i_whSystemName ) = 0;
+      virtual HRESULT __stdcall Doc_set_synergism_instruction (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ unsigned long i_ulObjIDSyn,
+        /*[in]*/ LPWSTR i_whSystemName ) = 0;
+      virtual HRESULT __stdcall Doc_set_synergism_velocity (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ unsigned long i_ulObjIDSyn ) = 0;
+      virtual HRESULT __stdcall Kit_init_post_option_struct (
+        /*[in]*/ struct struct_PQPostOption * i_stPostOption ) = 0;
+      virtual HRESULT __stdcall Robot_post_file (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ LPWSTR i_whPostFilePath,
+        /*[in]*/ LPWSTR i_whPostFileName,
+        /*[in]*/ LPWSTR i_whUseTCP,
+        /*[in]*/ struct struct_PQPostOption * i_stPostOption ) = 0;
+      virtual HRESULT __stdcall Path_add_positioning (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ LPWSTR i_wSurfaceName,
+        /*[in]*/ double * i_dPoint,
+        /*[in]*/ int i_dPointsize,
+        /*[in]*/ PQNormType * i_pqNormaltype,
+        /*[in]*/ double i_dTiltAngle,
+        /*[in]*/ double i_dHeight,
+        /*[in]*/ double i_dOffset,
+        /*[in]*/ double i_dDepth,
+        /*[in]*/ LPWSTR i_whGroupName,
+        /*[in]*/ PQPointInstruction i_eInstruction,
+        /*[out]*/ unsigned long * o_ulPathID ) = 0;
+      virtual HRESULT __stdcall Path_insert_from_point_with_sameproperty (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ int i_nPtCount,
+        /*[in]*/ double * i_dPosition,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ PQPointInstruction i_eInstruct,
+        /*[in]*/ double i_dVelocity,
+        /*[in]*/ double i_dSpeedPercent,
+        /*[in]*/ int i_nApproach,
+        /*[in]*/ BSTR i_PathName,
+        /*[in]*/ BSTR i_GroupName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[in]*/ long i_bToolEndPosture,
+        /*[in]*/ long i_bIsUpdate,
+        /*[out]*/ unsigned long * o_PathID ) = 0;
+      virtual HRESULT __stdcall Path_get_point_id (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ int * o_nPointsCount,
+        /*[out]*/ unsigned long * * o_ulPointIDs ) = 0;
+      virtual HRESULT __stdcall Point_get_posture_in_path_tcp_coordinate (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nPostureCount,
+        /*[out]*/ double * * o_dPointPosture ) = 0;
+      virtual HRESULT __stdcall Point_get_posture_in_path_tcp_coordinate_unsafe (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ double * i_dPointPosture,
+        /*[in]*/ int i_nPostureArraySize ) = 0;
+      virtual HRESULT __stdcall Path_modify_line_color (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ long i_lColor ) = 0;
+      virtual HRESULT __stdcall Path_show_name (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ long i_bShow ) = 0;
+      virtual HRESULT __stdcall Path_modify_line_width (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ double i_dLineWidth ) = 0;
+      virtual HRESULT __stdcall Point_modify_velocity_and_approch (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ double i_dVelocity,
+        /*[in]*/ int i_nApproach ) = 0;
+      virtual HRESULT __stdcall Robot_Get_All_Inverse_Kinematics (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_EndPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ long b_IsEndPosture,
+        /*[out]*/ double * * io_pJointValues,
+        /*[out]*/ int * o_nJointValuesCount,
+        /*[out]*/ struct struct_PQ6RConfig * * o_eAxisCfg,
+        /*[out]*/ int * o_nAxisCfgCount ) = 0;
+      virtual HRESULT __stdcall Part_get_extreme_point_of_edge_by_name (
+        /*[in]*/ LPWSTR i_wcharEdgeName,
+        /*[out]*/ double * * o_dStartPoint,
+        /*[out]*/ int * o_nStartPointSize,
+        /*[out]*/ double * * o_dStartTanVector,
+        /*[out]*/ int * o_nStartVectorSize,
+        /*[out]*/ double * * o_dEndPoint,
+        /*[out]*/ int * o_nEndPointSize,
+        /*[out]*/ double * * o_dEndTanVector,
+        /*[out]*/ int * o_nEndVectorSize ) = 0;
+      virtual HRESULT __stdcall Robot_inverse_kinematics_with_external_axis (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ PQCalInverseType i_eCalInveType,
+        /*[in]*/ double * i_EndPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ long b_IsEndPosture,
+        /*[in]*/ double * io_pJointValues,
+        /*[in]*/ int o_nJointValuesCount,
+        /*[in]*/ double * io_ExtJointRadValues,
+        /*[in]*/ int i_nExtJointRadValuesCount,
+        /*[in]*/ double * io_GuideRadValues,
+        /*[in]*/ int i_nGuideValuesCount,
+        /*[in]*/ double i_dfloating,
+        /*[in]*/ struct struct_PQ6RConfig i_eAxisCfg,
+        /*[out]*/ PQPathPtState * o_ePtStatus ) = 0;
+      virtual HRESULT __stdcall Doc_import_accessory_part_with_posture (
+        /*[in]*/ LPWSTR i_wsAbsPath,
+        /*[in]*/ LPWSTR i_wsFileType,
+        /*[in]*/ double * i_dPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ unsigned long i_ulCoorID,
+        /*[out]*/ unsigned long * o_ulObjId ) = 0;
+      virtual HRESULT __stdcall Kit_init_gp3reconstructionparm_struct (
+        /*[in]*/ struct struct_PQGP3ReconParm * i_sGp3ReconPram ) = 0;
+      virtual HRESULT __stdcall Doc_pointcloud_gp3reconstruction (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ struct struct_PQGP3ReconParm * i_sGp3ReconPram,
+        /*[out]*/ unsigned long * o_ulMeshObjID ) = 0;
+      virtual HRESULT __stdcall Robot_get_joints_count (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ int * o_nJointsCount ) = 0;
+      virtual HRESULT __stdcall Robot_get_model_num (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ LPWSTR * o_wsRobotType ) = 0;
+      virtual HRESULT __stdcall Doc_set_save_entityId_flag (
+        /*[in]*/ long i_bIsSava ) = 0;
+      virtual HRESULT __stdcall Doc_Export_Model (
+        /*[in]*/ LPWSTR i_sFilePath,
+        /*[in]*/ unsigned long * i_uObjIDs,
+        /*[in]*/ int i_nObjCount ) = 0;
+      virtual HRESULT __stdcall Doc_draw_cylinder (
+        /*[in]*/ double * i_dLineStart,
+        /*[in]*/ int i_nStartCount,
+        /*[in]*/ double * i_dLineEnd,
+        /*[in]*/ int i_nEndCount,
+        /*[in]*/ double i_radius,
+        /*[in]*/ double * i_dColorRGB,
+        /*[in]*/ int i_nColorCount,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[out]*/ unsigned long * o_uCylinderID,
+        /*[in]*/ long i_bIsUpdate ) = 0;
+      virtual HRESULT __stdcall Part_generate_path_by_four_axis_precision_machining (
+        /*[in]*/ unsigned long i_lPartID,
+        /*[in]*/ unsigned long i_crdSysID,
+        /*[in]*/ int i_nRotAxis,
+        /*[in]*/ double i_dStepover,
+        /*[in]*/ double i_dRangeMin,
+        /*[in]*/ double i_dangeMax,
+        /*[out]*/ unsigned long * o_uPathID ) = 0;
+      virtual HRESULT __stdcall Robot_get_forward_kinematics (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_dRobotJoint,
+        /*[in]*/ int i_nJointCount,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ unsigned long i_ulCoordinateID,
+        /*[in]*/ long i_bIsTcpPosture,
+        /*[out]*/ int * o_nPostureArraySize,
+        /*[out]*/ double * * o_dPosture ) = 0;
+      virtual HRESULT __stdcall Path_add_multi_layer_weld_feature (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ int i_nLayerNum,
+        /*[in]*/ long i_bAutoLoop,
+        /*[in]*/ double i_dBackPathZOffset,
+        /*[in]*/ double i_dTangentialOffset,
+        /*[in]*/ double i_dTangentialLeftOffset,
+        /*[in]*/ double i_dTangentialRightOffset,
+        /*[out]*/ unsigned long * o_ulFeatureID ) = 0;
+      virtual HRESULT __stdcall Path_modify_multi_layer_weld_feature (
+        /*[in]*/ unsigned long i_ulFeatureID,
+        /*[in]*/ int i_nLayerNum,
+        /*[in]*/ long i_bAutoLoop,
+        /*[in]*/ double i_dBackPathZOffset,
+        /*[in]*/ double i_dTangentialOffset,
+        /*[in]*/ double i_dTangentialLeftOffset,
+        /*[in]*/ double i_dTangentialRightOffset ) = 0;
+      virtual HRESULT __stdcall Path_delete_feature (
+        /*[in]*/ unsigned long i_ulFeatureID ) = 0;
+      virtual HRESULT __stdcall Doc_get_assistor_params (
+        /*[in]*/ unsigned long i_dNozzleID,
+        /*[out]*/ LPWSTR * o_wsParamsNames,
+        /*[out]*/ LPWSTR * o_wsParamsValues ) = 0;
+      virtual HRESULT __stdcall Part_get_face_of_edge_by_name (
+        /*[in]*/ LPWSTR i_wcharEdgeName,
+        /*[out]*/ LPWSTR * o_wcharFaceNames ) = 0;
+      virtual HRESULT __stdcall Part_check_edge_in_face_by_name (
+        /*[in]*/ LPWSTR i_wcharFaceName,
+        /*[in]*/ LPWSTR i_wcharEdgeName,
+        /*[in]*/ double i_dProjectionLengthThreshold,
+        /*[out]*/ long * o_bIn ) = 0;
+      virtual HRESULT __stdcall Part_get_face_by_name (
+        /*[in]*/ unsigned long i_uPartID,
+        /*[out]*/ LPWSTR * o_wcharFaceNames ) = 0;
+      virtual HRESULT __stdcall Part_get_edge_by_name (
+        /*[in]*/ unsigned long i_uPartID,
+        /*[in]*/ eLoopType i_EedgeType,
+        /*[out]*/ LPWSTR * o_wcharEdgeNames ) = 0;
+      virtual HRESULT __stdcall Part_get_face_normal_by_name (
+        /*[in]*/ LPWSTR i_wcharFaceName,
+        /*[in]*/ double i_PointX,
+        /*[in]*/ double i_PointY,
+        /*[in]*/ double i_PointZ,
+        /*[out]*/ double * o_dx,
+        /*[out]*/ double * o_dy,
+        /*[out]*/ double * o_dz ) = 0;
+      virtual HRESULT __stdcall Kit_init_pointcloud_edgeparm_struct (
+        /*[in]*/ struct struct_PQEdgePram * i_sEdgeParm ) = 0;
+      virtual HRESULT __stdcall Doc_create_curve_from_pointcloud (
+        /*[in]*/ unsigned long i_ulPointCloudID,
+        /*[in]*/ PQEdgeExtraType i_eEdgeExtraType,
+        /*[in]*/ struct struct_PQEdgePram * i_sEdgeParm,
+        /*[out]*/ unsigned long * * o_ulEdgeObjAIDs,
+        /*[out]*/ int * o_nObjCount ) = 0;
+      virtual HRESULT __stdcall Path_set_linkage_global_additional_control_data (
+        /*[in]*/ unsigned long * i_uObjectID,
+        /*[in]*/ int i_PathCount,
+        /*[in]*/ unsigned long i_ExtJointID,
+        /*[in]*/ int i_nExtJointIndex,
+        /*[in]*/ double i_ExtJointValue,
+        /*[in]*/ long i_bIsFixed,
+        /*[in]*/ double i_dDetectionValue,
+        /*[in]*/ long i_bIsMutationnDetection,
+        /*[in]*/ double i_dMInJointValue,
+        /*[in]*/ double i_dMaxJointValue ) = 0;
+      virtual HRESULT __stdcall Path_insert_from_joint_without_movement (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_dRobotJoints,
+        /*[in]*/ int i_nRobotJointsSize,
+        /*[in]*/ double * i_dGuideJoints,
+        /*[in]*/ int i_nGuideJointsSize,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ PQPointInstruction * i_eInstruct,
+        /*[in]*/ double * i_dVelocity,
+        /*[in]*/ double * i_dSpeedPercent,
+        /*[in]*/ int * i_nApproach,
+        /*[in]*/ BSTR i_PathName,
+        /*[in]*/ BSTR i_GroupName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[out]*/ unsigned long * o_PathID,
+        /*[in]*/ long i_bIsUpdate ) = 0;
+      virtual HRESULT __stdcall Robot_move_to_position (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_dPosition,
+        /*[in]*/ int i_nPositionSize,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_pPtStatus ) = 0;
+      virtual HRESULT __stdcall Doc_start_pickup_element (
+        /*[in]*/ PQPickupType i_eSelectType ) = 0;
+      virtual HRESULT __stdcall Doc_stop_pickup_element ( ) = 0;
+      virtual HRESULT __stdcall Path_post_file (
+        /*[in]*/ unsigned long * i_ulPathIDs,
+        /*[in]*/ int i_nPathCount,
+        /*[in]*/ LPWSTR i_whPostFilePath,
+        /*[in]*/ LPWSTR i_whPostFileName,
+        /*[in]*/ LPWSTR i_whUseTCP,
+        /*[in]*/ struct struct_PQPostOption * i_stPostOption ) = 0;
+      virtual HRESULT __stdcall Doc_calculate_angular_bisection_from_2points (
+        /*[in]*/ double * i_dStartPoint,
+        /*[in]*/ double * i_dEndPoint,
+        /*[in]*/ unsigned long i_uObjID,
+        /*[in]*/ double i_dTol,
+        /*[out]*/ double * * o_dNormal,
+        /*[out]*/ int * o_nNormalSize ) = 0;
+      virtual HRESULT __stdcall Doc_get_collide_points (
+        /*[out]*/ unsigned long * * o_ulObjAIDs,
+        /*[out]*/ int * o_nObjCount,
+        /*[out]*/ double * * o_dPoints,
+        /*[out]*/ int * o_PointsCount ) = 0;
+      virtual HRESULT __stdcall Kit_init_curveshape_pram_struct (
+        /*[in]*/ struct struct_PQPFGCurveShapeParm * i_sCurveShapeParm ) = 0;
+      virtual HRESULT __stdcall Doc_create_path_from_curve (
+        /*[in]*/ unsigned long * i_uCurveID,
+        /*[in]*/ int i_nCurveIDCount,
+        /*[in]*/ struct struct_PQPFGCurveShapeParm i_sCurveShapeParm,
+        /*[in]*/ unsigned long i_URObotID,
+        /*[out]*/ unsigned long * * o_ulPathIDs,
+        /*[out]*/ int * o_nPathCount ) = 0;
+      virtual HRESULT __stdcall Robot_get_brand (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ LPWSTR * o_chRobotBrand ) = 0;
+      virtual HRESULT __stdcall Doc_set_custom_parameter (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ LPWSTR i_chParaName,
+        /*[in]*/ LPWSTR i_chParaValue ) = 0;
+      virtual HRESULT __stdcall Doc_change_cylinder_color (
+        /*[in]*/ unsigned long i_uCylinderID,
+        /*[in]*/ double * i_dColorRGB,
+        /*[in]*/ int i_nColorCount ) = 0;
+      virtual HRESULT __stdcall Point_add_search_instruct_event (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ int i_nEventPosition,
+        /*[in]*/ LPWSTR i_whEventName,
+        /*[in]*/ LPWSTR i_whSaveResult,
+        /*[in]*/ LPWSTR i_whSearchResult,
+        /*[in]*/ PQSearchDirection i_eSearchDirection,
+        /*[in]*/ double * i_dSearchDistance,
+        /*[in]*/ int i_nDistanceCount ) = 0;
+      virtual HRESULT __stdcall Path_insert_point_distance (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ double i_dInsertDistance,
+        /*[in]*/ unsigned long * o_uInsertPointID ) = 0;
+      virtual HRESULT __stdcall Kit_init_rotray_path_parameter (
+        /*[in]*/ struct struct_PQRotrayProcessParameter * i_stProcessParameter,
+        /*[in]*/ struct struct_PQRotrayAreaParameter * i_stAreaParameter,
+        /*[in]*/ struct struct_PQRotrayCoordinateParameter * i_stCoordinateParameter,
+        /*[in]*/ struct struct_PQRotrayConnectParameter * i_stConnectParameter ) = 0;
+      virtual HRESULT __stdcall Doc_add_rotray_path (
+        /*[in]*/ unsigned long i_ulRobot,
+        /*[in]*/ struct struct_PQRotrayProcessParameter * i_stProcessParameter,
+        /*[in]*/ struct struct_PQRotrayAreaParameter * i_stAreaParameter,
+        /*[in]*/ struct struct_PQRotrayCoordinateParameter * i_stCoordinateParameter,
+        /*[in]*/ struct struct_PQRotrayConnectParameter * i_stConnectParameter,
+        /*[out]*/ unsigned long * o_ulPathID ) = 0;
+      virtual HRESULT __stdcall Doc_delete_obj (
+        /*[in]*/ unsigned long * i_ulObjIDArray,
+        /*[in]*/ int i_nObjIDArraySize ) = 0;
+      virtual HRESULT __stdcall Doc_insert_custom_define_robot (
+        /*[in]*/ LPWSTR i_wcRobrPath,
+        /*[out]*/ unsigned long * o_ulRobotID ) = 0;
+      virtual HRESULT __stdcall Path_add_shooting_event (
+        /*[in]*/ unsigned long i_uPointID,
+        /*[in]*/ unsigned long i_uExecuteObjID,
+        /*[in]*/ LPWSTR i_bsEventName,
+        /*[in]*/ LPWSTR i_bsContent,
+        /*[in]*/ double i_dTime ) = 0;
+      virtual HRESULT __stdcall Point_get_posture_in_path_tcp_coordinate_batch (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ int i_nStartIndex,
+        /*[in]*/ int i_nCount,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[out]*/ int * o_nPostureCount,
+        /*[out]*/ double * * o_dPointPosture ) = 0;
+      virtual HRESULT __stdcall Doc_import_part (
+        /*[in]*/ LPWSTR i_wsAbsPath,
+        /*[in]*/ LPWSTR i_wsFileType,
+        /*[out]*/ unsigned long * o_ulObjId ) = 0;
+      virtual HRESULT __stdcall Robot_get_type (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ PQRobotType * o_eRobotType ) = 0;
+      virtual HRESULT __stdcall Path_get_point_group_info (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[out]*/ int * o_nGroupCount,
+        /*[out]*/ int * * o_nGroupArray ) = 0;
+      virtual HRESULT __stdcall Path_get_point_joint_batch (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ int i_nStartIndex,
+        /*[in]*/ int i_nCount,
+        /*[out]*/ int * o_dJointArrayCount,
+        /*[out]*/ double * * o_nGroupArray ) = 0;
+      virtual HRESULT __stdcall Path_get_point_external_joint_batch (
+        /*[in]*/ unsigned long i_ulPathID,
+        /*[in]*/ int i_nStartIndex,
+        /*[in]*/ int i_nCount,
+        /*[out]*/ int * o_nExtCountArray,
+        /*[out]*/ unsigned long * * o_uExtJointID,
+        /*[out]*/ int * o_nExtJointArrayCount,
+        /*[out]*/ double * * o_nExtJointArray ) = 0;
+      virtual HRESULT __stdcall Doc_insert_custom_define_part (
+        /*[in]*/ LPWSTR i_wcRobpPath,
+        /*[out]*/ unsigned long * o_ulPartID ) = 0;
+      virtual HRESULT __stdcall Doc_import_accessory_part (
+        /*[in]*/ LPWSTR i_whFilePath,
+        /*[in]*/ long i_bShowProgress,
+        /*[out]*/ unsigned long * o_ulPartID ) = 0;
+      virtual HRESULT __stdcall Doc_import_ply_file (
+        /*[in]*/ LPWSTR i_whFilePath,
+        /*[in]*/ PQPlyType i_ePlyType,
+        /*[out]*/ unsigned long * o_ulPartID ) = 0;
+      virtual HRESULT __stdcall Path_motion_plan (
+        /*[in]*/ unsigned long i_ulStartPathID,
+        /*[in]*/ unsigned long i_ulEndPathID,
+        /*[in]*/ struct struct_PQMotionPlanParameter i_PQMotionPlanParameter,
+        /*[out]*/ unsigned long * i_ulNewPathID ) = 0;
+      virtual HRESULT __stdcall Kit_init_motion_plan_struct (
+        /*[in]*/ struct struct_PQMotionPlanParameter * i_PQMotionPlanParameter ) = 0;
+      virtual HRESULT __stdcall Doc_insert_custom_define_tool (
+        /*[in]*/ LPWSTR i_wcRobtPath,
+        /*[in]*/ long i_bReplaceFLWithoutSelectTool,
+        /*[in]*/ long i_bShowProgress,
+        /*[out]*/ unsigned long * o_ulToolID ) = 0;
+      virtual HRESULT __stdcall Doc_point_cloud_calibration (
+        /*[in]*/ unsigned long i_ulFixObjID,
+        /*[in]*/ double * i_dFixObjPosture,
+        /*[in]*/ int i_nFixObjPostureSize,
+        /*[in]*/ unsigned long i_ulMoveObjID,
+        /*[in]*/ double * i_dMoveObjPosture,
+        /*[in]*/ int i_nMoveObjPostureSize,
+        /*[out]*/ double * o_dAverageError ) = 0;
+      virtual HRESULT __stdcall Annotation_modify_display (
+        /*[in]*/ PQAnnotationDisplayType i_pqAnnotationDisplayType ) = 0;
+      virtual HRESULT __stdcall Points_translation (
+        /*[in]*/ unsigned long * i_ulPointIDs,
+        /*[in]*/ int i_nPointIDArraySize,
+        /*[in]*/ double i_dX,
+        /*[in]*/ double i_dY,
+        /*[in]*/ double i_dZ ) = 0;
+      virtual HRESULT __stdcall Doc_transform_accessory_into_part (
+        /*[in]*/ unsigned long i_ulAccessoryID,
+        /*[out]*/ unsigned long * o_ulPartID,
+        /*[in]*/ long i_bUpdateView ) = 0;
+      virtual HRESULT __stdcall Doc_enable_autosave (
+        /*[in]*/ long i_bEnable ) = 0;
+      virtual HRESULT __stdcall PQAPIInverseKinematics3R1P (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_EndPosture,
+        /*[in]*/ int i_nEndPostureCount,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ double * io_pJointValues,
+        /*[in]*/ int i_nJointValuesCount,
+        /*[in]*/ struct struct_PQ3R1PConfig i_n3R1PAxisCfg,
+        /*[in]*/ PQPathPtState * o_ePtStatus,
+        /*[in]*/ long i_bToolEndPosture ) = 0;
+      virtual HRESULT __stdcall PQAPIGetAxisConfig (
+        /*[in]*/ unsigned long i_uPathID,
+        /*[out]*/ struct struct_PQ6RConfig * o_eAxisCfg ) = 0;
+      virtual HRESULT __stdcall Robot_3R1P_inverse_kinematics_with_external_axis (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ PQCalInverseType i_eCalInveType,
+        /*[in]*/ double * i_EndPosture,
+        /*[in]*/ int i_nPostureArraySize,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ long b_IsEndPosture,
+        /*[in]*/ double * io_pJointValues,
+        /*[in]*/ int o_nJointValuesCount,
+        /*[in]*/ double * io_ExtJointRadValues,
+        /*[in]*/ int i_nExtJointRadValuesCount,
+        /*[in]*/ double * io_GuideRadValues,
+        /*[in]*/ int i_nGuideValuesCount,
+        /*[in]*/ double i_dfloating,
+        /*[in]*/ struct struct_PQ3R1PConfig i_eAxisCfg,
+        /*[out]*/ PQPathPtState * o_ePtStatus ) = 0;
+      virtual HRESULT __stdcall Doc_init_6Rconfig (
+        /*[out]*/ struct struct_PQ6RConfig * o_eAxisCfg ) = 0;
+      virtual HRESULT __stdcall Doc_init_3R1Pconfig (
+        /*[out]*/ struct struct_PQ3R1PConfig * o_eAxisCfg ) = 0;
+      virtual HRESULT __stdcall Robot_3R1P_get_axis_config (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ struct struct_PQ3R1PConfig * o_eAxisCfg ) = 0;
+      virtual HRESULT __stdcall Doc_custom_simulate_set_data (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ double * i_dPointPosture,
+        /*[in]*/ PQPostureType i_ePostureType ) = 0;
+      virtual HRESULT __stdcall Doc_custom_simulate_initialize (
+        /*[in]*/ long i_bShowSimControlDlg,
+        /*[in]*/ long i_bEnableOutput ) = 0;
+      virtual HRESULT __stdcall Doc_custom_simulate_start ( ) = 0;
+      virtual HRESULT __stdcall Doc_custom_simulate_stop ( ) = 0;
+      virtual HRESULT __stdcall Doc_custom_simulate_end ( ) = 0;
+      virtual HRESULT __stdcall Doc_custom_simulate_simulate_to_point (
+        /*[in]*/ unsigned long i_ulObjID,
+        /*[in]*/ int i_nPointIndex ) = 0;
+      virtual HRESULT __stdcall Robot_6R_get_axis_config (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ struct struct_PQ6RConfig * o_eAxisCfg ) = 0;
+      virtual HRESULT __stdcall Robot_get_floating (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ double * o_dFloating ) = 0;
+      virtual HRESULT __stdcall Path_modify_section_line_method (
+        /*[in]*/ long i_bUsingNewMethod ) = 0;
+      virtual HRESULT __stdcall Path_folder_post_file (
+        /*[in]*/ unsigned long i_ulPathFolderID,
+        /*[in]*/ LPWSTR i_wsOutDir,
+        /*[in]*/ LPWSTR i_whPostFileName,
+        /*[in]*/ LPWSTR i_whUseTCP,
+        /*[in]*/ struct struct_PQPostOption * i_stPostOption ) = 0;
+      virtual HRESULT __stdcall Part_get_edge_type (
+        /*[in]*/ LPWSTR i_wsEdgeName,
+        /*[out]*/ PQEdgeType * o_eEdgeType ) = 0;
+      virtual HRESULT __stdcall Part_get_circle_radius (
+        /*[in]*/ LPWSTR i_wsEdgeName,
+        /*[out]*/ double * o_dRadius ) = 0;
+      virtual HRESULT __stdcall Part_get_straight_line_length (
+        /*[in]*/ LPWSTR i_wsEdgeName,
+        /*[out]*/ double * o_dLength ) = 0;
+      virtual HRESULT __stdcall Part_get_discrete_point_position (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[in]*/ LPWSTR i_wsEdgeName,
+        /*[in]*/ PQDiscreteType i_eDiscreteType,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ double i_dStep,
+        /*[in]*/ double i_dInterferenceH,
+        /*[in]*/ double i_dInterferenceT,
+        /*[out]*/ int * o_nReturnPtCount,
+        /*[out]*/ double * * o_dPtPosition,
+        /*[out]*/ double * * o_dPtTangent ) = 0;
+      virtual HRESULT __stdcall Doc_exchange_model (
+        /*[in]*/ LPWSTR i_whFilePath,
+        /*[in]*/ LPWSTR i_whExchangePara,
+        /*[in]*/ LPWSTR i_whExchagePath ) = 0;
+      virtual HRESULT __stdcall Path_comment (
+        /*[in]*/ unsigned long * i_ulPathIDs,
+        /*[in]*/ int i_nPathIDArraySize ) = 0;
+      virtual HRESULT __stdcall Path_uncomment (
+        /*[in]*/ unsigned long * i_ulPathIDs,
+        /*[in]*/ int i_nPathIDArraySize ) = 0;
+      virtual HRESULT __stdcall Doc_define_custom_fl_tool (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[in]*/ double * i_dFLPosture,
+        /*[in]*/ int i_nFLPostureSize,
+        /*[in]*/ PQPostureType i_eFLPostureType,
+        /*[in]*/ double * i_dTcpPosture,
+        /*[in]*/ int i_nTCPPostureSize,
+        /*[in]*/ PQPostureType i_eTCPPostureType,
+        /*[in]*/ LPWSTR i_wsSavePath,
+        /*[out]*/ unsigned long * o_ulToolID ) = 0;
+      virtual HRESULT __stdcall Math_euler_rotate_along_axis (
+        /*[in]*/ double * i_dX,
+        /*[in]*/ double * i_dY,
+        /*[in]*/ double * i_dZ,
+        /*[in]*/ double * i_dA,
+        /*[in]*/ double * i_dB,
+        /*[in]*/ double * i_dC,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ double i_dRotateAngle,
+        /*[in]*/ PQRotationAxis i_eRotationAxisType ) = 0;
+      virtual HRESULT __stdcall Part_get_circle_edge_info (
+        /*[in]*/ LPWSTR i_wsEdgeName,
+        /*[out]*/ double * o_dRadius,
+        /*[out]*/ double * o_dCircleCenterX,
+        /*[out]*/ double * o_dCircleCenterY,
+        /*[out]*/ double * o_dCircleCenterZ,
+        /*[out]*/ double * o_dCircleStartAngle,
+        /*[out]*/ double * o_dCircleEndAngle,
+        /*[out]*/ double * o_dNormalX,
+        /*[out]*/ double * o_dNormalY,
+        /*[out]*/ double * o_dNormalZ,
+        /*[out]*/ double * o_dXNormalX,
+        /*[out]*/ double * o_dXNormalY,
+        /*[out]*/ double * o_dXNormalZ ) = 0;
+      virtual HRESULT __stdcall Doc_draw_circle (
+        /*[in]*/ LPWSTR i_wsCircleEdgeName,
+        /*[in]*/ double i_dLineRadius,
+        /*[in]*/ long i_lColor,
+        /*[in]*/ LPWSTR i_wsDisplayName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[out]*/ unsigned long * o_ulAccPartID ) = 0;
+      virtual HRESULT __stdcall Doc_get_event_template (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ int i_nTemplateNum,
+        /*[out]*/ LPWSTR * o_whTemplateName,
+        /*[out]*/ LPWSTR * o_whTemplateContent ) = 0;
+      virtual HRESULT __stdcall Doc_get_event_template_count (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ int * o_nTemplateCount ) = 0;
+      virtual HRESULT __stdcall Doc_draw_circle_with_pt (
+        /*[in]*/ double i_dCirclePt1[3],
+        /*[in]*/ double i_dCirclePt2[3],
+        /*[in]*/ double i_dCirclePt3[3],
+        /*[in]*/ double i_dLineRadius,
+        /*[in]*/ long i_lColor,
+        /*[in]*/ LPWSTR i_wsDisplayName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[out]*/ unsigned long * o_ulAccPartID ) = 0;
+      virtual HRESULT __stdcall Part_assembly (
+        /*[in]*/ unsigned long * i_ulAccPartID,
+        /*[in]*/ int i_nAccPartSize,
+        /*[in]*/ LPWSTR i_wsAccPartName ) = 0;
+      virtual HRESULT __stdcall Part_get_extreme_point_of_edge (
+        /*[in]*/ LPWSTR i_whEdgeName,
+        /*[out]*/ double o_dStartPoint[3],
+        /*[out]*/ double o_dEndPoint[3] ) = 0;
+      virtual HRESULT __stdcall Part_get_boundingbox_point (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[out]*/ double o_dMin[3],
+        /*[out]*/ double o_dMax[3],
+        /*[out]*/ double o_dVertex[24] ) = 0;
+      virtual HRESULT __stdcall Doc_create_box_accessory_part (
+        /*[in]*/ double i_dLength,
+        /*[in]*/ double i_dWidth,
+        /*[in]*/ double i_dHeight,
+        /*[in]*/ long i_lColor,
+        /*[in]*/ LPWSTR i_wsDisplayName,
+        /*[out]*/ unsigned long * o_ulPartID ) = 0;
+      virtual HRESULT __stdcall Robot_get_forward_kinematics_by_jointIndex (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ double * i_dRobotJoint,
+        /*[in]*/ int i_nJointCount,
+        /*[in]*/ int i_nJointIndex,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ unsigned long i_ulCoordinateID,
+        /*[out]*/ int * o_nPostureArraySize,
+        /*[out]*/ double * * o_dPosture ) = 0;
+      virtual HRESULT __stdcall Path_add_swing_event (
+        /*[in]*/ unsigned long * i_uPointsID,
+        /*[in]*/ int i_nPointCount,
+        /*[in]*/ unsigned long i_uExecuteObjID,
+        /*[in]*/ int i_nEventPosition,
+        /*[in]*/ LPWSTR i_bsEventName,
+        /*[in]*/ long i_bIsStop,
+        /*[in]*/ int i_nSwingJoint,
+        /*[in]*/ double i_SwingAngle,
+        /*[in]*/ double i_SwingValue ) = 0;
+      virtual HRESULT __stdcall Path_sand_blast (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[in]*/ int * i_nSerialNumber,
+        /*[in]*/ int i_nCount,
+        /*[in]*/ long * i_bJet,
+        /*[in]*/ long * i_bBlast ) = 0;
+      virtual HRESULT __stdcall Path_set_angle_priority (
+        /*[in]*/ unsigned long * i_ulObjID,
+        /*[in]*/ int i_nPathCount,
+        /*[in]*/ PQCalFrame i_pqCalFrame,
+        /*[in]*/ long i_bIsCalFirstJoint,
+        /*[in]*/ long i_bIsAngleCompensation,
+        /*[in]*/ PQPositionDir i_pqPositionDir,
+        /*[in]*/ long i_bOpenGuideControl,
+        /*[in]*/ PQGuideControlMode i_pqGuideControlMode,
+        /*[in]*/ double i_dGuideActive,
+        /*[in]*/ double i_dRobotActive ) = 0;
+      virtual HRESULT __stdcall Part_get_accpart_bounding_box (
+        /*[in]*/ unsigned long i_uAccPartID,
+        /*[out]*/ double o_dPointMin[3],
+        /*[out]*/ double o_dPointMax[3] ) = 0;
+      virtual HRESULT __stdcall Part_get_face_area (
+        /*[in]*/ LPWSTR i_wchFaceName,
+        /*[out]*/ double * o_dFaceArea ) = 0;
+      virtual HRESULT __stdcall Part_get_face_bndbox (
+        /*[in]*/ LPWSTR i_wchFaceName,
+        /*[out]*/ double o_dFacePtMin[3],
+        /*[out]*/ double o_dFacePtMax[3] ) = 0;
+      virtual HRESULT __stdcall Path_insert_from_point_with_external_joint (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[in]*/ int i_nPtCount,
+        /*[in]*/ double * i_dPosition,
+        /*[in]*/ unsigned long * i_ExtJointIDs,
+        /*[in]*/ int i_nExtJointCount,
+        /*[in]*/ double * i_dExtValue,
+        /*[in]*/ int i_nExtValueCount,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ PQPointInstruction * i_eInstruct,
+        /*[in]*/ double * i_dVelocity,
+        /*[in]*/ double * i_dSpeedPercent,
+        /*[in]*/ int * i_nApproach,
+        /*[in]*/ LPWSTR i_PathName,
+        /*[in]*/ LPWSTR i_GroupName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[in]*/ long i_bToolEndPosture,
+        /*[out]*/ unsigned long * o_PathID,
+        /*[in]*/ long i_bIsUpdate ) = 0;
+      virtual HRESULT __stdcall Doc_draw_straight_line (
+        /*[in]*/ LPWSTR i_wsEdgeName,
+        /*[in]*/ double i_dLineRadius,
+        /*[in]*/ long i_lColor,
+        /*[in]*/ LPWSTR i_wsDisplayName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[out]*/ unsigned long * o_ulAccPartID ) = 0;
+      virtual HRESULT __stdcall Path_get_sectionLine_face_normal (
+        /*[in]*/ unsigned long i_uPathID,
+        /*[out]*/ double * * o_FaceNormal,
+        /*[out]*/ int * o_nFaceNormalCount ) = 0;
+      virtual HRESULT __stdcall Part_get_face_type (
+        /*[in]*/ LPWSTR i_wchFaceName,
+        /*[out]*/ PQFaceType * o_eFaceType ) = 0;
+      virtual HRESULT __stdcall App_set_tip_name_version (
+        /*[in]*/ LPWSTR i_wtName,
+        /*[in]*/ LPWSTR i_wtVersion ) = 0;
+      virtual HRESULT __stdcall Doc_save_scene_image (
+        /*[in]*/ LPWSTR i_wtImagePath,
+        /*[in]*/ int i_nWidth,
+        /*[in]*/ int i_nHeight ) = 0;
+      virtual HRESULT __stdcall Part_get_vertex_position_ex (
+        /*[in]*/ unsigned long i_ulPartID,
+        /*[in]*/ unsigned long i_ulCoordinateID,
+        /*[out]*/ int * o_nVertexCount,
+        /*[out]*/ double * * o_dVertexPosition ) = 0;
+      virtual HRESULT __stdcall Robot_get_link_Obj (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ unsigned long * * o_uObjIds,
+        /*[out]*/ int * o_nObjArraySize ) = 0;
+      virtual HRESULT __stdcall Doc_get_drived_obj (
+        /*[in]*/ unsigned long i_ulID,
+        /*[out]*/ unsigned long * o_nCatchID ) = 0;
+      virtual HRESULT __stdcall Part_insert_point_with_posture (
+        /*[in]*/ unsigned long i_uPart,
+        /*[in]*/ int i_nPtCount,
+        /*[in]*/ double * i_dPosition,
+        /*[in]*/ PQPostureType i_ePostureType,
+        /*[in]*/ double i_dVelocity,
+        /*[in]*/ double i_dpalvel,
+        /*[in]*/ int * i_nApproach,
+        /*[in]*/ LPWSTR i_PathName,
+        /*[in]*/ LPWSTR i_GroupName,
+        /*[in]*/ unsigned long i_uCoordinateID,
+        /*[in]*/ long i_bIsUpdate,
+        /*[out]*/ unsigned long * i_uPathID ) = 0;
+      virtual HRESULT __stdcall Math_vector_rotate_by_vector (
+        /*[in]*/ double * i_RotateVec,
+        /*[in]*/ double * i_FixedVec,
+        /*[in]*/ double i_dRoateRad,
+        /*[out]*/ double * * o_ResultVec ) = 0;
+      virtual HRESULT __stdcall Kit_init_regplane_struct (
+        /*[out]*/ struct struct_PQRegPlaneParm * o_sRegPlaneParm ) = 0;
+      virtual HRESULT __stdcall Doc_get_pointcloud_plane (
+        /*[in]*/ unsigned long i_ulPointCloudID,
+        /*[in]*/ struct struct_PQRegPlaneParm i_sGetPlaneParam,
+        /*[out]*/ double * * o_dPlaneCoeff,
+        /*[out]*/ int * o_nPlaneCount ) = 0;
+      virtual HRESULT __stdcall Doc_get_pointcloud_obbvert (
+        /*[in]*/ unsigned long i_nPointsObjID,
+        /*[out]*/ double * * o_dVerts ) = 0;
+      virtual HRESULT __stdcall Doc_get_pointcloud_vertplane (
+        /*[in]*/ double * i_dVerts,
+        /*[in]*/ double * i_dPlanesCoeff,
+        /*[in]*/ int i_nPlaneNum,
+        /*[in]*/ double i_dTheta,
+        /*[out]*/ double * * o_dVertPlaneCoeff ) = 0;
+      virtual HRESULT __stdcall Path_set_folder_name (
+        /*[in]*/ unsigned long i_ulPathFolderID,
+        /*[in]*/ LPWSTR i_wsName ) = 0;
+      virtual HRESULT __stdcall Robot_get_rated_joint_velocity (
+        /*[in]*/ unsigned long i_ulRobotID,
+        /*[out]*/ int * o_nJointCount,
+        /*[out]*/ double * * o_dJointVelocity ) = 0;
+      virtual HRESULT __stdcall Point_get_spray_event_content (
+        /*[in]*/ unsigned long i_ulPointID,
+        /*[out]*/ LPWSTR * o_wsName,
+        /*[out]*/ unsigned long * o_ulExecuteDeviceID,
+        /*[out]*/ long * o_bPointForward,
+        /*[out]*/ LPWSTR * o_wsEventTemplate,
+        /*[out]*/ LPWSTR * o_wsEventContent,
+        /*[out]*/ long * o_bUnion,
+        /*[out]*/ unsigned long * * o_ulNozzleIDs,
+        /*[out]*/ unsigned long * * o_ulAssistorIDs,
+        /*[out]*/ int * o_nulAssistorCount ) = 0;
+      virtual HRESULT __stdcall Doc_get_mode_compound_as_part (
+        /*[out]*/ long * o_bModeCompoundAsPart ) = 0;
+      virtual HRESULT __stdcall Doc_set_mode_compound_as_part (
+        /*[in]*/ long i_bModeCompoundAsPart ) = 0;
+      virtual HRESULT __stdcall Path_get_flat_surfpath_slice_normals (
+        /*[in]*/ unsigned long i_uPathID,
+        /*[out]*/ double * * o_FaceNormal,
+        /*[out]*/ int * o_nFaceNormalCount ) = 0;
+};
+
+struct __declspec(uuid("1f685b3c-5a4f-4d2f-91a4-6362c2e1943a"))
+PQPlatformComponentCallBack;
+    // [ default ] interface IPQPlatformComponentCallBack
+
+struct __declspec(uuid("a04a7678-fcea-4ba3-8189-7e23199eb040"))
+PQComponentOption;
+    // [ default ] interface IPQComponentOption
+
+struct __declspec(uuid("e9b90f9c-9d0e-4a83-b73b-d48819f10a2d"))
+PQComponentUtility;
+    // [ default ] interface IPQComponentUtility
+
+struct __declspec(uuid("70d66320-0d8b-477b-b1c9-0ae07c04fc30"))
+IPQComponentUtility : IDispatch
+{
+    //
+    // Raw methods provided by interface
+    //
+
+      virtual HRESULT __stdcall License_get_hardkey_info (
+        /*[out]*/ LPWSTR * o_wsKeyInfo,
+        /*[out]*/ LPWSTR * o_wsStatusMsg ) = 0;
+      virtual HRESULT __stdcall App_set_language (
+        /*[in]*/ LPWSTR i_chLang ) = 0;
+      virtual HRESULT __stdcall App_get_version (
+        /*[out]*/ LPWSTR * o_wsVersion ) = 0;
+      virtual HRESULT __stdcall PQAPIFreeArray (
+        /*[in]*/ LONG_PTR * i_ptrDataArray ) = 0;
+};
+
+//
+// Named GUID constants initializations
+//
+
+extern "C" const GUID __declspec(selectany) LIBID_RPCLib =
+    {0x250d49b7,0x0a0e,0x42cf,{0x9d,0xbd,0x55,0xe0,0x17,0x53,0x15,0x66}};
+extern "C" const GUID __declspec(selectany) CLSID_PQPlatformComponent =
+    {0x32087f6b,0xaabf,0x420f,{0xaf,0xeb,0x5b,0x1e,0xaf,0x4d,0x88,0xf2}};
+extern "C" const GUID __declspec(selectany) IID_IPQPlatformComponentCallBack =
+    {0x0637b701,0x1636,0x49b6,{0x9d,0xf3,0x06,0xfd,0x04,0x74,0xd9,0x30}};
+extern "C" const GUID __declspec(selectany) IID_IPQComponentOption =
+    {0xe57f0328,0x15e9,0x415b,{0x8b,0xa1,0xe5,0x78,0xf7,0xb3,0x44,0x65}};
+extern "C" const GUID __declspec(selectany) IID_IPQPlatformComponent =
+    {0x25686fb1,0xda0d,0x4b16,{0x96,0x9b,0xd9,0x61,0x38,0x37,0xcb,0x4d}};
+extern "C" const GUID __declspec(selectany) CLSID_PQPlatformComponentCallBack =
+    {0x1f685b3c,0x5a4f,0x4d2f,{0x91,0xa4,0x63,0x62,0xc2,0xe1,0x94,0x3a}};
+extern "C" const GUID __declspec(selectany) CLSID_PQComponentOption =
+    {0xa04a7678,0xfcea,0x4ba3,{0x81,0x89,0x7e,0x23,0x19,0x9e,0xb0,0x40}};
+extern "C" const GUID __declspec(selectany) CLSID_PQComponentUtility =
+    {0xe9b90f9c,0x9d0e,0x4a83,{0xb7,0x3b,0xd4,0x88,0x19,0xf1,0x0a,0x2d}};
+extern "C" const GUID __declspec(selectany) IID_IPQComponentUtility =
+    {0x70d66320,0x0d8b,0x477b,{0xb1,0xc9,0x0a,0xe0,0x7c,0x04,0xfc,0x30}};
+
+#pragma pack(pop)
