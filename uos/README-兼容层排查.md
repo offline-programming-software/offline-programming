@@ -130,5 +130,69 @@ wine 对这套组合支持不完整 —— 界面、文件相关功能希望较�
 | `01-diagnose-on-uos.sh` | 采集环境 + 启动日志，生成可回传的报告 |
 | `02-fix-wineprefix.sh` | 建专用 wine 前缀，装运行库 / 字体 / GUI 组件 |
 | `03-register-pqkit.sh` | `regsvr32` 注册 PQKit COM 组件，失败时回退导入注册表 |
+| `04-verify-on-uos.sh` | **可运行性验收**：启动一次并逐项 PASS/FAIL，指出下一步 |
+| `05-pack-portable.sh` | 把验收通过的环境冻结成**自包含可复现包**（前缀 + 应用 + 启动器） |
 | `PQKit-com-reg.template.reg` | 由 `olp/PQKit.manifest` 生成：94 个 COM 类 + 2 个类型库 |
 | `.gitattributes` | 强制本目录 `.sh` 以 LF 换行提交（否则拷到 Linux 会报 `\r` 错误） |
+
+---
+
+## 8. 「能不能保证在 UOS 上跑起来」——工程上怎么做
+
+**先说结论：没有任何人能在不接触目标机的情况下"保证"它跑起来。** Wine 兼容性取决于
+PQKit 内部（MFC + Hoops3d + Python/.NET）的具体调用路径，只能实测。
+但可以把「碰运气」变成「可验证 + 可复现」，具体四件事：
+
+### 8.1 把失败分层，逐层拿掉（不要一上来就猜）
+
+| 层 | 典型失败 | 判据 | 对策 |
+| --- | --- | --- | --- |
+| L1 运行库 | `0xC0000135` / `0xC000007B` | 进程起不来 | 用 14.4x 运行库；`winetricks vcrun2022` |
+| L2 COM 注册 | 「PQKit 初始化失败」/`0x80040154` | 日志有 `REGDB_E_CLASSNOTREG` | 脚本 03 显式 `regsvr32`（**已确认四个 DLL 都导出 `DllRegisterServer`**） |
+| L3 依赖 DLL | `err:module:import_dll` | 日志指名缺哪个 | 按缺的名字补 `winetricks`（msxml6 / gdiplus / riched20 / dotnet48…） |
+| L4 图形 | 花屏 / 三维视图空白 | 界面出来但显示异常 | `QT_OPENGL=software`、`winetricks renderer=gl`、换 wine 版本 |
+| L5 内核 | 打开模型 / 生成轨迹时崩 | 日志里 `5axcore`、`Hoops`、`python` 报错 | 这一层最难；见 8.4 兜底 |
+
+脚本 `04-verify-on-uos.sh` 就是把 L1~L5 变成可自动判定的检查项：
+进程是否存活、有无 `REGDB_E_CLASSNOTREG`、有无 `import_dll`、
+PQKit 三元组（`RPC.dll`/`UPApiBase.dll`/`RobotArtPQ.dll`）是否被加载、内核 DLL 是否被加载、有无崩溃记录。
+
+### 8.2 换掉 UOS 自带的旧 wine（性价比最高的一步）
+
+UOS 自带的 deepin-wine 版本偏老，很多 COM/图形问题是新版 wine 已经修掉的。
+装一份 `wine-staging`（8/9/10 任一），用**同一个前缀方案**对比测试，成本很低：
+能过就固定用它，过不了再回头查具体报错。脚本都支持 `export WINE=wine` 指定运行器。
+
+### 8.3 冻结环境：同一份包，在任何 UOS x86_64 上结果一致
+
+环境差异（装了哪些原生 DLL、注册表内容、wine 版本）是"这台能跑、那台不能跑"的主因。
+`05-pack-portable.sh` 把 **wine 前缀 + 应用 + 启动器 + 注册脚本**打成一个自包含目录：
+
+- 应用放进前缀内的 `drive_c/olp`，注册表里记 `C:\olp\...`，因此**整包放到任何路径都能跑**；
+- 前缀里连 `winetricks` 装的原生 DLL 与注册表一起带走；
+- 打包脚本还会生成 `olp-portable.tar.gz`，拷到别的机器解压即用。
+
+这样交付物就从「一个 exe + 一堆说明」变成「一份已验收、可复现的运行环境」——
+这是在没有 PQKit Linux 版的前提下，最接近"保证运行"的形态。
+
+### 8.4 万一内核层（L5）过不去：退化方案
+
+需要提前和业务确认「哪些功能是必须的」：
+
+1. **文件进/文件出**（导入模型 → 生成轨迹 → 导出结果）是核心。若只有**三维交互视图**出问题，
+   可以考虑给程序加一个隐藏的批处理入口（`olp.exe --batch in.robx out.txt`），
+   绕开窗口渲染，把核心计算留在 Wine 里跑——这条路径由我们自己改代码，可控性最高。
+2. 若连 `CoCreateInstance` 之后的几何内核都起不来，Wine 这条路基本到头，
+   此时只剩：换成 Windows 虚拟机/远程桌面（路线 D），或重新评估原生移植（路线 C）。
+
+### 8.5 验收清单（建议作为交付判据）
+
+- [ ] `04-verify-on-uos.sh` 全部 PASS
+- [ ] 手动打开一个真实 `.robx` 工程，模型可见
+- [ ] 生成一次轨迹并导出文件，与 Windows 版结果逐字节/逐行比对一致
+- [ ] 连续运行 30 分钟无崩溃、无内存暴涨
+- [ ] 用 `05-pack-portable.sh` 的包在**另一台** UOS 机器上重复以上步骤
+
+> 建议按这个顺序推进：`01` 出报告 → `02/03` 修复 → `04` 验收 →
+> 换 wine 版本再验收（对比）→ `05` 冻结 → 第二台机器复现。
+> 每一步都有明确的成功判据，能清楚知道"卡在哪一层"，而不是反复试。
